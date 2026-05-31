@@ -1,0 +1,66 @@
+{
+  "name": "xin-tweaks-premium",
+  "version": "1.0.0",
+  "description": "Xin Tweaks - Ultimate Tweaking Utility by Xin",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build-native": "node-gyp rebuild",
+    "clean": "node-gyp clean"
+  },
+  "keywords": [
+    "tweaks",
+    "optimization",
+    "gaming",
+    "fortnite",
+    "performance"
+  ],
+  "author": "Xin",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "bindings": "^1.5.0",
+    "firebase": "^12.13.0",
+    "node-addon-api": "^7.0.0"
+  },
+  "gypfile": true,
+  "build": {
+    "appId": "com.xin.xintweaks",
+    "productName": "Xin Premium Optimizer",
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "compression": "maximum",
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Xin Premium Optimizer",
+      "artifactName": "${productName} Setup.exe",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
+    }
+  }
+}
