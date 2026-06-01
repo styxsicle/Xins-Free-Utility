@@ -1942,7 +1942,135 @@ body::after {
   border-color: var(--border-strong);
   color: var(--text);
 }
+.tweak-btn.locked {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
 .tweak-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+#page-network .tweaks-grid {
+  gap: 18px;
+}
+
+#page-network .network-tweak-card {
+  position: relative;
+  min-height: 178px;
+  padding: 22px 24px;
+  overflow: visible;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255,255,255,0.12), transparent 58%),
+    linear-gradient(160deg, rgba(28,28,28,0.82) 0%, rgba(8,8,8,0.72) 58%, rgba(38,38,38,0.5) 100%);
+  border-color: rgba(255,255,255,0.11);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+#page-network .network-tweak-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.12) 40%, transparent 72%);
+  transform: translateX(-35%);
+  transition: opacity 0.2s ease, transform 0.45s ease;
+}
+
+#page-network .network-tweak-card::after {
+  content: attr(data-network-tip);
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: calc(100% + 10px);
+  z-index: 20;
+  padding: 11px 12px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,0.12), transparent 56%),
+    linear-gradient(160deg, rgba(22,22,22,0.97) 0%, rgba(8,8,8,0.97) 100%);
+  color: var(--text-dim);
+  box-shadow: 0 18px 42px rgba(0,0,0,0.48), 0 0 26px rgba(255,255,255,0.08);
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+#page-network .network-tweak-card:hover {
+  border-color: rgba(255,255,255,0.28);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 46px rgba(255,255,255,0.12);
+  transform: translateY(-3px);
+}
+
+#page-network .network-tweak-card:hover::before {
+  opacity: 1;
+  transform: translateX(32%);
+}
+
+#page-network .network-tweak-card:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#page-network .network-tweak-card .tweak-header {
+  gap: 16px;
+}
+
+#page-network .network-tweak-card .tweak-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.24), rgba(255,255,255,0.06));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 10px 26px rgba(0,0,0,0.28);
+}
+
+#page-network .network-tweak-card .tweak-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+#page-network .network-tweak-card .tweak-info h4 {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+#page-network .network-tweak-card .tweak-info p {
+  font-size: 12.5px;
+  line-height: 1.48;
+}
+
+#page-network .network-tweak-card .tweak-actions {
+  margin-top: 20px;
+}
+
+#page-network .network-locked-btn {
+  position: relative;
+  min-height: 39px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.055));
+  border-color: rgba(255,255,255,0.18);
+  color: var(--text-dim);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 22px rgba(0,0,0,0.22);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#page-network .network-locked-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.18) 48%, transparent 74%);
+  transform: translateX(-115%);
+  transition: transform 0.45s ease;
+}
+
+#page-network .network-tweak-card:hover .network-locked-btn::after {
+  transform: translateX(115%);
+}
 
 /* Hide legacy galaxy decorations on buttons */
 .tweak-btn .spark, .tweak-btn .backdrop, .tweak-btn .galaxy, .tweak-btn .star,

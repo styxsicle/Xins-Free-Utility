@@ -349,6 +349,189 @@ ipcMain.handle('get-full-system-info', async () => {
     }
 });
 
+function runNetworkCommand(command, args, timeout = 12000) {
+    return new Promise((resolve) => {
+        execFile(command, args, {
+            windowsHide: true,
+            timeout,
+            maxBuffer: 1024 * 1024
+        }, (error, stdout, stderr) => {
+            if (error) {
+                resolve({
+                    success: false,
+                    message: stderr?.trim() || error.message,
+                    output: stdout?.trim() || ''
+                });
+                return;
+            }
+
+            resolve({
+                success: true,
+                message: stdout?.trim() || 'Command completed successfully.',
+                output: stdout?.trim() || ''
+            });
+        });
+    });
+}
+
+async function runNetworkPowerShellJson(script, timeout = 12000) {
+    const result = await runNetworkCommand('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], timeout);
+    if (!result.success) return result;
+
+    try {
+        return {
+            success: true,
+            data: result.output ? JSON.parse(result.output) : null
+        };
+    } catch (error) {
+        return {
+            success: false,
+            message: `Could not parse network data: ${error.message}`,
+            output: result.output
+        };
+    }
+}
+
+function normalizeNetworkList(value) {
+    if (!value) return [];
+    return Array.isArray(value) ? value : [value];
+}
+
+function isValidPingTarget(target) {
+    if (typeof target !== 'string') return false;
+    const value = target.trim();
+    if (!value || value.length > 253) return false;
+    return /^[a-zA-Z0-9.-]+$/.test(value) && !value.startsWith('-') && !value.includes('..');
+}
+
+function parsePingOutput(output) {
+    const times = [];
+    const timeRegex = /time[=<]\s*(\d+)\s*ms/gi;
+    let timeMatch;
+    while ((timeMatch = timeRegex.exec(output)) !== null) {
+        times.push(Number(timeMatch[1]));
+    }
+
+    const packetMatch = output.match(/Sent\s*=\s*(\d+),\s*Received\s*=\s*(\d+),\s*Lost\s*=\s*(\d+)\s*\((\d+)%\s*loss\)/i);
+    const averageMatch = output.match(/Average\s*=\s*(\d+)\s*ms/i);
+    const minimumMatch = output.match(/Minimum\s*=\s*(\d+)\s*ms/i);
+    const maximumMatch = output.match(/Maximum\s*=\s*(\d+)\s*ms/i);
+    const jitterValues = times.slice(1).map((time, index) => Math.abs(time - times[index]));
+    const jitter = jitterValues.length
+        ? jitterValues.reduce((total, value) => total + value, 0) / jitterValues.length
+        : 0;
+
+    return {
+        sent: packetMatch ? Number(packetMatch[1]) : times.length,
+        received: packetMatch ? Number(packetMatch[2]) : times.length,
+        lost: packetMatch ? Number(packetMatch[3]) : 0,
+        packetLoss: packetMatch ? Number(packetMatch[4]) : 0,
+        minimumMs: minimumMatch ? Number(minimumMatch[1]) : (times.length ? Math.min(...times) : null),
+        maximumMs: maximumMatch ? Number(maximumMatch[1]) : (times.length ? Math.max(...times) : null),
+        averageMs: averageMatch ? Number(averageMatch[1]) : (times.length ? Math.round(times.reduce((total, value) => total + value, 0) / times.length) : null),
+        jitterMs: Number(jitter.toFixed(1)),
+        samples: times
+    };
+}
+
+ipcMain.handle('get-network-info', async () => {
+    const dnsScript = `
+$ErrorActionPreference = 'Stop'
+@(Get-DnsClientServerAddress | Where-Object { $_.ServerAddresses.Count -gt 0 } | Select-Object InterfaceAlias,AddressFamily,ServerAddresses) |
+    ConvertTo-Json -Compress -Depth 5
+`;
+    const adapterScript = `
+$ErrorActionPreference = 'Stop'
+@(Get-NetAdapter | Select-Object Name,InterfaceDescription,Status,LinkSpeed,MacAddress) |
+    ConvertTo-Json -Compress -Depth 5
+`;
+
+    const [dnsResult, adapterResult] = await Promise.all([
+        runNetworkPowerShellJson(dnsScript, 10000),
+        runNetworkPowerShellJson(adapterScript, 10000)
+    ]);
+
+    const errors = [];
+    if (!dnsResult.success) errors.push(dnsResult.message);
+    if (!adapterResult.success) errors.push(adapterResult.message);
+
+    return {
+        success: errors.length === 0,
+        status: errors.length === 0 ? 'success' : (dnsResult.success || adapterResult.success ? 'partial' : 'error'),
+        message: errors.length ? errors.join('; ') : 'Network info loaded.',
+        dnsServers: normalizeNetworkList(dnsResult.data).map((item) => ({
+            interfaceAlias: item.InterfaceAlias || 'unknown',
+            addressFamily: item.AddressFamily || 'unknown',
+            servers: Array.isArray(item.ServerAddresses) ? item.ServerAddresses : []
+        })),
+        adapters: normalizeNetworkList(adapterResult.data).map((item) => ({
+            name: item.Name || 'unknown',
+            description: item.InterfaceDescription || 'unknown',
+            status: item.Status || 'unknown',
+            linkSpeed: item.LinkSpeed || 'unknown',
+            macAddress: item.MacAddress || 'unknown'
+        }))
+    };
+});
+
+ipcMain.handle('network-flush-dns', async () => {
+    const result = await runNetworkCommand('ipconfig', ['/flushdns'], 10000);
+    return {
+        success: result.success,
+        message: result.success ? 'DNS resolver cache flushed.' : result.message,
+        output: result.output
+    };
+});
+
+ipcMain.handle('network-ping-test', async (event, target) => {
+    const host = String(target || '').trim();
+    if (!isValidPingTarget(host)) {
+        return { success: false, message: 'Enter a valid hostname or IP address.' };
+    }
+
+    const result = await runNetworkCommand('ping', ['-n', '4', host], 15000);
+    return {
+        success: result.success,
+        message: result.success ? 'Ping test completed.' : result.message,
+        stats: parsePingOutput(result.output),
+        output: result.output
+    };
+});
+
+ipcMain.handle('network-packet-test', async (event, target) => {
+    const host = String(target || '').trim();
+    if (!isValidPingTarget(host)) {
+        return { success: false, message: 'Enter a valid hostname or IP address.' };
+    }
+
+    const result = await runNetworkCommand('ping', ['-n', '10', host], 25000);
+    return {
+        success: result.success,
+        message: result.success ? 'Packet loss and jitter test completed.' : result.message,
+        stats: parsePingOutput(result.output),
+        output: result.output
+    };
+});
+
+ipcMain.handle('network-release-renew-ip', async () => {
+    const result = await runNetworkCommand('cmd.exe', ['/d', '/s', '/c', 'ipconfig /release & ipconfig /renew'], 45000);
+    return {
+        success: result.success,
+        message: result.success ? 'IP address released and renewed.' : result.message,
+        output: result.output
+    };
+});
+
+ipcMain.handle('network-reset-winsock', async () => {
+    const result = await runNetworkCommand('netsh', ['winsock', 'reset'], 15000);
+    return {
+        success: result.success,
+        message: result.success ? 'Winsock reset completed. Restart required.' : result.message,
+        restartRequired: result.success,
+        output: result.output
+    };
+});
+
 // Persistent Stats Monitor
 let statsMonitorProcess = null;
 let currentSystemStats = {

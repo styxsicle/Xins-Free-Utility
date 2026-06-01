@@ -11,6 +11,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return ipcRenderer.invoke('get-full-system-info');
     },
     getLiveStats: () => ipcRenderer.invoke('get-live-stats'),
+    getNetworkInfo: () => ipcRenderer.invoke('get-network-info'),
+    flushDns: () => ipcRenderer.invoke('network-flush-dns'),
+    runPingTest: (target) => ipcRenderer.invoke('network-ping-test', target),
+    runPacketTest: (target) => ipcRenderer.invoke('network-packet-test', target),
+    releaseRenewIp: () => ipcRenderer.invoke('network-release-renew-ip'),
+    resetWinsock: () => ipcRenderer.invoke('network-reset-winsock'),
 
     applyTweak: (tweakId, action) => ipcRenderer.invoke('apply-tweak', tweakId, action),
     getToggleStates: () => ipcRenderer.invoke('get-toggle-states'),
