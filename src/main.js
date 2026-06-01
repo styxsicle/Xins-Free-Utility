@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
-const { exec, spawn } = require('child_process');
+const { exec, execFile, spawn } = require('child_process');
 const os = require('os');
 const fs = require('fs');
 const https = require('https');
@@ -104,6 +104,249 @@ ipcMain.handle('get-system-info', async () => {
         },
         uptime: os.uptime()
     };
+});
+
+function formatBytesForDisplay(bytes) {
+    const value = Number(bytes);
+    if (!Number.isFinite(value) || value <= 0) return 'unknown';
+
+    const units = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    let size = value;
+    let unitIndex = 0;
+
+    while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex++;
+    }
+
+    return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function normalizeList(value) {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.filter(Boolean).map(String);
+    return [String(value)];
+}
+
+function normalizeObjectList(value) {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === 'object') return [value];
+    return [];
+}
+
+function formatUptimeForDisplay(seconds) {
+    const totalSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+}
+
+function unknownIfEmpty(value, emptyValue = 'unknown') {
+    if (value === null || value === undefined) return emptyValue;
+    const text = String(value).trim();
+    return text ? text : emptyValue;
+}
+
+function firstObject(value) {
+    const values = normalizeObjectList(value);
+    return values.length ? values[0] : null;
+}
+
+function safeNumber(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+}
+
+function runPowerShellJson(label, script, timeout = 6000) {
+    console.log(`[SYSTEM INFO] Backend query starts: ${label}`);
+    return new Promise((resolve, reject) => {
+        execFile('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+            windowsHide: true,
+            timeout,
+            maxBuffer: 1024 * 1024
+        }, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`[SYSTEM INFO] Backend query failed: ${label}: ${stderr?.trim() || error.message}`);
+                reject(new Error(stderr?.trim() || error.message));
+                return;
+            }
+
+            try {
+                const text = stdout.trim();
+                const data = text ? JSON.parse(text) : null;
+                console.log(`[SYSTEM INFO] Backend query returns: ${label}`);
+                resolve(data);
+            } catch (parseError) {
+                console.error(`[SYSTEM INFO] Backend query parse failed: ${label}: ${parseError.message}`);
+                reject(new Error(`Could not parse ${label}: ${parseError.message}`));
+            }
+        });
+    });
+}
+
+async function queryCim(label, script, timeout = 6000) {
+    try {
+        const data = await runPowerShellJson(label, script, timeout);
+        return { label, success: true, data };
+    } catch (error) {
+        return { label, success: false, error: error.message, data: null };
+    }
+}
+
+async function getFullSystemInfoFromPowerShell() {
+    const queries = {
+        os: `
+$ErrorActionPreference = 'Stop'
+Get-CimInstance -ClassName Win32_OperatingSystem |
+    Select-Object Caption,Version,BuildNumber,OSArchitecture,@{Name='LastBootUpTime';Expression={$_.LastBootUpTime.ToString('o')}} |
+    ConvertTo-Json -Compress -Depth 4
+`,
+        cpu: `
+$ErrorActionPreference = 'Stop'
+Get-CimInstance -ClassName Win32_Processor |
+    Select-Object -First 1 Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed |
+    ConvertTo-Json -Compress -Depth 4
+`,
+        gpu: `
+$ErrorActionPreference = 'Stop'
+@(Get-CimInstance -ClassName Win32_VideoController | Select-Object Name,DriverVersion,DriverDate,AdapterRAM) |
+    ConvertTo-Json -Compress -Depth 4
+`,
+        computerSystem: `
+$ErrorActionPreference = 'Stop'
+Get-CimInstance -ClassName Win32_ComputerSystem |
+    Select-Object -First 1 TotalPhysicalMemory,Manufacturer,Model |
+    ConvertTo-Json -Compress -Depth 4
+`,
+        baseboard: `
+$ErrorActionPreference = 'Stop'
+Get-CimInstance -ClassName Win32_BaseBoard |
+    Select-Object -First 1 Manufacturer,Product,SerialNumber |
+    ConvertTo-Json -Compress -Depth 4
+`,
+        storage: `
+$ErrorActionPreference = 'Stop'
+@(Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID,VolumeName,FileSystem,Size,FreeSpace) |
+    ConvertTo-Json -Compress -Depth 4
+`,
+        keyboards: `
+$ErrorActionPreference = 'Stop'
+@(Get-CimInstance -ClassName Win32_Keyboard | Select-Object Name,Description,DeviceID) |
+    ConvertTo-Json -Compress -Depth 4
+`,
+        mice: `
+$ErrorActionPreference = 'Stop'
+@(Get-CimInstance -ClassName Win32_PointingDevice | Select-Object Name,Description,DeviceID) |
+    ConvertTo-Json -Compress -Depth 4
+`,
+        network: `
+$ErrorActionPreference = 'Stop'
+@(Get-CimInstance -ClassName Win32_NetworkAdapter | Where-Object { $_.PhysicalAdapter -eq $true } | Select-Object Name,Manufacturer,MACAddress,AdapterType,NetConnectionStatus) |
+    ConvertTo-Json -Compress -Depth 4
+`
+    };
+
+    const results = {};
+    for (const [key, script] of Object.entries(queries)) {
+        results[key] = await queryCim(key, script);
+    }
+    return results;
+}
+
+ipcMain.handle('get-full-system-info', async () => {
+    console.log('[SYSTEM INFO] IPC request starts: get-full-system-info');
+    try {
+        const results = await getFullSystemInfoFromPowerShell();
+        const osInfo = firstObject(results.os.data);
+        const cpuInfo = firstObject(results.cpu.data);
+        const computerSystem = firstObject(results.computerSystem.data);
+        const baseboardInfo = firstObject(results.baseboard.data);
+        const lastBootTime = osInfo?.LastBootUpTime ? Date.parse(osInfo.LastBootUpTime) : NaN;
+        const uptimeSeconds = Number.isFinite(lastBootTime) ? (Date.now() - lastBootTime) / 1000 : null;
+        const errors = Object.values(results)
+            .filter((result) => !result.success)
+            .map((result) => `${result.label}: ${result.error}`);
+        const successfulQueries = Object.values(results).filter((result) => result.success).length;
+        const storageDrives = normalizeObjectList(results.storage.data).map((drive) => ({
+            name: unknownIfEmpty(drive.DeviceID),
+            label: unknownIfEmpty(drive.VolumeName),
+            fileSystem: unknownIfEmpty(drive.FileSystem),
+            size: formatBytesForDisplay(drive.Size),
+            free: formatBytesForDisplay(drive.FreeSpace)
+        }));
+        const gpuDevices = normalizeObjectList(results.gpu.data).map((gpu) => ({
+            name: unknownIfEmpty(gpu.Name),
+            driverVersion: unknownIfEmpty(gpu.DriverVersion),
+            driverDate: unknownIfEmpty(gpu.DriverDate),
+            vram: formatBytesForDisplay(gpu.AdapterRAM)
+        }));
+        const keyboardDevices = normalizeObjectList(results.keyboards.data).map((keyboard) => (
+            unknownIfEmpty(keyboard.Name || keyboard.Description || keyboard.DeviceID, 'not detected')
+        ));
+        const mouseDevices = normalizeObjectList(results.mice.data).map((mouse) => (
+            unknownIfEmpty(mouse.Name || mouse.Description || mouse.DeviceID, 'not detected')
+        ));
+        const networkAdapters = normalizeObjectList(results.network.data).map((adapter) => ({
+            name: unknownIfEmpty(adapter.Name, 'not detected'),
+            manufacturer: unknownIfEmpty(adapter.Manufacturer),
+            adapterType: unknownIfEmpty(adapter.AdapterType),
+            macAddress: unknownIfEmpty(adapter.MACAddress)
+        }));
+        const cpuCores = safeNumber(cpuInfo?.NumberOfCores);
+        const cpuThreads = safeNumber(cpuInfo?.NumberOfLogicalProcessors);
+        const cpuMaxClock = safeNumber(cpuInfo?.MaxClockSpeed);
+        const baseboardManufacturer = unknownIfEmpty(baseboardInfo?.Manufacturer);
+        const baseboardProduct = unknownIfEmpty(baseboardInfo?.Product);
+        const windowsCaption = unknownIfEmpty(osInfo?.Caption);
+        const windowsVersionNumber = unknownIfEmpty(osInfo?.Version);
+        const windowsBuild = unknownIfEmpty(osInfo?.BuildNumber);
+
+        return {
+            success: errors.length === 0,
+            status: errors.length === 0 ? 'success' : (successfulQueries > 0 ? 'partial' : 'error'),
+            message: errors.length
+                ? `Some runtime system queries failed: ${errors.join('; ')}`
+                : 'System info loaded from runtime CIM queries.',
+            errors,
+            info: {
+                windowsVersion: [windowsCaption, windowsVersionNumber, `Build ${windowsBuild}`].filter((part) => part && part !== 'unknown' && part !== 'Build unknown').join(' ') || 'unknown',
+                windowsBuild,
+                osArchitecture: unknownIfEmpty(osInfo?.OSArchitecture),
+                lastBootTime: unknownIfEmpty(osInfo?.LastBootUpTime),
+                uptime: uptimeSeconds === null ? 'unknown' : formatUptimeForDisplay(uptimeSeconds),
+                cpuName: unknownIfEmpty(cpuInfo?.Name),
+                cpuCores: cpuCores === null ? 'unknown' : String(cpuCores),
+                cpuThreads: cpuThreads === null ? 'unknown' : String(cpuThreads),
+                cpuMaxClock: cpuMaxClock === null ? 'unknown' : `${cpuMaxClock} MHz`,
+                gpuDevices,
+                gpuName: gpuDevices.length ? gpuDevices.map((gpu) => gpu.name).join(', ') : 'not detected',
+                totalRam: formatBytesForDisplay(computerSystem?.TotalPhysicalMemory),
+                systemManufacturer: unknownIfEmpty(computerSystem?.Manufacturer),
+                systemModel: unknownIfEmpty(computerSystem?.Model),
+                motherboard: [baseboardManufacturer, baseboardProduct].filter((part) => part && part !== 'unknown').join(' ') || 'unknown',
+                baseboardManufacturer,
+                baseboardProduct,
+                storageDrives,
+                keyboardDevices,
+                mouseDevices,
+                networkAdapters
+            }
+        };
+    } catch (error) {
+        console.error('[SYSTEM INFO] Failed to load full system info:', error);
+        return {
+            success: false,
+            status: 'error',
+            message: error.message,
+            errors: [error.message],
+            info: {}
+        };
+    }
 });
 
 // Persistent Stats Monitor
@@ -724,4 +967,3 @@ ipcMain.handle('save-toggle-state', async (event, toggleId, state) => {
     saveToggleStates(states);
     return { success: true };
 });
-

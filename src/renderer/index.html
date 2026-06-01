@@ -201,6 +201,16 @@
                                     </svg>
                                     Run System Scan
                                 </button>
+                                <button class="hero-cta-ghost" id="hero-system-info-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="4" width="18" height="14" rx="2"/>
+                                        <path d="M8 22h8"/>
+                                        <path d="M12 18v4"/>
+                                        <path d="M8 9h8"/>
+                                        <path d="M8 13h5"/>
+                                    </svg>
+                                    View Full System Info
+                                </button>
                             </div>
                         </div>
 
@@ -1547,6 +1557,122 @@
                 </div>
                 </div>
             </main>
+        </div>
+
+        <div class="system-info-modal" id="system-info-modal" aria-hidden="true">
+            <div class="system-info-backdrop" data-system-info-close></div>
+            <section class="system-info-panel glass" role="dialog" aria-modal="true" aria-labelledby="system-info-title">
+                <div class="system-info-header">
+                    <div>
+                        <span class="system-info-kicker">Read-only device profile</span>
+                        <h2 id="system-info-title">Full System Info</h2>
+                    </div>
+                    <button class="system-info-close" id="system-info-close" aria-label="Close system info" data-system-info-close>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="system-info-state loading" id="system-info-loading">
+                    <div class="system-info-spinner" aria-hidden="true"></div>
+                    <span>Loading system info...</span>
+                </div>
+
+                <div class="system-info-state success" id="system-info-success" hidden>
+                    <strong>System info loaded.</strong>
+                    <span>All available read-only device details are shown below.</span>
+                </div>
+
+                <div class="system-info-state error" id="system-info-error" hidden>
+                    <strong>Could not load every detail.</strong>
+                    <span id="system-info-error-message">Some read-only device queries were unavailable.</span>
+                </div>
+
+                <div class="system-info-grid" id="system-info-content" hidden>
+                    <div class="system-info-item">
+                        <span>Windows Version</span>
+                        <strong id="fsi-windows">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>Windows Build</span>
+                        <strong id="fsi-windows-build">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>OS Architecture</span>
+                        <strong id="fsi-os-architecture">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>CPU</span>
+                        <strong id="fsi-cpu">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>CPU Cores</span>
+                        <strong id="fsi-cpu-cores">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>CPU Threads</span>
+                        <strong id="fsi-cpu-threads">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>CPU Max Clock</span>
+                        <strong id="fsi-cpu-clock">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>Total RAM</span>
+                        <strong id="fsi-ram">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>System Manufacturer</span>
+                        <strong id="fsi-system-manufacturer">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>System Model</span>
+                        <strong id="fsi-system-model">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>Motherboard / Baseboard</span>
+                        <strong id="fsi-motherboard">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>Baseboard Manufacturer</span>
+                        <strong id="fsi-baseboard-manufacturer">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>Baseboard Product</span>
+                        <strong id="fsi-baseboard-product">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>Uptime</span>
+                        <strong id="fsi-uptime">--</strong>
+                    </div>
+                    <div class="system-info-item">
+                        <span>Last Boot Time</span>
+                        <strong id="fsi-last-boot">--</strong>
+                    </div>
+                    <div class="system-info-item wide">
+                        <span>GPU Devices</span>
+                        <div class="system-info-list" id="fsi-gpus"></div>
+                    </div>
+                    <div class="system-info-item wide">
+                        <span>Storage Drives</span>
+                        <div class="system-info-list" id="fsi-storage"></div>
+                    </div>
+                    <div class="system-info-item wide">
+                        <span>Keyboard Devices</span>
+                        <div class="system-info-list" id="fsi-keyboards"></div>
+                    </div>
+                    <div class="system-info-item wide">
+                        <span>Mouse Devices</span>
+                        <div class="system-info-list" id="fsi-mice"></div>
+                    </div>
+                    <div class="system-info-item wide">
+                        <span>Network Adapters</span>
+                        <div class="system-info-list" id="fsi-network"></div>
+                    </div>
+                </div>
+            </section>
         </div>
 
         <div id="notification-container"></div>

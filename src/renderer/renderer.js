@@ -14,6 +14,7 @@ function initializeApp() {
     initializeSocialCards();
     initializeHireButtons();
     initializeExternalLinks();
+    initializeSystemInfoModal();
     loadSystemInfo();
     startLiveMonitoring();
 }
@@ -357,6 +358,163 @@ function dismissNotification(notification) {
     setTimeout(() => {
         notification.remove();
     }, 300);
+}
+
+function initializeSystemInfoModal() {
+    const openBtn = document.getElementById('hero-system-info-btn');
+    const modal = document.getElementById('system-info-modal');
+    const loadingState = document.getElementById('system-info-loading');
+    const successState = document.getElementById('system-info-success');
+    const errorState = document.getElementById('system-info-error');
+    const errorMessage = document.getElementById('system-info-error-message');
+    const content = document.getElementById('system-info-content');
+
+    if (!openBtn || !modal || !loadingState || !successState || !errorState || !content) return;
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value || 'unknown';
+    };
+
+    const renderList = (id, items, formatter = (item) => item) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = '';
+
+        const values = Array.isArray(items) ? items : [];
+        if (!values.length) {
+            const empty = document.createElement('span');
+            empty.className = 'system-info-empty';
+            empty.textContent = 'not detected';
+            el.appendChild(empty);
+            return;
+        }
+
+        values.forEach((item) => {
+            const row = document.createElement('span');
+            row.textContent = formatter(item);
+            el.appendChild(row);
+        });
+    };
+
+    const openModal = () => {
+        console.log('[SYSTEM INFO] Modal opens');
+        modal.classList.add('visible');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+    };
+
+    const closeModal = () => {
+        modal.classList.remove('visible');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+    };
+
+    const setLoading = () => {
+        loadingState.hidden = false;
+        successState.hidden = true;
+        errorState.hidden = true;
+        content.hidden = true;
+    };
+
+    const showContent = () => {
+        loadingState.hidden = true;
+        successState.hidden = false;
+        errorState.hidden = true;
+        content.hidden = false;
+    };
+
+    const showPartial = (message) => {
+        loadingState.hidden = true;
+        successState.hidden = true;
+        errorState.hidden = false;
+        content.hidden = false;
+        if (errorMessage) errorMessage.textContent = message || 'Some read-only device queries were unavailable.';
+    };
+
+    const showError = (message) => {
+        loadingState.hidden = true;
+        successState.hidden = true;
+        errorState.hidden = false;
+        content.hidden = true;
+        if (errorMessage) errorMessage.textContent = message || 'Some read-only device queries were unavailable.';
+    };
+
+    const renderSystemInfo = (info) => {
+        setText('fsi-windows', info.windowsVersion);
+        setText('fsi-os-architecture', info.osArchitecture);
+        setText('fsi-windows-build', info.windowsBuild);
+        setText('fsi-last-boot', info.lastBootTime);
+        setText('fsi-cpu', info.cpuName);
+        setText('fsi-cpu-cores', info.cpuCores);
+        setText('fsi-cpu-threads', info.cpuThreads);
+        setText('fsi-cpu-clock', info.cpuMaxClock);
+        setText('fsi-ram', info.totalRam);
+        setText('fsi-system-manufacturer', info.systemManufacturer);
+        setText('fsi-system-model', info.systemModel);
+        setText('fsi-motherboard', info.motherboard);
+        setText('fsi-baseboard-manufacturer', info.baseboardManufacturer);
+        setText('fsi-baseboard-product', info.baseboardProduct);
+        setText('fsi-uptime', info.uptime);
+        renderList('fsi-gpus', info.gpuDevices, (gpu) => {
+            return `${gpu.name || 'unknown'} | Driver ${gpu.driverVersion || 'unknown'} | Driver Date ${gpu.driverDate || 'unknown'} | VRAM ${gpu.vram || 'unknown'}`;
+        });
+        renderList('fsi-storage', info.storageDrives, (drive) => {
+            const label = drive.label && drive.label !== 'unknown' ? ` (${drive.label})` : '';
+            const fs = drive.fileSystem && drive.fileSystem !== 'unknown' ? ` | ${drive.fileSystem}` : '';
+            return `${drive.name || 'unknown'}${label}${fs} | Size ${drive.size || 'unknown'} | Free ${drive.free || 'unknown'}`;
+        });
+        renderList('fsi-keyboards', info.keyboardDevices);
+        renderList('fsi-mice', info.mouseDevices);
+        renderList('fsi-network', info.networkAdapters, (adapter) => {
+            return `${adapter.name || 'not detected'} | ${adapter.manufacturer || 'unknown'} | ${adapter.adapterType || 'unknown'} | MAC ${adapter.macAddress || 'unknown'}`;
+        });
+    };
+
+    openBtn.addEventListener('click', async () => {
+        openModal();
+        setLoading();
+        openBtn.disabled = true;
+
+        try {
+            console.log('[SYSTEM INFO] IPC request starts');
+            const result = await window.electronAPI.getFullSystemInfo();
+            console.log('[SYSTEM INFO] Renderer receives data', {
+                status: result.status,
+                success: result.success,
+                errorCount: Array.isArray(result.errors) ? result.errors.length : 0
+            });
+            renderSystemInfo(result.info || {});
+
+            if (result.status === 'success') {
+                showContent();
+                showNotification('success', 'System Info Loaded', 'Full system info is ready.');
+            } else if (result.status === 'partial') {
+                showPartial(result.message);
+                showNotification('warning', 'Partial System Info', result.message || 'Some details were unavailable.');
+            } else {
+                showError(result.message);
+                showNotification('error', 'System Info Error', result.message || 'System info could not be loaded.');
+            }
+        } catch (error) {
+            showError(error.message);
+            showNotification('error', 'System Info Error', error.message);
+        } finally {
+            loadingState.hidden = true;
+            openBtn.disabled = false;
+            console.log('[SYSTEM INFO] Loading ends');
+        }
+    });
+
+    modal.querySelectorAll('[data-system-info-close]').forEach((el) => {
+        el.addEventListener('click', closeModal);
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('visible')) {
+            closeModal();
+        }
+    });
 }
 
 function initializeToggles() {

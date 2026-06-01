@@ -6,6 +6,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     close: () => ipcRenderer.send('window-close'),
 
     getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
+    getFullSystemInfo: () => {
+        console.log('[SYSTEM INFO] IPC request starts: preload get-full-system-info');
+        return ipcRenderer.invoke('get-full-system-info');
+    },
     getLiveStats: () => ipcRenderer.invoke('get-live-stats'),
 
     applyTweak: (tweakId, action) => ipcRenderer.invoke('apply-tweak', tweakId, action),
