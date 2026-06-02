@@ -1394,70 +1394,94 @@
 
                     <div class="controls-section">
                         <h3 class="section-title">Network Tools</h3>
-                        <div class="tweaks-grid">
-                            <div class="tweak-card network-tweak-card" data-network-tip="Coming soon: compare latency across popular DNS providers and surface the fastest result detected for this connection.">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <div class="toggles-grid network-grid">
+                            <div class="toggle-card network-card" data-network-card="auto-dns-finder" data-cat="network">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="tc-head">
+                                    <div class="tc-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <circle cx="12" cy="12" r="10" />
                                             <path d="M2 12h20" />
                                             <path d="M12 2a15.3 15.3 0 0 1 0 20" />
                                             <path d="M12 2a15.3 15.3 0 0 0 0 20" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
+                                    <div class="tc-titles">
                                         <h4>Auto DNS Finder</h4>
-                                        <p>Tests popular DNS providers and recommends the lowest latency option</p>
+                                        <p>Compare DNS latency</p>
                                     </div>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn locked network-locked-btn" disabled>Coming Soon</button>
+                                <div class="tc-foot">
+                                    <div class="tc-status">
+                                        <span class="tc-status-dot"></span>
+                                        <span class="tc-status-text">Network</span>
+                                    </div>
+                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
                                 </div>
                             </div>
 
-                            <div class="tweak-card network-tweak-card" data-network-tip="Coming soon: check common local connectivity issues, DNS state, adapter state, and suggest safe next steps.">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <div class="toggle-card network-card" data-network-card="network-doctor" data-cat="network">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="tc-head">
+                                    <div class="tc-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M3 12h3l2-5 4 10 2-5h7" />
                                             <circle cx="3" cy="12" r="1" />
                                             <circle cx="21" cy="12" r="1" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
+                                    <div class="tc-titles">
                                         <h4>Network Doctor</h4>
-                                        <p>Scans common network issues and suggests fixes</p>
+                                        <p>Scan common issues</p>
                                     </div>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn locked network-locked-btn" disabled>Coming Soon</button>
+                                <div class="tc-foot">
+                                    <div class="tc-status">
+                                        <span class="tc-status-dot"></span>
+                                        <span class="tc-status-text">Safe</span>
+                                    </div>
+                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
                                 </div>
                             </div>
 
-                            <div class="tweak-card network-tweak-card" data-network-tip="Coming soon: clear the local DNS resolver cache using a safe Windows command after confirmation.">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <div class="toggle-card network-card" data-network-card="flush-dns-cache" data-cat="network">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="tc-head">
+                                    <div class="tc-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M4 7h16" />
                                             <path d="M4 12h16" />
                                             <path d="M4 17h10" />
                                             <path d="M18 15l2 2 2-2" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
+                                    <div class="tc-titles">
                                         <h4>Flush DNS Cache</h4>
-                                        <p>Clears local DNS resolver cache</p>
+                                        <p>Clear resolver cache</p>
                                     </div>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn locked network-locked-btn" disabled>Coming Soon</button>
+                                <div class="tc-foot">
+                                    <div class="tc-status">
+                                        <span class="tc-status-dot"></span>
+                                        <span class="tc-status-text">Locked</span>
+                                    </div>
+                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
                                 </div>
                             </div>
 
-                            <div class="tweak-card network-tweak-card" data-network-tip="Coming soon: choose a network adapter and restart it with a clear warning before applying changes.">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <div class="toggle-card network-card" data-network-card="adapter-reset" data-cat="network">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="tc-head">
+                                    <div class="tc-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <rect x="3" y="5" width="18" height="14" rx="2" />
                                             <path d="M8 21h8" />
                                             <path d="M12 19v2" />
@@ -1465,37 +1489,51 @@
                                             <path d="M8 14h5" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
+                                    <div class="tc-titles">
                                         <h4>Adapter Reset</h4>
-                                        <p>Restarts selected network adapter</p>
+                                        <p>Restart selected adapter</p>
                                     </div>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn locked network-locked-btn" disabled>Coming Soon</button>
+                                <div class="tc-foot">
+                                    <div class="tc-status">
+                                        <span class="tc-status-dot"></span>
+                                        <span class="tc-status-text">Locked</span>
+                                    </div>
+                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
                                 </div>
                             </div>
 
-                            <div class="tweak-card network-tweak-card" data-network-tip="Coming soon: run ping samples and summarize packet loss, latency range, and jitter without claiming guaranteed improvements.">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <div class="toggle-card network-card" data-network-card="packet-loss-test" data-cat="network">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="tc-head">
+                                    <div class="tc-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M3 12h4l3 8 4-16 3 8h4" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
+                                    <div class="tc-titles">
                                         <h4>Packet Loss Test</h4>
-                                        <p>Checks packet loss and jitter using ping tests</p>
+                                        <p>Check loss and jitter</p>
                                     </div>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn locked network-locked-btn" disabled>Coming Soon</button>
+                                <div class="tc-foot">
+                                    <div class="tc-status">
+                                        <span class="tc-status-dot"></span>
+                                        <span class="tc-status-text">Network</span>
+                                    </div>
+                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
                                 </div>
                             </div>
 
-                            <div class="tweak-card network-tweak-card" data-network-tip="Coming soon: group repair actions behind warnings so Winsock and IP fixes are explicit before running.">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <div class="toggle-card network-card" data-network-card="tcp-ip-repair" data-cat="network">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="tc-head">
+                                    <div class="tc-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M12 2v4" />
                                             <path d="M12 18v4" />
                                             <path d="M4.93 4.93l2.83 2.83" />
@@ -1505,53 +1543,71 @@
                                             <circle cx="12" cy="12" r="3" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
+                                    <div class="tc-titles">
                                         <h4>TCP/IP Repair</h4>
-                                        <p>Runs safe Winsock/IP repair actions with warning</p>
+                                        <p>Repair actions with warning</p>
                                     </div>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn locked network-locked-btn" disabled>Coming Soon</button>
+                                <div class="tc-foot">
+                                    <div class="tc-status">
+                                        <span class="tc-status-dot"></span>
+                                        <span class="tc-status-text">Safe</span>
+                                    </div>
+                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
                                 </div>
                             </div>
 
-                            <div class="tweak-card network-tweak-card" data-network-tip="Coming soon: view DNS profiles and apply selected servers after showing exactly what will change.">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <div class="toggle-card network-card" data-network-card="dns-server-manager" data-cat="network">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="tc-head">
+                                    <div class="tc-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M4 6h16" />
                                             <path d="M4 12h16" />
                                             <path d="M4 18h10" />
                                             <circle cx="18" cy="18" r="2" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
+                                    <div class="tc-titles">
                                         <h4>DNS Server Manager</h4>
-                                        <p>View and apply DNS profiles</p>
+                                        <p>View DNS profiles</p>
                                     </div>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn locked network-locked-btn" disabled>Coming Soon</button>
+                                <div class="tc-foot">
+                                    <div class="tc-status">
+                                        <span class="tc-status-dot"></span>
+                                        <span class="tc-status-text">Coming Soon</span>
+                                    </div>
+                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
                                 </div>
                             </div>
 
-                            <div class="tweak-card network-tweak-card" data-network-tip="Coming soon: compare ping to common game regions and show measured routing conditions.">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <div class="toggle-card network-card" data-network-card="game-route-checker" data-cat="network">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="tc-head">
+                                    <div class="tc-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <circle cx="12" cy="12" r="10" />
                                             <path d="M12 6v6l4 2" />
                                             <path d="M4 4l3 3" />
                                             <path d="M20 4l-3 3" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
+                                    <div class="tc-titles">
                                         <h4>Game Route Checker</h4>
-                                        <p>Checks ping to common game regions and servers</p>
+                                        <p>Check game region routes</p>
                                     </div>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn locked network-locked-btn" disabled>Coming Soon</button>
+                                <div class="tc-foot">
+                                    <div class="tc-status">
+                                        <span class="tc-status-dot"></span>
+                                        <span class="tc-status-text">Network</span>
+                                    </div>
+                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
                                 </div>
                             </div>
                         </div>
@@ -1739,6 +1795,33 @@
                 </div>
                 </div>
             </main>
+        </div>
+
+        <!-- System Scan Overlay -->
+        <div class="scan-overlay" id="scan-overlay" aria-hidden="true">
+            <div class="scan-backdrop"></div>
+            <div class="scan-card">
+                <div class="scan-logo-wrap">
+                    <div class="scan-logo-ring"></div>
+                    <img src="../../assets/XTweaks_Logo.png" class="scan-logo" alt="Xin Premium">
+                </div>
+                <h2 class="scan-title">Scanning Your System</h2>
+                <p class="scan-status-text" id="scan-status-text">Initializing hardware scan...</p>
+                <div class="scan-progress-track">
+                    <div class="scan-progress-bar" id="scan-progress-bar"></div>
+                </div>
+                <div class="scan-complete-row" id="scan-complete-row" hidden>
+                    <svg class="scan-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span>System profile ready</span>
+                </div>
+                <div class="scan-error-row" id="scan-error-row" hidden>
+                    <strong>System scan failed</strong>
+                    <span class="scan-error-message" id="scan-error-message">Unable to load full system details.</span>
+                    <button class="scan-close-btn" id="scan-close-btn">Close</button>
+                </div>
+            </div>
         </div>
 
         <div class="system-info-modal" id="system-info-modal" aria-hidden="true">

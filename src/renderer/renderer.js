@@ -471,39 +471,160 @@ function initializeSystemInfoModal() {
         });
     };
 
-    openBtn.addEventListener('click', async () => {
-        openModal();
-        setLoading();
-        openBtn.disabled = true;
+    const runSystemScan = () => new Promise((resolve) => {
+        const overlay    = document.getElementById('scan-overlay');
+        const statusEl   = document.getElementById('scan-status-text');
+        const progressBar = document.getElementById('scan-progress-bar');
+        const completeRow = document.getElementById('scan-complete-row');
+        const errorRow   = document.getElementById('scan-error-row');
+        const errorMsgEl = document.getElementById('scan-error-message');
+        const closeBtn   = document.getElementById('scan-close-btn');
 
-        try {
-            console.log('[SYSTEM INFO] IPC request starts');
-            const result = await window.electronAPI.getFullSystemInfo();
-            console.log('[SYSTEM INFO] Renderer receives data', {
-                status: result.status,
-                success: result.success,
-                errorCount: Array.isArray(result.errors) ? result.errors.length : 0
+        const statusMessages = [
+            'Scanning your system...',
+            'Preparing full system info...'
+        ];
+
+        // Each message is visible for ~1500ms. Message 2 fades in at ~1700ms
+        // (1500ms interval + 200ms fade), so ANIM_MS=3200 gives it ~1500ms too.
+        const ANIM_MS = 3200;
+        const STATUS_INTERVAL = 1500;
+
+        let fetchResult  = null;
+        let fetchError   = null;
+        let animComplete = false;
+        let fetchComplete = false;
+        const startTime  = Date.now();
+
+        // Reset overlay state
+        completeRow.hidden = true;
+        completeRow.classList.remove('visible');
+        errorRow.hidden = true;
+        progressBar.style.transition = 'none';
+        progressBar.style.width = '0%';
+        statusEl.style.opacity = '';
+        statusEl.classList.remove('fade-out');
+        statusEl.textContent = statusMessages[0];
+
+        // Show overlay
+        overlay.classList.remove('hiding');
+        overlay.classList.add('visible');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+
+        // Re-enable smooth progress transitions after reset frame
+        requestAnimationFrame(() => {
+            progressBar.style.transition = 'width 0.12s linear';
+        });
+
+        // Cycle status text
+        let statusIdx = 0;
+        const statusTimer = setInterval(() => {
+            statusIdx = Math.min(statusIdx + 1, statusMessages.length - 1);
+            statusEl.classList.add('fade-out');
+            setTimeout(() => {
+                statusEl.textContent = statusMessages[statusIdx];
+                statusEl.classList.remove('fade-out');
+            }, 200);
+        }, STATUS_INTERVAL);
+
+        // Fill progress to 90% over ANIM_MS, then hold
+        const progressTimer = setInterval(() => {
+            const raw = ((Date.now() - startTime) / ANIM_MS) * 90;
+            progressBar.style.width = Math.min(raw, 90) + '%';
+        }, 60);
+
+        // Minimum animation timer
+        const animTimer = setTimeout(() => {
+            animComplete = true;
+            if (fetchComplete) onBothDone();
+        }, ANIM_MS);
+
+        // Kick off IPC fetch
+        console.log('[SCAN] IPC request starts');
+        window.electronAPI.getFullSystemInfo()
+            .then((result) => {
+                fetchResult = result;
+                fetchComplete = true;
+                console.log('[SCAN] Fetch complete, status:', result.status);
+                if (animComplete) onBothDone();
+            })
+            .catch((err) => {
+                fetchError = err;
+                fetchComplete = true;
+                console.error('[SCAN] Fetch error:', err.message);
+                if (animComplete) onBothDone();
             });
-            renderSystemInfo(result.info || {});
 
-            if (result.status === 'success') {
-                showContent();
-                showNotification('success', 'System Info Loaded', 'Full system info is ready.');
-            } else if (result.status === 'partial') {
-                showPartial(result.message);
-                showNotification('warning', 'Partial System Info', result.message || 'Some details were unavailable.');
-            } else {
-                showError(result.message);
-                showNotification('error', 'System Info Error', result.message || 'System info could not be loaded.');
+        function onBothDone() {
+            clearInterval(statusTimer);
+            clearInterval(progressTimer);
+            clearTimeout(animTimer);
+
+            if (fetchError) {
+                progressBar.style.width = '0%';
+                statusEl.classList.add('fade-out');
+                errorMsgEl.textContent = fetchError.message || 'Unable to load full system details.';
+                setTimeout(() => { errorRow.hidden = false; }, 220);
+                closeBtn.onclick = () => closeOverlay(false);
+                return;
             }
-        } catch (error) {
-            showError(error.message);
-            showNotification('error', 'System Info Error', error.message);
-        } finally {
-            loadingState.hidden = true;
-            openBtn.disabled = false;
-            console.log('[SYSTEM INFO] Loading ends');
+
+            // Complete: fill bar and show checkmark
+            progressBar.style.width = '100%';
+            statusEl.classList.add('fade-out');
+            setTimeout(() => {
+                statusEl.style.opacity = '0';
+                completeRow.hidden = false;
+                requestAnimationFrame(() => completeRow.classList.add('visible'));
+            }, 220);
+
+            setTimeout(() => closeOverlay(true), 380);
         }
+
+        function closeOverlay(success) {
+            overlay.classList.add('hiding');
+            overlay.classList.remove('visible');
+            setTimeout(() => {
+                overlay.classList.remove('hiding');
+                overlay.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('modal-open');
+                statusEl.style.opacity = '';
+                statusEl.classList.remove('fade-out');
+                resolve({ success, result: fetchResult });
+            }, 380);
+        }
+    });
+
+    openBtn.addEventListener('click', async () => {
+        openBtn.disabled = true;
+        const scan = await runSystemScan();
+        openBtn.disabled = false;
+
+        if (!scan.success) return;
+
+        const result = scan.result;
+        console.log('[SYSTEM INFO] Renderer receives data', {
+            status: result.status,
+            success: result.success,
+            errorCount: Array.isArray(result.errors) ? result.errors.length : 0
+        });
+
+        openModal();
+        renderSystemInfo(result.info || {});
+
+        if (result.status === 'success') {
+            showContent();
+            showNotification('success', 'System Info Loaded', 'Full system info is ready.');
+        } else if (result.status === 'partial') {
+            showPartial(result.message);
+            showNotification('warning', 'Partial System Info', result.message || 'Some details were unavailable.');
+        } else {
+            showError(result.message);
+            showNotification('error', 'System Info Error', result.message || 'System info could not be loaded.');
+        }
+        loadingState.hidden = true;
+        console.log('[SYSTEM INFO] Loading ends');
     });
 
     modal.querySelectorAll('[data-system-info-close]').forEach((el) => {
@@ -1259,6 +1380,49 @@ const TOGGLE_DETAILS = {
     }
 };
 
+const NETWORK_DETAILS = {
+    'auto-dns-finder': {
+        impact: 'Low',
+        category: 'Network',
+        body: 'Coming soon: tests popular DNS providers and recommends the lowest latency option detected for the current connection.'
+    },
+    'network-doctor': {
+        impact: 'Medium',
+        category: 'Safe',
+        body: 'Coming soon: scans common network issues and suggests fixes without applying changes automatically.'
+    },
+    'flush-dns-cache': {
+        impact: 'Low',
+        category: 'Locked',
+        body: 'Coming soon: clears the local DNS resolver cache after the action is explicitly enabled.'
+    },
+    'adapter-reset': {
+        impact: 'Medium',
+        category: 'Locked',
+        body: 'Coming soon: restarts a selected network adapter with a clear warning before anything runs.'
+    },
+    'packet-loss-test': {
+        impact: 'Low',
+        category: 'Network',
+        body: 'Coming soon: checks packet loss and jitter using ping samples and reports measured results.'
+    },
+    'tcp-ip-repair': {
+        impact: 'High',
+        category: 'Safe',
+        body: 'Coming soon: groups Winsock and IP repair actions behind warnings so repair steps are explicit.'
+    },
+    'dns-server-manager': {
+        impact: 'Medium',
+        category: 'Coming Soon',
+        body: 'Coming soon: view DNS profiles and apply selected servers after showing exactly what will change.'
+    },
+    'game-route-checker': {
+        impact: 'Low',
+        category: 'Network',
+        body: 'Coming soon: checks ping to common game regions and servers without promising guaranteed latency changes.'
+    }
+};
+
 const TOGGLE_ICONS = {
     'gaming-game-bar':           '<rect x="2" y="6" width="20" height="12" rx="3"/><path d="M6 12h4M8 10v4M16 11h.01M19 13h.01"/>',
     'gaming-game-mode':          '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
@@ -1319,12 +1483,13 @@ function ensureTooltip() {
 
 function showTooltipFor(card) {
     const tt = ensureTooltip();
-    const id = card.dataset.toggle || '';
+    const id = card.dataset.toggle || card.dataset.networkCard || '';
     const category = card.dataset.cat || 'default';
-    const detail = TOGGLE_DETAILS[id] || { impact: 'Medium', category: 'Tweak', body: 'Refines a system behavior to favor responsiveness over background activity.' };
+    const detail = TOGGLE_DETAILS[id] || NETWORK_DETAILS[id] || { impact: 'Medium', category: 'Tweak', body: 'Refines a system behavior to favor responsiveness over background activity.' };
 
     const title = card.querySelector('.tc-titles h4')?.textContent || '';
     const isOn = card.classList.contains('on');
+    const isNetworkPlaceholder = !!card.dataset.networkCard;
 
     tt.dataset.cat = category;
     tt.dataset.impact = detail.impact.toLowerCase();
@@ -1332,7 +1497,8 @@ function showTooltipFor(card) {
     tt.querySelector('.tt-cat').textContent = detail.category;
     tt.querySelector('.tt-impact-text').textContent = `${detail.impact} impact`;
     tt.querySelector('.tt-body').textContent = detail.body;
-    tt.querySelector('.tt-state-text').textContent = isOn ? 'Currently active' : 'Currently inactive';
+    tt.querySelector('.tt-state-text').textContent = isNetworkPlaceholder ? 'Placeholder locked' : (isOn ? 'Currently active' : 'Currently inactive');
+    tt.querySelector('.tt-hint').textContent = isNetworkPlaceholder ? 'Coming soon' : 'Toggle to apply';
     tt.classList.toggle('is-on', isOn);
 
     // Position centered below the card, kept inside viewport
@@ -1360,7 +1526,7 @@ function hideTooltip() {
 }
 
 function enhanceToggleCards() {
-    const cards = document.querySelectorAll('.toggle-card');
+    const cards = document.querySelectorAll('.toggle-card[data-toggle]');
     cards.forEach(card => {
         if (card.dataset.enhanced === '1') return;
         card.dataset.enhanced = '1';
@@ -1447,7 +1613,40 @@ function enhanceToggleCards() {
     document.querySelector('.content')?.addEventListener('scroll', hideTooltip, { passive: true });
 }
 
+function enhanceNetworkCards() {
+    const cards = document.querySelectorAll('#page-network .network-card');
+    cards.forEach(card => {
+        if (card.dataset.networkEnhanced === '1') return;
+        card.dataset.networkEnhanced = '1';
+        card.dataset.cat = 'network';
+
+        card.addEventListener('pointermove', (e) => {
+            const r = card.getBoundingClientRect();
+            const x = ((e.clientX - r.left) / r.width) * 100;
+            const y = ((e.clientY - r.top) / r.height) * 100;
+            card.style.setProperty('--mx', `${x}%`);
+            card.style.setProperty('--my', `${y}%`);
+        });
+
+        let showTimer;
+        card.addEventListener('mouseenter', () => {
+            clearTimeout(showTimer);
+            showTimer = setTimeout(() => {
+                ensureTooltip().dataset.targetId = card.dataset.networkCard || '';
+                showTooltipFor(card);
+            }, 220);
+        });
+        card.addEventListener('mouseleave', () => {
+            clearTimeout(showTimer);
+            hideTooltip();
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Defer slightly so the toggle wiring in initializeToggles has time to attach checkbox listeners
-    setTimeout(enhanceToggleCards, 0);
+    setTimeout(() => {
+        enhanceToggleCards();
+        enhanceNetworkCards();
+    }, 0);
 });
