@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         console.log('[SYSTEM INFO] IPC request starts: preload get-full-system-info');
         return ipcRenderer.invoke('get-full-system-info');
     },
+    runSystemScan: () => ipcRenderer.invoke('run-system-scan'),
     getLiveStats: () => ipcRenderer.invoke('get-live-stats'),
     getNetworkInfo: () => ipcRenderer.invoke('get-network-info'),
     flushDns: () => ipcRenderer.invoke('network-flush-dns'),

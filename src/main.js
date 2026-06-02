@@ -20,10 +20,12 @@ try {
 
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 1280,
-        height: 800,
-        minWidth: 1100,
-        minHeight: 700,
+        width: 1400,
+        height: 900,
+        minWidth: 1200,
+        minHeight: 760,
+        center: true,
+        resizable: true,
         frame: false,
         transparent: false,
         backgroundColor: '#0a0a0a',
@@ -346,6 +348,229 @@ ipcMain.handle('get-full-system-info', async () => {
             errors: [error.message],
             info: {}
         };
+    }
+});
+
+ipcMain.handle('run-system-scan', async () => {
+    console.log('[SCAN] IPC request starts: run-system-scan');
+    try {
+        // Snapshot live stats — already polled continuously, zero extra overhead
+        const liveStats = { ...currentSystemStats };
+        const cpuUsage  = Math.round(liveStats.cpuUsage   || 0);
+        const memUsage  = Math.round(liveStats.memoryUsage || 0);
+        const gpuUsage  = Math.round(liveStats.gpuUsage   || 0);
+
+        // Run focused queries in parallel, each with independent timeouts
+        const [storageResult, gpuResult, startupResult, pingResult] = await Promise.all([
+            queryCim('scan-storage', `
+$ErrorActionPreference = 'Stop'
+@(Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" |
+  Select-Object DeviceID,Size,FreeSpace) | ConvertTo-Json -Compress -Depth 4
+`, 8000),
+            queryCim('scan-gpu', `
+$ErrorActionPreference = 'Stop'
+@(Get-CimInstance -ClassName Win32_VideoController |
+  Select-Object Name,DriverVersion) | ConvertTo-Json -Compress -Depth 4
+`, 8000),
+            queryCim('scan-startup', `
+$ErrorActionPreference = 'Stop'
+@(Get-CimInstance -ClassName Win32_StartupCommand) |
+  Measure-Object | Select-Object Count | ConvertTo-Json -Compress
+`, 8000),
+            // Ping 8.8.8.8 — runNetworkCommand always resolves, never rejects
+            new Promise(resolve => {
+                const cmd = require('child_process');
+                cmd.execFile('ping', ['-n', '3', '8.8.8.8'], { windowsHide: true, timeout: 10000 }, (err, stdout) => {
+                    resolve({ success: !err, output: stdout || '' });
+                });
+            })
+        ]);
+
+        // ── Storage ── find minimum free% across all fixed drives
+        const storageDrives = normalizeObjectList(storageResult.data);
+        let minFreePercent = null;
+        let storageDetail  = 'unknown';
+        if (storageDrives.length > 0) {
+            const pcts = storageDrives
+                .filter(d => d.Size && Number(d.Size) > 0)
+                .map(d => Math.round((Number(d.FreeSpace || 0) / Number(d.Size)) * 100));
+            if (pcts.length > 0) {
+                minFreePercent = Math.min(...pcts);
+                storageDetail  = `${minFreePercent}% free (lowest drive)`;
+            }
+        }
+
+        // ── GPU ── check for valid driver version
+        const gpuDevices      = normalizeObjectList(gpuResult.data);
+        const hasGpuDriverInfo = gpuDevices.some(g => g.DriverVersion && String(g.DriverVersion).trim() !== '');
+        const gpuName          = gpuDevices.length ? unknownIfEmpty(gpuDevices[0].Name, 'not detected') : 'not detected';
+
+        // ── Startup items ── Win32_StartupCommand count
+        const startupData  = startupResult.success ? startupResult.data : null;
+        const startupCount = startupData && typeof startupData.Count === 'number' ? startupData.Count : null;
+
+        // ── Network ── parse average ping from ping output
+        const pingStats = parsePingOutput(pingResult.output || '');
+        const pingMs    = pingStats.averageMs;
+
+        // ══ Score formula ═══════════════════════════════════════════════════
+        // Start at 100. Every input is read from this PC at runtime.
+        // No values are hardcoded.
+        let score = 100;
+
+        // CPU  — live polled usage %
+        if      (cpuUsage > 80) score -= 15;
+        else if (cpuUsage > 60) score -= 8;
+        else if (cpuUsage > 40) score -= 3;
+
+        // Memory — live polled usage %
+        if      (memUsage > 90) score -= 20;
+        else if (memUsage > 75) score -= 12;
+        else if (memUsage > 60) score -= 5;
+
+        // Storage — lowest free % across all CIM-queried fixed drives
+        if (minFreePercent !== null) {
+            if      (minFreePercent < 10) score -= 15;
+            else if (minFreePercent < 20) score -= 8;
+            else if (minFreePercent < 30) score -= 3;
+        }
+
+        // Network — average ping to 8.8.8.8
+        if      (pingMs === null) score -= 2;    // unreachable, small unknown penalty
+        else if (pingMs > 100)   score -= 8;
+        else if (pingMs > 50)    score -= 4;
+        else if (pingMs > 25)    score -= 1;
+
+        // Startup items — CIM Win32_StartupCommand count
+        if (startupCount !== null) {
+            if      (startupCount > 15) score -= 8;
+            else if (startupCount > 10) score -= 5;
+            else if (startupCount > 5)  score -= 2;
+        }
+
+        // GPU driver info missing — minor informational deduction
+        if (!hasGpuDriverInfo) score -= 2;
+
+        score = Math.max(0, Math.min(100, score));
+
+        // ── Overall status ──────────────────────────────────────────────────
+        let overallStatus, description;
+        if (score >= 85) {
+            overallStatus = 'optimized';
+            description   = 'Your system is running efficiently. Resources are well-balanced and performance looks solid.';
+        } else if (score >= 65) {
+            overallStatus = 'good';
+            description   = 'Your system is in reasonable shape, but a few areas could benefit from some tuning.';
+        } else {
+            overallStatus = 'needs-attention';
+            description   = 'Several areas are putting pressure on your system. The tweaks below can help restore performance.';
+        }
+
+        // ── Category statuses ───────────────────────────────────────────────
+        const categories = {
+            cpu: {
+                status: cpuUsage > 60 ? 'needs-work' : cpuUsage > 40 ? 'good' : 'excellent',
+                detail: `${cpuUsage}% active usage`
+            },
+            memory: {
+                status: memUsage > 75 ? 'needs-work' : memUsage > 60 ? 'good' : 'excellent',
+                detail: `${memUsage}% usage`
+            },
+            storage: {
+                status: minFreePercent === null ? 'unknown'
+                    : minFreePercent < 20 ? 'needs-work'
+                    : minFreePercent < 40 ? 'good' : 'excellent',
+                detail: storageDetail
+            },
+            network: {
+                status: pingMs === null ? 'unknown'
+                    : pingMs > 100 ? 'needs-work'
+                    : pingMs > 50  ? 'good' : 'excellent',
+                detail: pingMs !== null ? `${pingMs}ms avg (8.8.8.8)` : 'not detected'
+            },
+            startup: {
+                status: startupCount === null ? 'unknown'
+                    : startupCount > 10 ? 'needs-work'
+                    : startupCount > 5  ? 'good' : 'excellent',
+                detail: startupCount !== null ? `${startupCount} startup items` : 'unknown'
+            },
+            gpu: {
+                status: hasGpuDriverInfo ? 'excellent' : gpuDevices.length > 0 ? 'good' : 'unknown',
+                detail: hasGpuDriverInfo ? 'Driver detected' : gpuDevices.length > 0 ? 'Limited driver info' : 'Not detected'
+            }
+        };
+
+        // ── Recommended tweaks (derived from scan results, not hardcoded) ───
+        const tweaks = [];
+
+        tweaks.push({
+            id: 'disable-game-bar',
+            name: 'Disable Xbox Game Bar',
+            description: 'Removes Game Bar background recording overhead.',
+            badge: 'safe'
+        });
+        tweaks.push({
+            id: 'optimize-power-plan',
+            name: 'Set High Performance Power Plan',
+            description: 'Lets your CPU run at full clock speeds without power throttling.',
+            badge: 'safe'
+        });
+        if (cpuUsage > 50 || (startupCount !== null && startupCount > 5)) {
+            tweaks.push({
+                id: 'manage-startup',
+                name: 'Manage Startup Applications',
+                description: `${startupCount !== null ? startupCount + ' startup items detected. ' : ''}Reducing startup items speeds up boot and lowers idle load.`,
+                badge: 'admin'
+            });
+        }
+        if (minFreePercent !== null && minFreePercent < 30) {
+            tweaks.push({
+                id: 'clear-temp',
+                name: 'Clear Temp Files & Cache',
+                description: `${minFreePercent}% free on lowest drive. Cleaning temp data reclaims disk space.`,
+                badge: 'safe'
+            });
+        }
+        if (pingMs !== null && pingMs > 40) {
+            tweaks.push({
+                id: 'disable-delivery-opt',
+                name: 'Disable Delivery Optimization',
+                description: 'Stops Windows from using your connection to distribute updates to other PCs.',
+                badge: 'safe'
+            });
+        }
+        if (!hasGpuDriverInfo) {
+            tweaks.push({
+                id: 'gpu-drivers',
+                name: 'Check GPU Driver Status',
+                description: 'No driver version detected. Updating drivers can improve stability and graphics performance.',
+                badge: 'soon'
+            });
+        }
+        if (memUsage > 70) {
+            tweaks.push({
+                id: 'tune-memory',
+                name: 'Tune Memory Services',
+                description: `Memory at ${memUsage}%. Adjusting background memory services can free up RAM.`,
+                badge: 'safe'
+            });
+        }
+
+        console.log(`[SCAN] Complete. Score: ${score} | Status: ${overallStatus} | CPU: ${cpuUsage}% | MEM: ${memUsage}% | Ping: ${pingMs}ms | Startup: ${startupCount}`);
+
+        return {
+            success: true,
+            score,
+            status: overallStatus,
+            description,
+            categories,
+            tweaks: tweaks.slice(0, 6),
+            rawData: { cpuUsage, memUsage, gpuUsage, gpuName, hasGpuDriverInfo, pingMs, startupCount, storageMinFreePercent: minFreePercent }
+        };
+
+    } catch (error) {
+        console.error('[SCAN] Failed:', error);
+        return { success: false, error: error.message };
     }
 });
 

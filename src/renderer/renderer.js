@@ -15,6 +15,7 @@ function initializeApp() {
     initializeHireButtons();
     initializeExternalLinks();
     initializeSystemInfoModal();
+    initializeSystemScanModal();
     loadSystemInfo();
     startLiveMonitoring();
 }
@@ -638,6 +639,214 @@ function initializeSystemInfoModal() {
     });
 }
 
+function initializeSystemScanModal() {
+    const modal      = document.getElementById('scan-results-modal');
+    const loadingEl  = document.getElementById('sr-loading');
+    const errorEl    = document.getElementById('sr-error');
+    const errorMsgEl = document.getElementById('sr-error-msg');
+    const resultsEl  = document.getElementById('sr-results');
+    const statusEl   = document.getElementById('sr-loading-status');
+    const barEl      = document.getElementById('sr-loading-bar');
+    const scanBtn    = document.getElementById('hero-scan-btn');
+
+    if (!modal || !scanBtn) return;
+
+    const openModal = () => {
+        modal.classList.add('visible');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+    };
+
+    const closeModal = () => {
+        modal.classList.remove('visible');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+    };
+
+    const resetLoading = () => {
+        loadingEl.hidden = false;
+        errorEl.hidden   = true;
+        resultsEl.hidden = true;
+        statusEl.textContent = 'Scanning your system...';
+        statusEl.classList.remove('fade');
+        barEl.style.transition = 'none';
+        barEl.style.width = '0%';
+    };
+
+    const showError = (msg) => {
+        loadingEl.hidden = true;
+        errorEl.hidden   = false;
+        resultsEl.hidden = true;
+        if (errorMsgEl) errorMsgEl.textContent = msg || 'Unable to complete system scan.';
+    };
+
+    const showResults = (data) => {
+        loadingEl.hidden = true;
+        errorEl.hidden   = true;
+        resultsEl.hidden = false;
+        renderScanResults(data);
+    };
+
+    function renderScanResults(data) {
+        const RING_CIRC = 327; // 2π × r=52 ≈ 326.73
+
+        // Score number
+        document.getElementById('sr-score-num').textContent = data.score;
+
+        // Ring fill — start at empty, animate to score offset after paint
+        const ringFill  = document.getElementById('sr-ring-fill');
+        const colorClass = data.score >= 85 ? 'sr-ring-green'
+            : data.score >= 65 ? 'sr-ring-amber' : 'sr-ring-red';
+        ringFill.className = 'sr-ring-fill ' + colorClass;
+        ringFill.style.strokeDasharray  = RING_CIRC;
+        ringFill.style.strokeDashoffset = RING_CIRC;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            ringFill.style.strokeDashoffset = RING_CIRC * (1 - data.score / 100);
+        }));
+
+        // Status pill
+        const pill = document.getElementById('sr-pill');
+        const pillMap = {
+            'optimized':       { label: 'Optimized',       cls: 'sr-pill-optimized' },
+            'good':            { label: 'Good',             cls: 'sr-pill-good' },
+            'needs-attention': { label: 'Needs Attention',  cls: 'sr-pill-needs-attention' }
+        };
+        const pm = pillMap[data.status] || { label: data.status, cls: '' };
+        pill.textContent = pm.label;
+        pill.className   = 'sr-pill ' + pm.cls;
+
+        // Description
+        document.getElementById('sr-desc').textContent = data.description;
+
+        // Category cards helper
+        const setCategory = (statusId, detailId, catData) => {
+            const sEl = document.getElementById(statusId);
+            const dEl = document.getElementById(detailId);
+            if (!sEl || !catData) return;
+            const statusLabels  = { excellent: 'Excellent', good: 'Good', 'needs-work': 'Needs Work', unknown: 'Unknown' };
+            const statusClasses = { excellent: 'sr-cat-excellent', good: 'sr-cat-good', 'needs-work': 'sr-cat-needs-work', unknown: 'sr-cat-unknown' };
+            sEl.textContent = statusLabels[catData.status] || catData.status;
+            sEl.className   = 'sr-cat-status ' + (statusClasses[catData.status] || '');
+            if (dEl) dEl.textContent = catData.detail;
+        };
+
+        const cats = data.categories || {};
+        setCategory('sr-cat-cpu-status',     'sr-cat-cpu-detail',     cats.cpu);
+        setCategory('sr-cat-mem-status',     'sr-cat-mem-detail',     cats.memory);
+        setCategory('sr-cat-storage-status', 'sr-cat-storage-detail', cats.storage);
+        setCategory('sr-cat-net-status',     'sr-cat-net-detail',     cats.network);
+        setCategory('sr-cat-startup-status', 'sr-cat-startup-detail', cats.startup);
+        setCategory('sr-cat-gpu-status',     'sr-cat-gpu-detail',     cats.gpu);
+
+        // Tweaks list
+        const list = document.getElementById('sr-tweaks-list');
+        list.textContent = '';
+
+        const badgeLabels  = { safe: 'Safe', admin: 'Admin Required', soon: 'Coming Soon' };
+        const badgeClasses = { safe: 'sr-badge-safe', admin: 'sr-badge-admin', soon: 'sr-badge-soon' };
+
+        (data.tweaks || []).forEach(tweak => {
+            const row  = document.createElement('div');
+            row.className = 'sr-tweak-row';
+
+            const body = document.createElement('div');
+            body.className = 'sr-tweak-body';
+
+            const nameEl = document.createElement('span');
+            nameEl.className   = 'sr-tweak-name';
+            nameEl.textContent = tweak.name;
+
+            const descEl = document.createElement('span');
+            descEl.className   = 'sr-tweak-desc';
+            descEl.textContent = tweak.description;
+
+            body.appendChild(nameEl);
+            body.appendChild(descEl);
+
+            const badge = document.createElement('span');
+            badge.className   = 'sr-tweak-badge ' + (badgeClasses[tweak.badge] || 'sr-badge-soon');
+            badge.textContent = badgeLabels[tweak.badge] || tweak.badge;
+
+            row.appendChild(body);
+            row.appendChild(badge);
+            list.appendChild(row);
+        });
+
+        // Apply button — navigate user to Tweaks tab
+        const applyBtn = document.getElementById('sr-apply-btn');
+        if (applyBtn) applyBtn.onclick = () => {
+            showNotification('info', 'Apply Tweaks', 'Head to the Tweaks tab to apply optimizations individually.');
+        };
+
+        // View Full System Info button — close this modal then trigger the existing flow
+        const viewBtn = document.getElementById('sr-view-system-btn');
+        if (viewBtn) viewBtn.onclick = () => {
+            closeModal();
+            document.getElementById('hero-system-info-btn')?.click();
+        };
+    }
+
+    // Close triggers (backdrop click + close button)
+    modal.querySelectorAll('[data-sr-close]').forEach(el => {
+        el.addEventListener('click', closeModal);
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && modal.classList.contains('visible')) closeModal();
+    });
+
+    // Main scan button click
+    scanBtn.addEventListener('click', async () => {
+        scanBtn.disabled = true;
+        openModal();
+        resetLoading();
+
+        const ANIM_MS   = 3000;
+        const startTime = Date.now();
+
+        // Switch status text at the halfway point
+        const statusTimer = setTimeout(() => {
+            statusEl.classList.add('fade');
+            setTimeout(() => {
+                statusEl.textContent = 'Calculating optimization score...';
+                statusEl.classList.remove('fade');
+            }, 250);
+        }, 1500);
+
+        // Progress bar fills to 88% over ANIM_MS, then holds
+        requestAnimationFrame(() => { barEl.style.transition = 'width 0.12s linear'; });
+        const progressTimer = setInterval(() => {
+            const pct = Math.min(((Date.now() - startTime) / ANIM_MS) * 88, 88);
+            barEl.style.width = pct + '%';
+        }, 60);
+
+        let scanData  = null;
+        let scanError = null;
+
+        await Promise.all([
+            new Promise(resolve => setTimeout(resolve, ANIM_MS)),
+            window.electronAPI.runSystemScan()
+                .then(r  => { scanData  = r; })
+                .catch(e => { scanError = e; })
+        ]);
+
+        clearInterval(progressTimer);
+        clearTimeout(statusTimer);
+        scanBtn.disabled = false;
+
+        if (scanError || !scanData || !scanData.success) {
+            const msg = (scanError && scanError.message)
+                || (scanData  && scanData.error)
+                || 'Unable to complete system scan.';
+            showError(msg);
+            return;
+        }
+
+        barEl.style.width = '100%';
+        await new Promise(r => setTimeout(r, 180));
+        showResults(scanData);
+    });
+}
+
 function initializeToggles() {
     const toggleCards = document.querySelectorAll('.toggle-card');
 
@@ -1234,18 +1443,6 @@ function initializeDashboardExtras() {
         });
     }
 
-    wireActionButton(
-        document.getElementById('hero-optimize-btn'),
-        'Optimizing…', 'Applied',
-        'Optimization complete',
-        'Recommended preset applied. Your system is tuned for maximum performance.'
-    );
-    wireActionButton(
-        document.getElementById('hero-scan-btn'),
-        'Scanning…', 'Applied',
-        'System scan complete',
-        'No critical issues found. Your system is running smoothly.'
-    );
     wireActionButton(
         document.getElementById('apply-all-btn'),
         'Applying…', 'Applied',
