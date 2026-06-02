@@ -14,8 +14,8 @@ function initializeApp() {
     initializeSocialCards();
     initializeHireButtons();
     initializeExternalLinks();
-    initializeSystemInfoModal();
-    initializeSystemScanModal();
+    const sysInfoApi = initializeSystemInfoModal();
+    initializeSystemScanModal(sysInfoApi);
     loadSystemInfo();
     startLiveMonitoring();
 }
@@ -637,9 +637,25 @@ function initializeSystemInfoModal() {
             closeModal();
         }
     });
+
+    // Fast-path open: skip the scan overlay, render with already-fetched data
+    const openDirect = (result) => {
+        openModal();
+        renderSystemInfo(result.info || {});
+        if (result.status === 'success') {
+            showContent();
+        } else if (result.status === 'partial') {
+            showPartial(result.message);
+        } else {
+            showError(result.message);
+        }
+        loadingState.hidden = true;
+    };
+
+    return { openDirect };
 }
 
-function initializeSystemScanModal() {
+function initializeSystemScanModal(sysInfoApi) {
     const modal      = document.getElementById('scan-results-modal');
     const loadingEl  = document.getElementById('sr-loading');
     const errorEl    = document.getElementById('sr-error');
@@ -650,6 +666,9 @@ function initializeSystemScanModal() {
     const scanBtn    = document.getElementById('hero-scan-btn');
 
     if (!modal || !scanBtn) return;
+
+    // Cached prefetch promise for full system info — set after scan results render
+    let _sysInfoPrefetch = null;
 
     const openModal = () => {
         modal.classList.add('visible');
@@ -772,17 +791,135 @@ function initializeSystemScanModal() {
             list.appendChild(row);
         });
 
-        // Apply button — navigate user to Tweaks tab
-        const applyBtn = document.getElementById('sr-apply-btn');
-        if (applyBtn) applyBtn.onclick = () => {
-            showNotification('info', 'Apply Tweaks', 'Head to the Tweaks tab to apply optimizations individually.');
+        // ── Apply results popup ──────────────────────────────────────
+        const applyBtn      = document.getElementById('sr-apply-btn');
+        const applyBtnLabel = document.getElementById('sr-apply-btn-label');
+        const popup         = document.getElementById('sr-apply-popup');
+        const popupList     = document.getElementById('sr-apply-popup-list');
+        const popupSummary  = document.getElementById('sr-apply-popup-summary');
+        const popupClose    = document.getElementById('sr-apply-popup-close');
+        const popupDone     = document.getElementById('sr-apply-popup-done');
+        const scanPanel     = modal.querySelector('.scan-results-panel');
+
+        const closePopup = () => {
+            popup.classList.remove('sr-popup-visible');
+            setTimeout(() => { popup.hidden = true; }, 260);
+        };
+        if (popupClose) popupClose.onclick = closePopup;
+        if (popupDone)  popupDone.onclick  = closePopup;
+
+        if (applyBtn) applyBtn.onclick = async () => {
+            const safeTweaks = (data.tweaks || []).filter(t => t.badge === 'safe');
+            if (safeTweaks.length === 0) {
+                showNotification('info', 'Nothing to Apply', 'No safe tweaks are available for this scan.');
+                return;
+            }
+
+            applyBtn.disabled = true;
+            if (applyBtnLabel) applyBtnLabel.textContent = 'Applying...';
+
+            // Populate popup — ALL tweaks so user sees the full picture
+            popupList.textContent = '';
+            popupSummary.textContent = '';
+            delete popupSummary.dataset.variant;
+
+            const rowMap = {};
+            (data.tweaks || []).forEach(tweak => {
+                const row = document.createElement('div');
+                row.className = 'sr-popup-row';
+
+                const iconEl = document.createElement('div');
+                iconEl.className = 'sr-popup-icon';
+
+                const bodyEl = document.createElement('div');
+                bodyEl.className = 'sr-popup-body';
+
+                const nameEl = document.createElement('span');
+                nameEl.className = 'sr-popup-name';
+                nameEl.textContent = tweak.name;
+
+                const reasonEl = document.createElement('span');
+                reasonEl.className = 'sr-popup-reason';
+
+                if (tweak.badge === 'admin') {
+                    row.dataset.state = 'admin';
+                    reasonEl.textContent = 'Requires Administrator';
+                } else if (tweak.badge === 'soon') {
+                    row.dataset.state = 'soon';
+                    reasonEl.textContent = 'Coming Soon';
+                } else {
+                    row.dataset.state = 'pending';
+                    reasonEl.textContent = 'Pending';
+                    rowMap[tweak.id] = row;
+                }
+
+                bodyEl.appendChild(nameEl);
+                bodyEl.appendChild(reasonEl);
+                row.appendChild(iconEl);
+                row.appendChild(bodyEl);
+                popupList.appendChild(row);
+            });
+
+            // Reveal popup and scroll it into view
+            popup.hidden = false;
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                popup.classList.add('sr-popup-visible');
+                if (scanPanel) scanPanel.scrollTo({ top: scanPanel.scrollHeight, behavior: 'smooth' });
+            }));
+
+            const progressText = { running: 'Applying...', done: 'Done', failed: 'Failed', skipped: 'Not Available' };
+            const unsubscribe = window.electronAPI.onTweakProgress((progress) => {
+                const row = rowMap[progress.id];
+                if (!row) return;
+                row.dataset.state = progress.status;
+                const r = row.querySelector('.sr-popup-reason');
+                if (r) r.textContent = progressText[progress.status] || progress.status;
+            });
+
+            try {
+                const result = await window.electronAPI.applyRecommendedTweaks(safeTweaks.map(t => t.id));
+                const succeeded = (result.results || []).filter(r => r.success).length;
+                const failed    = (result.results || []).filter(r => !r.success).length;
+
+                if (failed === 0) {
+                    popupSummary.textContent = `${succeeded} safe tweak${succeeded !== 1 ? 's' : ''} applied successfully`;
+                    popupSummary.dataset.variant = 'success';
+                } else {
+                    popupSummary.textContent = `${succeeded} applied · ${failed} could not be applied`;
+                    popupSummary.dataset.variant = 'partial';
+                }
+                if (applyBtnLabel) applyBtnLabel.textContent = 'Applied';
+            } catch (err) {
+                popupSummary.textContent = 'Could not apply: ' + (err.message || 'Unknown error');
+                popupSummary.dataset.variant = 'error';
+                applyBtn.disabled = false;
+                if (applyBtnLabel) applyBtnLabel.textContent = 'Apply Recommended Tweaks';
+            } finally {
+                unsubscribe();
+            }
         };
 
-        // View Full System Info button — close this modal then trigger the existing flow
+        // ── View Full System Info — fast path via prefetch ────────────
         const viewBtn = document.getElementById('sr-view-system-btn');
-        if (viewBtn) viewBtn.onclick = () => {
-            closeModal();
-            document.getElementById('hero-system-info-btn')?.click();
+        if (viewBtn) viewBtn.onclick = async () => {
+            // Hide scan modal visually; keep body locked so there's no scroll jump
+            modal.classList.remove('visible');
+            modal.setAttribute('aria-hidden', 'true');
+
+            let opened = false;
+            if (_sysInfoPrefetch && sysInfoApi) {
+                try {
+                    const result = await _sysInfoPrefetch;
+                    if (result && (result.status === 'success' || result.status === 'partial')) {
+                        sysInfoApi.openDirect(result);
+                        opened = true;
+                    }
+                } catch (_) {}
+            }
+            if (!opened) {
+                document.body.classList.remove('modal-open');
+                document.getElementById('hero-system-info-btn')?.click();
+            }
         };
     }
 
@@ -797,6 +934,7 @@ function initializeSystemScanModal() {
     // Main scan button click
     scanBtn.addEventListener('click', async () => {
         scanBtn.disabled = true;
+        _sysInfoPrefetch = null; // reset so we always get fresh data after a new scan
         openModal();
         resetLoading();
 
@@ -844,6 +982,11 @@ function initializeSystemScanModal() {
         barEl.style.width = '100%';
         await new Promise(r => setTimeout(r, 180));
         showResults(scanData);
+
+        // Prefetch full system info while the user reads results
+        if (!_sysInfoPrefetch) {
+            _sysInfoPrefetch = window.electronAPI.getFullSystemInfo().catch(() => null);
+        }
     });
 }
 

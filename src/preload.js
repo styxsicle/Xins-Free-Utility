@@ -20,6 +20,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     resetWinsock: () => ipcRenderer.invoke('network-reset-winsock'),
 
     applyTweak: (tweakId, action) => ipcRenderer.invoke('apply-tweak', tweakId, action),
+    applyRecommendedTweaks: (tweakIds) => ipcRenderer.invoke('apply-recommended-tweaks', tweakIds),
+    onTweakProgress: (cb) => {
+        const handler = (_, data) => cb(data);
+        ipcRenderer.on('tweak-progress', handler);
+        return () => ipcRenderer.removeListener('tweak-progress', handler);
+    },
     getToggleStates: () => ipcRenderer.invoke('get-toggle-states'),
     saveToggleState: (toggleId, state) => ipcRenderer.invoke('save-toggle-state', toggleId, state),
     runCleanup: (type) => ipcRenderer.invoke('run-cleanup', type),

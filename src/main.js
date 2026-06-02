@@ -1106,6 +1106,18 @@ const tweakCommands = {
         apply: 'ipconfig /flushdns',
         revert: 'echo DNS cache will rebuild automatically'
     },
+    'optimize-power-plan': {
+        apply: 'powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c'
+    },
+    'clear-temp': {
+        apply: 'del /q /f /s "%TEMP%\\*" 2>nul & exit /b 0'
+    },
+    'disable-delivery-opt': {
+        apply: 'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\DeliveryOptimization" /v SystemSettingsDownloadMode /t REG_DWORD /d 0 /f'
+    },
+    'tune-memory': {
+        apply: 'reg add "HKCU\\Control Panel\\Desktop" /v AutoEndTasks /t REG_SZ /d "1" /f && reg add "HKCU\\Control Panel\\Desktop" /v WaitToKillAppTimeout /t REG_SZ /d "5000" /f && reg add "HKCU\\Control Panel\\Desktop" /v HungAppTimeout /t REG_SZ /d "3000" /f'
+    },
     'clear-standby-list': {
         apply: 'powershell -Command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" && reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer" /v AlwaysUnloadDLL /t REG_DWORD /d 1 /f',
         revert: 'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer" /v AlwaysUnloadDLL /t REG_DWORD /d 0 /f'
@@ -1297,6 +1309,37 @@ ipcMain.handle('apply-tweak', async (event, tweakId, action) => {
             }
         });
     });
+});
+
+ipcMain.handle('apply-recommended-tweaks', async (event, tweakIds) => {
+    const results = [];
+    for (let i = 0; i < tweakIds.length; i++) {
+        const id = tweakIds[i];
+        const tweakDef = tweakCommands[id];
+
+        event.sender.send('tweak-progress', { step: i + 1, total: tweakIds.length, id, status: 'running' });
+
+        if (!tweakDef || !tweakDef.apply) {
+            results.push({ id, success: false, message: 'Not available' });
+            event.sender.send('tweak-progress', { step: i + 1, total: tweakIds.length, id, status: 'skipped' });
+            continue;
+        }
+
+        const cmdHasErrHandling = tweakDef.apply.includes('2>nul') || tweakDef.apply.includes('exit /b 0');
+        const result = await new Promise((resolve) => {
+            exec(tweakDef.apply, { shell: 'cmd.exe', timeout: 15000 }, (error) => {
+                if (error && !cmdHasErrHandling) {
+                    resolve({ id, success: false, message: error.message });
+                } else {
+                    resolve({ id, success: true, message: 'Applied' });
+                }
+            });
+        });
+
+        results.push(result);
+        event.sender.send('tweak-progress', { step: i + 1, total: tweakIds.length, id, status: result.success ? 'done' : 'failed' });
+    }
+    return { success: true, results };
 });
 
 ipcMain.handle('run-cleanup', async (event, type) => {
