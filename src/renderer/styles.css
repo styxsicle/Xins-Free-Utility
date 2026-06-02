@@ -362,6 +362,11 @@ body::after {
   transform: translateY(-1px);
   box-shadow: 0 12px 32px rgba(255,255,255,0.55), inset 0 1px 0 rgba(255,255,255,0.2);
 }
+.top-bar-cta:active {
+  transform: scale(0.97) translateY(0) !important;
+  box-shadow: 0 3px 10px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+  transition-duration: 0.08s !important;
+}
 
 .search-kbd {
   margin-left: auto;
@@ -566,6 +571,7 @@ body::after {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .hero-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 40px rgba(255,255,255,0.22); }
+.hero-cta:active { transform: scale(0.97) translateY(0) !important; box-shadow: 0 4px 14px rgba(255,255,255,0.12) !important; transition-duration: 0.08s !important; }
 .hero-cta:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 .hero-cta svg { width: 14px; height: 14px; }
 
@@ -586,6 +592,7 @@ body::after {
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 .hero-cta-ghost:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
+.hero-cta-ghost:active { transform: scale(0.97) !important; background: rgba(255,255,255,0.07) !important; transition-duration: 0.08s !important; }
 .hero-cta-ghost svg { width: 14px; height: 14px; }
 .hero-cta-ghost:disabled {
   opacity: 0.6;
@@ -644,12 +651,21 @@ body::after {
   position: fixed;
   inset: 0;
   z-index: 9000;
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   padding: 28px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.30s ease, visibility 0s linear 0.30s;
 }
-.system-info-modal.visible { display: flex; }
+.system-info-modal.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: all;
+  transition: opacity 0.30s ease, visibility 0s linear 0s;
+}
 .system-info-modal [hidden] { display: none !important; }
 
 .system-info-backdrop {
@@ -669,6 +685,11 @@ body::after {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transform: scale(0.96) translateY(14px);
+  transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.system-info-modal.visible .system-info-panel {
+  transform: scale(1) translateY(0);
 }
 
 .system-info-header {
@@ -704,11 +725,16 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.14s ease;
 }
 .system-info-close:hover {
   background: rgba(255,255,255,0.09);
   color: var(--text);
   border-color: var(--border-strong);
+}
+.system-info-close:active {
+  transform: scale(0.88);
+  background: rgba(255,255,255,0.13);
 }
 .system-info-close svg { width: 16px; height: 16px; }
 
@@ -776,6 +802,12 @@ body::after {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: rgba(255,255,255,0.035);
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.system-info-item:hover {
+  border-color: rgba(255,255,255,0.13);
+  background: rgba(255,255,255,0.055);
+  transform: translateY(-2px);
 }
 .system-info-item.wide { grid-column: 1 / -1; }
 .system-info-item > span {
@@ -1935,6 +1967,7 @@ body::after {
   box-shadow: 0 6px 18px rgba(255,255,255,0.32);
 }
 .tweak-btn.apply:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(255,255,255,0.5); }
+.tweak-btn.apply:active { transform: scale(0.97) !important; box-shadow: 0 2px 8px rgba(255,255,255,0.18) !important; transition-duration: 0.08s !important; }
 .tweak-btn.revert {
   background: rgba(255,255,255,0.04);
   border-color: var(--border);
@@ -2012,6 +2045,7 @@ body::after {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .cleanup-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(255,255,255,0.5); }
+.cleanup-btn:active { transform: scale(0.97) !important; box-shadow: 0 2px 8px rgba(255,255,255,0.18) !important; transition-duration: 0.08s !important; }
 
 .about-section { margin-bottom: 28px; }
 .about-card {
@@ -2532,24 +2566,7 @@ body::after {
   box-shadow: 0 0 10px rgba(255,255,255,0.28);
 }
 
-.scan-complete-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  color: var(--success);
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: 0.1px;
-  opacity: 0;
-  transform: translateY(5px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-.scan-complete-row.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-.scan-complete-row[hidden] { display: none !important; }
+/* scan-complete-row styles moved to PREMIUM ANIMATION POLISH section at end of file */
 
 .scan-check {
   width: 16px;
@@ -2633,6 +2650,12 @@ body::after {
     0 0 0 1px rgba(255,255,255,0.04),
     inset 0 1px 0 rgba(255,255,255,0.10),
     inset 0 -1px 0 rgba(0,0,0,0.45);
+
+  transform: scale(0.96) translateY(14px);
+  transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.system-info-modal.visible .scan-results-panel {
+  transform: scale(1) translateY(0);
 }
 
 /* Silver diagonal gloss — same mask-composite technique as .glass::before */
@@ -2883,7 +2906,7 @@ body::after {
     inset 0 -1px 0 rgba(0,0,0,0.28),
     0 2px 10px rgba(0,0,0,0.3);
 
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* Glossy top sheen on each card */
@@ -2905,6 +2928,7 @@ body::after {
     inset 0 -1px 0 rgba(0,0,0,0.28),
     0 4px 18px rgba(0,0,0,0.42),
     0 0 0 1px rgba(255,255,255,0.06);
+  transform: translateY(-2px);
 }
 
 .sr-cat-top {
@@ -2998,7 +3022,7 @@ body::after {
     inset 0 1px 0 rgba(255,255,255,0.07),
     0 2px 8px rgba(0,0,0,0.25);
 
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease, transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* Silver gloss hairline at top of each row */
@@ -3020,6 +3044,7 @@ body::after {
     inset 0 1px 0 rgba(255,255,255,0.10),
     0 4px 16px rgba(0,0,0,0.36),
     0 0 0 1px rgba(255,255,255,0.05);
+  transform: translateY(-1px);
 }
 
 .sr-tweak-body {
@@ -3071,8 +3096,8 @@ body::after {
   overflow: hidden;
   /* Slide-in */
   opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 0.26s ease, transform 0.30s cubic-bezier(0.18, 1, 0.4, 1);
+  transform: translateY(22px);
+  transition: opacity 0.30s ease, transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .sr-apply-popup.sr-popup-visible {
   opacity: 1;
@@ -3134,13 +3159,17 @@ body::after {
   border: 1px solid rgba(255,255,255,0.09);
   color: rgba(180,180,185,0.65);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s ease;
   flex-shrink: 0;
 }
 .sr-popup-close-btn:hover {
   background: rgba(255,255,255,0.08);
   border-color: rgba(255,255,255,0.2);
   color: var(--text);
+}
+.sr-popup-close-btn:active {
+  transform: scale(0.88);
+  transition-duration: 0.06s;
 }
 
 /* Summary line */
@@ -3308,4 +3337,74 @@ body::after {
   gap: 10px;
   flex-wrap: wrap;
   padding-top: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PREMIUM ANIMATION POLISH
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Modal panel entrance shine — single sweep on open ───── */
+@keyframes modalPanelShine {
+  0%   { left: -80%; opacity: 0; }
+  18%  { opacity: 1; }
+  82%  { opacity: 1; }
+  100% { left: 120%; opacity: 0; }
+}
+
+.system-info-panel::after,
+.scan-results-panel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -80%;
+  width: 55%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.052) 50%, transparent 100%);
+  transform: skewX(-10deg);
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+}
+
+.system-info-modal.visible .system-info-panel::after,
+.system-info-modal.visible .scan-results-panel::after {
+  animation: modalPanelShine 1.0s cubic-bezier(0.4, 0, 0.2, 1) 0.14s forwards;
+}
+
+/* ── Scan complete row — more visible checkmark ──────────── */
+.scan-complete-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  color: var(--success);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+  opacity: 0;
+  transform: translateY(6px) scale(0.96);
+  transition: opacity 0.36s ease, transform 0.36s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.scan-complete-row.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.scan-complete-row[hidden] { display: none !important; }
+
+/* ── Apply popup done button active state ────────────────── */
+.sr-popup-done-btn:active {
+  transform: scale(0.96) !important;
+  transition-duration: 0.07s !important;
+}
+
+/* ── Nav item active (click feedback) ───────────────────── */
+.nav-item:active {
+  transform: scale(0.97);
+  transition-duration: 0.08s;
+}
+
+/* ── Icon buttons active ─────────────────────────────────── */
+.icon-btn:active {
+  transform: scale(0.9);
+  transition-duration: 0.07s;
 }

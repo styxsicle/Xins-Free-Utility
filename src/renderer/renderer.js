@@ -580,7 +580,7 @@ function initializeSystemInfoModal() {
                 requestAnimationFrame(() => completeRow.classList.add('visible'));
             }, 220);
 
-            setTimeout(() => closeOverlay(true), 380);
+            setTimeout(() => closeOverlay(true), 1000);
         }
 
         function closeOverlay(success) {
