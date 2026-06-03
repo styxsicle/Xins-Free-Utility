@@ -3550,6 +3550,164 @@ body::after {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── GPU Stat Strip (3 live mini cards below the header) ─── */
+.gpu-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.gpu-stat-card {
+  --gpu-sc-color: 200, 200, 208;
+  position: relative;
+  padding: 16px 16px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+  background: linear-gradient(160deg, rgba(22,22,22,0.72) 0%, rgba(8,8,8,0.56) 60%, rgba(40,40,40,0.42) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.05);
+  overflow: hidden;
+  transition: border-color 0.40s ease, box-shadow 0.40s ease, transform 0.28s ease;
+}
+
+/* Vendor accent — applied by JS setting data-vendor attribute */
+.gpu-stat-card[data-vendor="nvidia"]  { --gpu-sc-color: 74, 222, 128; }
+.gpu-stat-card[data-vendor="amd"]     { --gpu-sc-color: 248, 113, 113; }
+.gpu-stat-card[data-vendor="intel"]   { --gpu-sc-color: 96, 165, 250; }
+.gpu-stat-card[data-vendor="unknown"] { --gpu-sc-color: 180, 180, 185; }
+
+/* Left-edge accent bar — fades in after vendor detection */
+.gpu-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 14px; bottom: 14px; left: 0;
+  width: 2px;
+  background: rgb(var(--gpu-sc-color));
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 10px rgb(var(--gpu-sc-color));
+  opacity: 0;
+  transition: opacity 0.40s ease;
+  pointer-events: none;
+}
+.gpu-stat-card:not([data-vendor="neutral"])::before { opacity: 0.55; }
+
+/* Hover lift + vendor glow */
+.gpu-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(var(--gpu-sc-color), 0.26);
+  box-shadow: var(--shadow), 0 0 28px rgba(var(--gpu-sc-color), 0.10), inset 0 1px 0 rgba(255,255,255,0.07);
+}
+
+/* Top row: icon + label + value */
+.gpu-sc-top {
+  display: flex; align-items: center; gap: 12px;
+}
+
+.gpu-sc-icon {
+  width: 36px; height: 36px; flex-shrink: 0;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgb(var(--gpu-sc-color));
+  box-shadow: 0 0 12px rgba(var(--gpu-sc-color), 0.10);
+  transition: color 0.40s ease, box-shadow 0.40s ease, border-color 0.40s ease;
+}
+.gpu-sc-icon svg { width: 17px; height: 17px; }
+.gpu-stat-card:not([data-vendor="neutral"]) .gpu-sc-icon {
+  border-color: rgba(var(--gpu-sc-color), 0.22);
+}
+
+.gpu-sc-body { flex: 1; min-width: 0; }
+
+.gpu-sc-lbl {
+  display: block;
+  font-size: 9.5px; font-weight: 800;
+  letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.gpu-sc-val-row {
+  display: flex; align-items: baseline; gap: 3px;
+}
+
+.gpu-sc-val {
+  font-size: 22px; font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+/* Smaller value text for long strings like a plan name */
+.gpu-sc-val--text {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.gpu-sc-unit {
+  font-size: 12px; font-weight: 600;
+  color: var(--text-muted);
+  padding-bottom: 2px;
+}
+
+/* Sparkline */
+.gpu-sc-spark { width: 100%; height: 26px; display: block; overflow: visible; }
+
+.gpu-sc-spark-fill {
+  fill: rgb(var(--gpu-sc-color));
+  opacity: 0.14;
+  transition: opacity 0.40s ease;
+}
+.gpu-sc-spark-line {
+  stroke: rgb(var(--gpu-sc-color));
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  opacity: 0.72;
+  transition: opacity 0.40s ease;
+}
+
+/* Power Plan status row */
+.gpu-sc-status {
+  display: flex; align-items: center; gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.gpu-sc-status-dot {
+  width: 6px; height: 6px; flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.16);
+  transition: background 0.36s ease, box-shadow 0.36s ease;
+}
+.gpu-sc-status-dot[data-state="active"] {
+  background: rgb(var(--gpu-sc-color));
+  box-shadow: 0 0 8px rgba(var(--gpu-sc-color), 0.55);
+  animation: gpuScDotPulse 2.6s ease-in-out infinite;
+}
+@keyframes gpuScDotPulse {
+  0%, 100% { opacity: 0.50; }
+  50%       { opacity: 1.00; }
+}
+
+.gpu-sc-status-text {
+  font-size: 10.5px; font-weight: 600;
+  color: var(--text-muted); letter-spacing: 0.2px;
+}
+
+@media (max-width: 860px) { .gpu-stat-strip { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .gpu-stat-strip { grid-template-columns: 1fr; } }
+
 /* Detected GPU info card */
 .gpu-results-header {
   display: flex;
@@ -3681,16 +3839,17 @@ body::after {
 .gpu-card-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 14px;
 }
 
-/* GPU card — matches toggle-card aesthetic */
+/* GPU card — sized to match System/Fortnite tweak cards */
 .gpu-card {
   --mx: 50%; --my: 0%;
   --gpu-color: 255, 255, 255;
   position: relative;
-  padding: 18px 18px 16px;
-  display: flex; flex-direction: column; gap: 12px;
+  padding: 22px 22px 20px;
+  display: flex; flex-direction: column; gap: 18px;
+  min-height: 168px;
   background: linear-gradient(160deg, rgba(22,22,22,0.72) 0%, rgba(8,8,8,0.56) 60%, rgba(40,40,40,0.42) 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -3749,8 +3908,8 @@ body::after {
 }
 
 .gpu-card-icon {
-  width: 42px; height: 42px; flex-shrink: 0;
-  border-radius: 12px;
+  width: 48px; height: 48px; flex-shrink: 0;
+  border-radius: 13px;
   display: flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01));
   border: 1px solid rgba(255,255,255,0.08);
@@ -3761,23 +3920,23 @@ body::after {
 .gpu-card--nvidia .gpu-card-icon { background: linear-gradient(135deg, rgba(74,222,128,0.18), rgba(74,222,128,0.04)); border-color: rgba(74,222,128,0.25); color: var(--gpu-nvidia); box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 14px rgba(74,222,128,0.12); }
 .gpu-card--amd    .gpu-card-icon { background: linear-gradient(135deg, rgba(248,113,113,0.18), rgba(248,113,113,0.04)); border-color: rgba(248,113,113,0.25); color: var(--gpu-amd);    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 14px rgba(248,113,113,0.12); }
 .gpu-card--intel  .gpu-card-icon { background: linear-gradient(135deg, rgba(96,165,250,0.18), rgba(96,165,250,0.04));   border-color: rgba(96,165,250,0.25);  color: var(--gpu-intel);  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 14px rgba(96,165,250,0.12); }
-.gpu-card-icon svg { width: 20px; height: 20px; }
+.gpu-card-icon svg { width: 22px; height: 22px; }
 
 .gpu-card-body { flex: 1; min-width: 0; }
 .gpu-card-title {
-  font-size: 13.5px; font-weight: 700; color: var(--text);
-  letter-spacing: -0.1px; margin-bottom: 5px;
+  font-size: 14.5px; font-weight: 700; color: var(--text);
+  letter-spacing: -0.15px; margin-bottom: 7px;
 }
 .gpu-card-desc {
-  font-size: 11.5px; color: var(--text-muted); line-height: 1.45;
+  font-size: 12.5px; color: var(--text-muted); line-height: 1.55;
 }
 
 /* Card footer */
 .gpu-card-foot {
   display: flex; align-items: center;
-  justify-content: space-between; gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  justify-content: space-between; gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
   position: relative; z-index: 1; margin-top: auto;
 }
 
@@ -3794,13 +3953,14 @@ body::after {
 
 /* Locked button */
 .gpu-card-btn {
-  padding: 5px 13px;
-  border-radius: 8px;
+  padding: 7px 16px;
+  border-radius: 9px;
   border: 1px solid rgba(255,255,255,0.09);
   background: rgba(255,255,255,0.04);
   color: var(--text-muted);
-  font-family: inherit; font-size: 12px; font-weight: 700;
+  font-family: inherit; font-size: 12.5px; font-weight: 700;
   cursor: not-allowed; opacity: 0.55;
+  white-space: nowrap;
 }
 
 /* -- Error state --------------------------------------------- */
@@ -3823,6 +3983,113 @@ body::after {
   font-size: 12.5px; color: var(--text-muted);
   max-width: 340px; line-height: 1.5;
 }
+
+/* -- GPU tooltip cat colors (reuses .tc-tooltip system) ------ */
+.tc-tooltip[data-cat="gpu-nvidia"]  { --cat-color: 74, 222, 128; }
+.tc-tooltip[data-cat="gpu-amd"]     { --cat-color: 248, 113, 113; }
+.tc-tooltip[data-cat="gpu-intel"]   { --cat-color: 96, 165, 250; }
+.tc-tooltip[data-cat="gpu-unknown"] { --cat-color: 180, 180, 190; }
+
+/* -- Badge animated status dot ------------------------------- */
+.gpu-badge-dot {
+  display: inline-block;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.gpu-badge--soon .gpu-badge-dot {
+  background: rgba(200, 200, 210, 0.40);
+  animation: gpuBadgePulse 2.8s ease-in-out infinite;
+}
+.gpu-badge--info .gpu-badge-dot {
+  background: rgba(140, 170, 220, 0.48);
+  animation: gpuBadgePulse 3.2s ease-in-out infinite;
+}
+.gpu-badge--safe .gpu-badge-dot {
+  background: #4ade80;
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.65);
+  animation: gpuBadgePulse 2.0s ease-in-out infinite;
+}
+.gpu-badge--admin .gpu-badge-dot {
+  background: #fbbf24;
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.55);
+  animation: gpuBadgePulse 2.2s ease-in-out infinite;
+}
+
+@keyframes gpuBadgePulse {
+  0%, 100% { opacity: 0.36; transform: scale(1); }
+  50%       { opacity: 1.00; transform: scale(1.45); }
+}
+
+/* -- Card footer left group (badge + impact pill) ------------ */
+.gpu-card-foot-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* -- Impact pill --------------------------------------------- */
+.gpu-card-impact {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+.gpu-card-impact::before {
+  content: '';
+  display: inline-block;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.gpu-impact--low::before {
+  background: rgba(180, 180, 190, 0.45);
+}
+.gpu-impact--medium::before {
+  background: #fbbf24;
+  box-shadow: 0 0 5px rgba(251, 191, 36, 0.45);
+  animation: gpuBadgePulse 2.6s ease-in-out infinite;
+}
+.gpu-impact--high::before {
+  background: rgba(255, 210, 130, 0.88);
+  box-shadow: 0 0 6px rgba(255, 190, 80, 0.40);
+  animation: gpuBadgePulse 2.1s ease-in-out infinite;
+}
+
+/* -- Vendor-specific hover glow (subtle, accent only) -------- */
+.gpu-card--nvidia:hover {
+  box-shadow: var(--shadow), 0 0 44px rgba(74, 222, 128, 0.14), 0 8px 26px rgba(74, 222, 128, 0.06), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.gpu-card--amd:hover {
+  box-shadow: var(--shadow), 0 0 44px rgba(248, 113, 113, 0.14), 0 8px 26px rgba(248, 113, 113, 0.06), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.gpu-card--intel:hover {
+  box-shadow: var(--shadow), 0 0 44px rgba(96, 165, 250, 0.14), 0 8px 26px rgba(96, 165, 250, 0.06), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+/* Top-edge vendor shine line on hover */
+.gpu-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(var(--gpu-color), 0.55) 50%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.30s ease;
+  z-index: 3;
+  pointer-events: none;
+}
+.gpu-card:hover::after { opacity: 1; }
 
 /* -- Responsive ---------------------------------------------- */
 @media (max-width: 1100px) { .gpu-card-grid { grid-template-columns: repeat(2, 1fr); } }

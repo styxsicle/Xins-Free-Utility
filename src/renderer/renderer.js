@@ -1826,11 +1826,25 @@ function showTooltipFor(card) {
     const tt = ensureTooltip();
     const id = card.dataset.toggle || card.dataset.networkCard || '';
     const category = card.dataset.cat || 'default';
-    const detail = TOGGLE_DETAILS[id] || NETWORK_DETAILS[id] || { impact: 'Medium', category: 'Tweak', body: 'Refines a system behavior to favor responsiveness over background activity.' };
-
-    const title = card.querySelector('.tc-titles h4')?.textContent || '';
-    const isOn = card.classList.contains('on');
+    const isGpuCard = card.dataset.gpuCard === '1';
     const isNetworkPlaceholder = !!card.dataset.networkCard;
+
+    let detail;
+    if (isGpuCard) {
+        const imp = card.dataset.impact || 'medium';
+        detail = {
+            impact: imp.charAt(0).toUpperCase() + imp.slice(1),
+            category: card.dataset.category || 'GPU Tool',
+            body: card.dataset.hoverBody || 'GPU optimization tool for your hardware.'
+        };
+    } else {
+        detail = TOGGLE_DETAILS[id] || NETWORK_DETAILS[id] || { impact: 'Medium', category: 'Tweak', body: 'Refines a system behavior to favor responsiveness over background activity.' };
+    }
+
+    const title = isGpuCard
+        ? (card.querySelector('.gpu-card-title')?.textContent || '')
+        : (card.querySelector('.tc-titles h4')?.textContent || '');
+    const isOn = card.classList.contains('on');
 
     tt.dataset.cat = category;
     tt.dataset.impact = detail.impact.toLowerCase();
@@ -1838,9 +1852,16 @@ function showTooltipFor(card) {
     tt.querySelector('.tt-cat').textContent = detail.category;
     tt.querySelector('.tt-impact-text').textContent = `${detail.impact} impact`;
     tt.querySelector('.tt-body').textContent = detail.body;
-    tt.querySelector('.tt-state-text').textContent = isNetworkPlaceholder ? 'Placeholder locked' : (isOn ? 'Currently active' : 'Currently inactive');
-    tt.querySelector('.tt-hint').textContent = isNetworkPlaceholder ? 'Coming soon' : 'Toggle to apply';
-    tt.classList.toggle('is-on', isOn);
+
+    if (isGpuCard) {
+        tt.querySelector('.tt-state-text').textContent = 'Coming soon';
+        tt.querySelector('.tt-hint').textContent = 'Placeholder · not yet active';
+        tt.classList.remove('is-on');
+    } else {
+        tt.querySelector('.tt-state-text').textContent = isNetworkPlaceholder ? 'Placeholder locked' : (isOn ? 'Currently active' : 'Currently inactive');
+        tt.querySelector('.tt-hint').textContent = isNetworkPlaceholder ? 'Coming soon' : 'Toggle to apply';
+        tt.classList.toggle('is-on', isOn);
+    }
 
     // Position centered below the card, kept inside viewport
     const rect = card.getBoundingClientRect();
@@ -2008,50 +2029,54 @@ function initializeGpuPage() {
 
     if (!gpuNavBtn || !gpuScanState) return;
 
-    let detectionDone = false;
-    let detectedGpus  = [];
+    let detectionDone  = false;
+    let detectedGpus   = [];
+    let gpuStatInterval = null;
+    const gpuTempHist  = [];
+    const gpuUsageHist = [];
+    const GPU_SC_LEN   = 24;
 
     // ── Card definitions per vendor ───────────────────────────
     const GPU_CARDS = {
         nvidia: [
-            { icon: 'zap',      title: 'Low Latency Mode',       desc: 'Configure NVIDIA Ultra-Low Latency mode for competitive play.',         badge: 'soon' },
-            { icon: 'chart',    title: 'VRAM Monitor',           desc: 'Installed VRAM detected for your NVIDIA GPU.',                          badge: 'info' },
-            { icon: 'trash',    title: 'Shader Cache Cleanup',   desc: 'Clear the NVIDIA shader cache to resolve stutter from stale entries.',  badge: 'soon' },
-            { icon: 'info',     title: 'Driver Info',            desc: 'Installed driver version and release date for your NVIDIA GPU.',        badge: 'info' },
-            { icon: 'sliders',  title: 'Performance Preference', desc: 'Set NVIDIA Power Management mode to Maximum Performance.',              badge: 'soon' },
-            { icon: 'activity', title: 'Reflex Ready Check',     desc: 'Verify your NVIDIA Reflex configuration in supported titles.',          badge: 'soon' },
-            { icon: 'power',    title: 'GPU Power Mode',         desc: 'Inspect and configure GPU power delivery preferences.',                 badge: 'soon' },
-            { icon: 'settings', title: 'Profile Inspector',      desc: 'Advanced per-application NVIDIA profile controls.',                     badge: 'soon' },
+            { icon: 'zap',      title: 'Low Latency Mode',       desc: 'Configure NVIDIA Ultra-Low Latency mode for competitive play.',         badge: 'soon', impact: 'High',   category: 'Latency',     hoverBody: 'Queues frames just before the GPU needs them, cutting the gap between your input and the rendered frame. Most impactful at high frame rates on a high-refresh display.' },
+            { icon: 'chart',    title: 'VRAM Monitor',           desc: 'Installed VRAM detected for your NVIDIA GPU.',                          badge: 'info', impact: 'Low',    category: 'Diagnostics', hoverBody: 'Reads your card\'s installed video memory. Helps gauge texture quality headroom and determine whether VRAM pressure is contributing to stutters.' },
+            { icon: 'trash',    title: 'Shader Cache Cleanup',   desc: 'Clear the NVIDIA shader cache to resolve stutter from stale entries.',  badge: 'soon', impact: 'Medium', category: 'Stability',   hoverBody: 'Clears stale compiled shader entries from disk. Outdated cache data causes stutters when a scene first loads — a clean rebuild with the current driver resolves persistent hitching.' },
+            { icon: 'info',     title: 'Driver Info',            desc: 'Installed driver version and release date for your NVIDIA GPU.',        badge: 'info', impact: 'Low',    category: 'Diagnostics', hoverBody: 'Displays your installed driver version and release date. Useful for confirming you\'re current or isolating regressions introduced by a specific driver update.' },
+            { icon: 'sliders',  title: 'Performance Preference', desc: 'Set NVIDIA Power Management mode to Maximum Performance.',              badge: 'soon', impact: 'High',   category: 'Performance', hoverBody: 'Sets NVIDIA Power Management to Maximum Performance, preventing clock downscaling during the initial session ramp-up. Tightens frame-delivery consistency in variable workloads.' },
+            { icon: 'activity', title: 'Reflex Ready Check',     desc: 'Verify your NVIDIA Reflex configuration in supported titles.',          badge: 'soon', impact: 'Medium', category: 'Latency',     hoverBody: 'Confirms whether NVIDIA Reflex Low Latency is active in supported titles. Reflex reduces the render queue depth to lower system latency between input and displayed frame.' },
+            { icon: 'power',    title: 'GPU Power Mode',         desc: 'Inspect and configure GPU power delivery preferences.',                 badge: 'soon', impact: 'Medium', category: 'Performance', hoverBody: 'Reads and adjusts the GPU power limit. Higher sustained power allows the card to hold boost clocks longer — relevant during extended GPU-heavy sessions.' },
+            { icon: 'settings', title: 'Profile Inspector',      desc: 'Advanced per-application NVIDIA profile controls.',                     badge: 'soon', impact: 'Medium', category: 'Advanced',    hoverBody: 'Exposes per-application driver profile settings not available in the standard Control Panel. Fine-tune anti-aliasing, texture filtering, and render flags on a per-game basis.' },
         ],
         amd: [
-            { icon: 'zap',      title: 'Radeon Anti-Lag',        desc: 'Enable AMD Anti-Lag for reduced input latency in supported games.',     badge: 'soon' },
-            { icon: 'chart',    title: 'VRAM Monitor',           desc: 'Installed VRAM detected for your AMD GPU.',                            badge: 'info' },
-            { icon: 'trash',    title: 'Shader Cache Cleanup',   desc: 'Clear Radeon shader cache to fix stuttering from outdated entries.',   badge: 'soon' },
-            { icon: 'info',     title: 'Driver Info',            desc: 'Installed driver version and release date for your AMD GPU.',          badge: 'info' },
-            { icon: 'sliders',  title: 'Performance Mode',       desc: 'Configure Radeon Power Management for maximum performance output.',    badge: 'soon' },
-            { icon: 'activity', title: 'Anti-Lag Ready Check',   desc: 'Verify AMD Anti-Lag configuration in supported titles.',              badge: 'soon' },
-            { icon: 'power',    title: 'GPU Power Mode',         desc: 'Inspect and configure GPU power delivery preferences.',                badge: 'soon' },
-            { icon: 'settings', title: 'Adrenalin Profile',      desc: 'AMD Adrenalin software profile configuration.',                       badge: 'soon' },
+            { icon: 'zap',      title: 'Radeon Anti-Lag',        desc: 'Enable AMD Anti-Lag for reduced input latency in supported games.',     badge: 'soon', impact: 'High',   category: 'Latency',     hoverBody: 'Synchronizes CPU and GPU pacing to reduce the latency between input and rendered frame. Most impactful in CPU-bound scenarios at high frame rates.' },
+            { icon: 'chart',    title: 'VRAM Monitor',           desc: 'Installed VRAM detected for your AMD GPU.',                            badge: 'info', impact: 'Low',    category: 'Diagnostics', hoverBody: 'Reads your card\'s installed video memory. Helps gauge texture quality headroom and understand whether VRAM pressure is behind observed stuttering.' },
+            { icon: 'trash',    title: 'Shader Cache Cleanup',   desc: 'Clear Radeon shader cache to fix stuttering from outdated entries.',   badge: 'soon', impact: 'Medium', category: 'Stability',   hoverBody: 'Clears stale Radeon shader cache entries. Outdated cache data causes microstutters when shaders first load — rebuilding from the current driver state fixes persistent hitching.' },
+            { icon: 'info',     title: 'Driver Info',            desc: 'Installed driver version and release date for your AMD GPU.',          badge: 'info', impact: 'Low',    category: 'Diagnostics', hoverBody: 'Displays your installed Adrenalin driver version and release date. Useful for confirming you\'re current or isolating regressions from a specific driver update.' },
+            { icon: 'sliders',  title: 'Performance Mode',       desc: 'Configure Radeon Power Management for maximum performance output.',    badge: 'soon', impact: 'High',   category: 'Performance', hoverBody: 'Configures Radeon Power Management to Maximum Performance, preventing aggressive downclocking during brief load dips. Delivers more consistent frame delivery.' },
+            { icon: 'activity', title: 'Anti-Lag Ready Check',   desc: 'Verify AMD Anti-Lag configuration in supported titles.',              badge: 'soon', impact: 'Medium', category: 'Latency',     hoverBody: 'Confirms whether Anti-Lag is active and properly configured in supported titles. Reports availability for the current game and installed driver version.' },
+            { icon: 'power',    title: 'GPU Power Mode',         desc: 'Inspect and configure GPU power delivery preferences.',                badge: 'soon', impact: 'Medium', category: 'Performance', hoverBody: 'Reads and adjusts the GPU TDP limit. Sustaining higher power draw prevents thermal throttling during extended gaming sessions.' },
+            { icon: 'settings', title: 'Adrenalin Profile',      desc: 'AMD Adrenalin software profile configuration.',                       badge: 'soon', impact: 'Medium', category: 'Advanced',    hoverBody: 'Accesses Radeon Software Adrenalin per-game profile settings. Enables per-title overrides for Anti-Lag, Enhanced Sync, and image sharpening without affecting global settings.' },
         ],
         intel: [
-            { icon: 'info',     title: 'Arc Driver Info',        desc: 'Installed driver version and release date for your Intel GPU.',        badge: 'info' },
-            { icon: 'chart',    title: 'VRAM Monitor',           desc: 'Installed VRAM detected for your Intel GPU.',                          badge: 'info' },
-            { icon: 'sliders',  title: 'Power / Performance',    desc: 'Configure Intel GPU power preference for performance or efficiency.',  badge: 'soon' },
-            { icon: 'trash',    title: 'Shader Cache Cleanup',   desc: 'Clear Intel GPU shader cache to resolve driver-related stutter.',      badge: 'soon' },
-            { icon: 'monitor',  title: 'Display Settings',       desc: 'Verify display configuration, refresh rate, and color settings.',     badge: 'soon' },
-            { icon: 'power',    title: 'GPU Power Mode',         desc: 'Inspect and configure GPU power delivery preferences.',               badge: 'soon' },
-            { icon: 'cpu',      title: 'Integrated GPU Mode',    desc: 'Check active GPU routing for Intel integrated graphics.',              badge: 'soon' },
-            { icon: 'settings', title: 'Intel Command Center',   desc: 'Intel Arc Control software integration.',                             badge: 'soon' },
+            { icon: 'info',     title: 'Arc Driver Info',        desc: 'Installed driver version and release date for your Intel GPU.',        badge: 'info', impact: 'Low',    category: 'Diagnostics', hoverBody: 'Displays your installed Intel Arc driver version and date. Driver currency significantly affects performance on Arc hardware — confirming this is the first step in diagnosing issues.' },
+            { icon: 'chart',    title: 'VRAM Monitor',           desc: 'Installed VRAM detected for your Intel GPU.',                          badge: 'info', impact: 'Low',    category: 'Diagnostics', hoverBody: 'Reports installed VRAM on your Intel GPU. On Arc discrete cards, knowing available memory helps calibrate texture quality and workload sizing.' },
+            { icon: 'sliders',  title: 'Power / Performance',    desc: 'Configure Intel GPU power preference for performance or efficiency.',  badge: 'soon', impact: 'High',   category: 'Performance', hoverBody: 'Adjusts the Intel GPU power preference profile between efficiency and full performance. Arc discrete cards benefit from the performance profile during gaming to avoid unnecessary power-state drops.' },
+            { icon: 'trash',    title: 'Shader Cache Cleanup',   desc: 'Clear Intel GPU shader cache to resolve driver-related stutter.',      badge: 'soon', impact: 'Medium', category: 'Stability',   hoverBody: 'Clears the Intel GPU shader cache on disk. Driver-related stutters during shader compilation can be resolved by forcing a clean rebuild with the latest driver version.' },
+            { icon: 'monitor',  title: 'Display Settings',       desc: 'Verify display configuration, refresh rate, and color settings.',     badge: 'soon', impact: 'Low',    category: 'Display',     hoverBody: 'Reads display configuration including refresh rate, resolution, and color depth. Confirms the display is operating at intended settings after driver or OS changes.' },
+            { icon: 'power',    title: 'GPU Power Mode',         desc: 'Inspect and configure GPU power delivery preferences.',               badge: 'soon', impact: 'Medium', category: 'Performance', hoverBody: 'Configures Intel GPU power delivery settings. For Arc discrete GPUs, this affects sustained boost behavior during extended render workloads.' },
+            { icon: 'cpu',      title: 'Integrated GPU Mode',    desc: 'Check active GPU routing for Intel integrated graphics.',              badge: 'soon', impact: 'Medium', category: 'Routing',     hoverBody: 'Checks which workloads are routed to integrated Intel graphics versus a discrete adapter. Misconfigured routing can cause games to run on the weaker iGPU unexpectedly.' },
+            { icon: 'settings', title: 'Intel Command Center',   desc: 'Intel Arc Control software integration.',                             badge: 'soon', impact: 'Low',    category: 'Advanced',    hoverBody: 'Integration point for Intel Arc Control. Surfaces driver-level settings and performance overlays for Arc discrete and integrated GPUs.' },
         ],
         unknown: [
-            { icon: 'info',     title: 'GPU Info',               desc: 'Basic GPU information from your system.',                             badge: 'info' },
-            { icon: 'chart',    title: 'VRAM Monitor',           desc: 'Installed VRAM detected for your GPU.',                               badge: 'info' },
-            { icon: 'sliders',  title: 'Performance Settings',   desc: 'General GPU performance configuration options.',                      badge: 'soon' },
-            { icon: 'trash',    title: 'Shader Cache Cleanup',   desc: 'Clear GPU shader cache to resolve stutter from stale entries.',       badge: 'soon' },
-            { icon: 'monitor',  title: 'Display Settings',       desc: 'Verify display configuration and refresh rate settings.',             badge: 'soon' },
-            { icon: 'power',    title: 'GPU Power Mode',         desc: 'Inspect and configure GPU power delivery preferences.',               badge: 'soon' },
-            { icon: 'activity', title: 'Performance Profile',    desc: 'Hardware-specific GPU performance profile.',                          badge: 'soon' },
-            { icon: 'settings', title: 'Advanced Settings',      desc: 'Advanced GPU configuration tools.',                                   badge: 'soon' },
+            { icon: 'info',     title: 'GPU Info',               desc: 'Basic GPU information from your system.',                             badge: 'info', impact: 'Low',    category: 'Diagnostics', hoverBody: 'Displays available hardware information for the detected GPU. Driver data and VRAM capacity help identify the hardware and confirm the driver is properly installed.' },
+            { icon: 'chart',    title: 'VRAM Monitor',           desc: 'Installed VRAM detected for your GPU.',                               badge: 'info', impact: 'Low',    category: 'Diagnostics', hoverBody: 'Reports installed video memory. Knowing available VRAM helps calibrate texture quality settings and diagnose memory-pressure stuttering.' },
+            { icon: 'sliders',  title: 'Performance Settings',   desc: 'General GPU performance configuration options.',                      badge: 'soon', impact: 'Medium', category: 'Performance', hoverBody: 'Applies general GPU scheduling and power settings to favor sustained boost behavior during gaming sessions.' },
+            { icon: 'trash',    title: 'Shader Cache Cleanup',   desc: 'Clear GPU shader cache to resolve stutter from stale entries.',       badge: 'soon', impact: 'Medium', category: 'Stability',   hoverBody: 'Clears GPU shader cache from disk. Stale compiled shaders cause microstutters on first load — a clean rebuild resolves hitching tied to outdated entries.' },
+            { icon: 'monitor',  title: 'Display Settings',       desc: 'Verify display configuration and refresh rate settings.',             badge: 'soon', impact: 'Low',    category: 'Display',     hoverBody: 'Reads current display configuration including refresh rate, resolution, and color output. Confirms the display is operating at intended settings.' },
+            { icon: 'power',    title: 'GPU Power Mode',         desc: 'Inspect and configure GPU power delivery preferences.',               badge: 'soon', impact: 'Medium', category: 'Performance', hoverBody: 'Configures GPU power delivery preferences. Higher power limits reduce throttling during sustained workloads and improve frame-delivery consistency.' },
+            { icon: 'activity', title: 'Performance Profile',    desc: 'Hardware-specific GPU performance profile.',                          badge: 'soon', impact: 'Medium', category: 'Performance', hoverBody: 'Applies hardware-specific GPU scheduling and power preferences known to improve responsiveness in gaming workloads.' },
+            { icon: 'settings', title: 'Advanced Settings',      desc: 'Advanced GPU configuration tools.',                                   badge: 'soon', impact: 'Low',    category: 'Advanced',    hoverBody: 'Advanced configuration panel exposing driver-level controls for render pipeline scheduling and power behavior.' },
         ],
     };
 
@@ -2074,6 +2099,78 @@ function initializeGpuPage() {
 
     function iconSvg(name) {
         return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON_PATHS[name] || ICON_PATHS.info}</svg>`;
+    }
+
+    // ── GPU Stat Strip ────────────────────────────────────────
+    function initGpuStatStrip(gpus) {
+        const vendor = (gpus[0] || {}).vendor || 'unknown';
+
+        // Apply vendor accent to all three stat cards
+        ['gpu-sc-temp', 'gpu-sc-usage', 'gpu-sc-power'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.dataset.vendor = vendor;
+        });
+
+        // Clear any prior polling interval (e.g. retry after error)
+        if (gpuStatInterval) { clearInterval(gpuStatInterval); gpuStatInterval = null; }
+        gpuTempHist.length  = 0;
+        gpuUsageHist.length = 0;
+
+        function updateSparkline(lineId, fillId, hist) {
+            if (hist.length < 2) return;
+            const slice = hist.slice(-GPU_SC_LEN);
+            document.getElementById(lineId)?.setAttribute('d', buildSparklinePath(slice, 80, 26, 2));
+            document.getElementById(fillId)?.setAttribute('d', buildAreaPath(slice, 80, 26, 2));
+        }
+
+        async function tick() {
+            // ── GPU Load (mirrors live-polled value, no extra IPC) ──
+            const rawUsage = parseFloat(
+                document.getElementById('gpu-usage')?.textContent || '0'
+            ) || 0;
+            gpuUsageHist.push(rawUsage);
+            while (gpuUsageHist.length > GPU_SC_LEN) gpuUsageHist.shift();
+
+            const usageValEl = document.getElementById('gpu-sc-usage-val');
+            if (usageValEl) usageValEl.textContent = Math.round(rawUsage);
+            updateSparkline('gpu-sc-usage-line', 'gpu-sc-usage-fill', gpuUsageHist);
+
+            // ── Temp + Power Plan (backend-cached, cheap) ──
+            try {
+                const stats = await window.electronAPI.getGpuLiveStats();
+
+                const tempVal  = document.getElementById('gpu-sc-temp-val');
+                const tempUnit = document.getElementById('gpu-sc-temp-unit');
+
+                if (stats.temp !== null && stats.temp !== undefined) {
+                    if (tempVal)  tempVal.textContent  = stats.temp;
+                    if (tempUnit) tempUnit.textContent = '°C';
+                    gpuTempHist.push(stats.temp);
+                    while (gpuTempHist.length > GPU_SC_LEN) gpuTempHist.shift();
+                    updateSparkline('gpu-sc-temp-line', 'gpu-sc-temp-fill', gpuTempHist);
+                } else {
+                    if (tempVal)  tempVal.textContent  = 'N/A';
+                    if (tempUnit) tempUnit.textContent = '';
+                }
+
+                const powerVal  = document.getElementById('gpu-sc-power-val');
+                const powerText = document.getElementById('gpu-sc-power-text');
+                const powerDot  = document.getElementById('gpu-sc-power-dot');
+
+                if (stats.powerPlan) {
+                    if (powerVal)  powerVal.textContent  = stats.powerPlan;
+                    if (powerText) powerText.textContent = 'Active';
+                    if (powerDot)  powerDot.dataset.state = 'active';
+                } else {
+                    if (powerVal)  powerVal.textContent  = '--';
+                    if (powerText) powerText.textContent = 'Unavailable';
+                    if (powerDot)  delete powerDot.dataset.state;
+                }
+            } catch (_) { /* keep previous values on transient error */ }
+        }
+
+        tick();
+        gpuStatInterval = setInterval(tick, 1000);
     }
 
     // ── Detection ─────────────────────────────────────────────
@@ -2171,6 +2268,7 @@ function initializeGpuPage() {
         gpuScanState.hidden = true;
         gpuScanState.classList.remove('gpu-scan-fading');
         renderGpuPage(detectedGpus);
+        initGpuStatStrip(detectedGpus);
     }
 
     // ── Render GPU page ───────────────────────────────────────
@@ -2263,6 +2361,17 @@ function initializeGpuPage() {
         cards.forEach(c => {
             const card = document.createElement('div');
             card.className = `gpu-card gpu-card--${v}`;
+
+            // Tooltip data attributes
+            card.dataset.gpuCard = '1';
+            card.dataset.cat = `gpu-${v}`;
+            card.dataset.impact = (c.impact || 'medium').toLowerCase();
+            card.dataset.category = c.category || 'GPU Tool';
+            card.dataset.hoverBody = c.hoverBody || c.desc;
+
+            const impactLower = (c.impact || 'medium').toLowerCase();
+            const btnText = c.badge === 'info' ? 'Read Only' : 'Coming Soon';
+
             card.innerHTML = `
                 <div class="gpu-card-aurora" aria-hidden="true"></div>
                 <div class="gpu-card-top">
@@ -2273,16 +2382,30 @@ function initializeGpuPage() {
                     </div>
                 </div>
                 <div class="gpu-card-foot">
-                    <span class="gpu-card-badge ${BADGE_CLASS[c.badge] || 'gpu-badge--soon'}">${BADGE_LABEL[c.badge] || 'Coming Soon'}</span>
-                    <button class="gpu-card-btn" disabled>Locked</button>
+                    <div class="gpu-card-foot-left">
+                        <span class="gpu-card-badge ${BADGE_CLASS[c.badge] || 'gpu-badge--soon'}"><span class="gpu-badge-dot" aria-hidden="true"></span>${BADGE_LABEL[c.badge] || 'Coming Soon'}</span>
+                        <span class="gpu-card-impact gpu-impact--${impactLower}">${c.impact || 'Medium'} Impact</span>
+                    </div>
+                    <button class="gpu-card-btn" disabled>${btnText}</button>
                 </div>
             `;
 
-            // Pointer-tracking aurora (same pattern as toggle-card)
+            // Pointer-tracking aurora
             card.addEventListener('pointermove', e => {
                 const r = card.getBoundingClientRect();
                 card.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
                 card.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
+            });
+
+            // Hover tooltip (220ms dwell, same as toggle-card)
+            let gpuShowTimer;
+            card.addEventListener('mouseenter', () => {
+                clearTimeout(gpuShowTimer);
+                gpuShowTimer = setTimeout(() => showTooltipFor(card), 220);
+            });
+            card.addEventListener('mouseleave', () => {
+                clearTimeout(gpuShowTimer);
+                hideTooltip();
             });
 
             grid.appendChild(card);

@@ -1147,6 +1147,75 @@
                             <div class="gpu-results-info" id="gpu-results-info"></div>
                             <div class="gpu-vendor-tabs" id="gpu-vendor-tabs"></div>
                         </div>
+
+                        <!-- Live stats strip: temperature, GPU load, power plan -->
+                        <div class="gpu-stat-strip" id="gpu-stat-strip">
+
+                            <div class="gpu-stat-card" id="gpu-sc-temp" data-vendor="neutral">
+                                <div class="gpu-sc-top">
+                                    <div class="gpu-sc-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="gpu-sc-body">
+                                        <span class="gpu-sc-lbl">Temperature</span>
+                                        <div class="gpu-sc-val-row">
+                                            <span class="gpu-sc-val" id="gpu-sc-temp-val">--</span>
+                                            <span class="gpu-sc-unit" id="gpu-sc-temp-unit"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <svg class="gpu-sc-spark" viewBox="0 0 80 26" preserveAspectRatio="none">
+                                    <path class="gpu-sc-spark-fill" id="gpu-sc-temp-fill" d=""/>
+                                    <path class="gpu-sc-spark-line" id="gpu-sc-temp-line" d=""/>
+                                </svg>
+                            </div>
+
+                            <div class="gpu-stat-card" id="gpu-sc-usage" data-vendor="neutral">
+                                <div class="gpu-sc-top">
+                                    <div class="gpu-sc-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                                        </svg>
+                                    </div>
+                                    <div class="gpu-sc-body">
+                                        <span class="gpu-sc-lbl">GPU Load</span>
+                                        <div class="gpu-sc-val-row">
+                                            <span class="gpu-sc-val" id="gpu-sc-usage-val">--</span>
+                                            <span class="gpu-sc-unit">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <svg class="gpu-sc-spark" viewBox="0 0 80 26" preserveAspectRatio="none">
+                                    <path class="gpu-sc-spark-fill" id="gpu-sc-usage-fill" d=""/>
+                                    <path class="gpu-sc-spark-line" id="gpu-sc-usage-line" d=""/>
+                                </svg>
+                            </div>
+
+                            <div class="gpu-stat-card" id="gpu-sc-power" data-vendor="neutral">
+                                <div class="gpu-sc-top">
+                                    <div class="gpu-sc-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+                                            <line x1="12" y1="2" x2="12" y2="12"/>
+                                        </svg>
+                                    </div>
+                                    <div class="gpu-sc-body">
+                                        <span class="gpu-sc-lbl">Power Plan</span>
+                                        <div class="gpu-sc-val-row">
+                                            <span class="gpu-sc-val gpu-sc-val--text" id="gpu-sc-power-val">--</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="gpu-sc-status">
+                                    <span class="gpu-sc-status-dot" id="gpu-sc-power-dot"></span>
+                                    <span class="gpu-sc-status-text" id="gpu-sc-power-text">Detecting...</span>
+                                </div>
+                            </div>
+
+                        </div>
+
                         <div id="gpu-vendor-sections"></div>
                     </div>
 

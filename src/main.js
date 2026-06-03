@@ -1419,6 +1419,68 @@ ipcMain.handle('save-toggle-state', async (event, toggleId, state) => {
     return { success: true };
 });
 
+// ── GPU Live Stats (real temp via nvidia-smi, power plan, usage) ──
+let _gpuLiveCache   = { temp: null, powerPlan: null };
+let _gpuTempTs      = 0;
+let _gpuPlanTs      = 0;
+let _nvidiaSmiOk    = null; // null=untested, true=works, false=unavailable
+
+function _fetchNvidiaTemp() {
+    return new Promise((resolve) => {
+        execFile(
+            'nvidia-smi',
+            ['--query-gpu=temperature.gpu', '--format=csv,noheader,nounits'],
+            { windowsHide: true, timeout: 3000 },
+            (err, stdout) => {
+                if (err) { _nvidiaSmiOk = false; resolve(null); return; }
+                const v = parseInt((stdout || '').trim(), 10);
+                const val = Number.isFinite(v) ? v : null;
+                _nvidiaSmiOk = val !== null;
+                resolve(val);
+            }
+        );
+    });
+}
+
+function _fetchPowerPlan() {
+    return new Promise((resolve) => {
+        execFile(
+            'powercfg', ['/getactivescheme'],
+            { windowsHide: true, timeout: 4000 },
+            (err, stdout) => {
+                if (err) { resolve(null); return; }
+                const m = (stdout || '').match(/\(([^)]+)\)/);
+                resolve(m ? m[1].trim() : null);
+            }
+        );
+    });
+}
+
+ipcMain.handle('get-gpu-live-stats', async () => {
+    const now   = Date.now();
+    const tasks = [];
+
+    // Refresh temp every 2.5 s; skip nvidia-smi entirely once known unavailable
+    if (_nvidiaSmiOk !== false && now - _gpuTempTs > 2500) {
+        _gpuTempTs = now;
+        tasks.push(_fetchNvidiaTemp().then(v => { _gpuLiveCache.temp = v; }));
+    }
+
+    // Refresh power plan every 30 s
+    if (now - _gpuPlanTs > 30000) {
+        _gpuPlanTs = now;
+        tasks.push(_fetchPowerPlan().then(v => { if (v !== null) _gpuLiveCache.powerPlan = v; }));
+    }
+
+    if (tasks.length) await Promise.all(tasks);
+
+    return {
+        usage:     Math.min(100, Math.max(0, Math.round(currentSystemStats.gpuUsage ?? 0))),
+        temp:      _gpuLiveCache.temp,      // integer °C, or null if unavailable
+        powerPlan: _gpuLiveCache.powerPlan  // string, or null if unavailable
+    };
+});
+
 // ── GPU Info ──────────────────────────────────────────────────
 function detectGpuVendor(name) {
     const n = (name || '').toLowerCase();
