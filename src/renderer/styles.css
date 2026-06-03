@@ -518,10 +518,10 @@ body::after {
   font-weight: 800;
   letter-spacing: 1.2px;
   text-transform: uppercase;
-  color: #d4b8ff;
+  color: #ffffff;
   margin-bottom: 14px;
 }
-.hero-badge svg { width: 12px; height: 12px; color: #ffffff; filter: drop-shadow(0 0 6px rgba(255,255,255,0.6)); }
+.hero-badge svg { width: 16px; height: 16px; color: #e0ad2a; filter: drop-shadow(0 0 4px rgba(224,173,42,0.96)) drop-shadow(0 0 14px rgba(208,150,20,0.52)); }
 
 .hero-title {
   font-size: 34px;
@@ -2254,11 +2254,14 @@ body::after {
   .features-grid, .devs-grid { grid-template-columns: 1fr; }
 }
 
-/* Premium upgrade card (sidebar bottom on flagship) */
+/* Premium card — sidebar bottom */
 .nav-upgrade {
     margin-top: auto;
-    padding: 16px;
-    text-align: left;
+    flex-shrink: 0;
+    padding: 10px 13px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
     background: linear-gradient(160deg, rgba(35,35,35,0.65) 0%, rgba(15,15,15,0.75) 100%);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -2275,31 +2278,19 @@ body::after {
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
 }
-.nav-upgrade-title {
-    font-size: 12.5px;
-    font-weight: 800;
-    color: var(--text);
-    margin-bottom: 8px;
-    letter-spacing: 0.2px;
+.nav-upgrade-crown-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: #e0ad2a;
+    filter: drop-shadow(0 0 4px rgba(224,173,42,0.96)) drop-shadow(0 0 14px rgba(208,150,20,0.52));
 }
-.nav-upgrade-copy {
-    font-size: 11px;
-    color: var(--text-muted);
-    line-height: 1.5;
-    margin-bottom: 12px;
-}
-.nav-upgrade-badge {
-    display: inline-block;
-    font-size: 9.5px;
+.nav-upgrade-label {
+    font-size: 11.5px;
     font-weight: 800;
-    letter-spacing: 1.4px;
+    letter-spacing: 1.3px;
     text-transform: uppercase;
-    padding: 5px 11px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(120,120,120,0.10));
-    border: 1px solid rgba(255,255,255,0.22);
-    color: #ffffff;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+    color: var(--text);
 }
 
 .nav-branding.nav-branding-profile {
