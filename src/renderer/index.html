@@ -93,6 +93,17 @@
                     <span class="nav-text">Fortnite</span>
                 </button>
 
+                <button class="nav-item" data-page="gpu">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="1" y="7" width="22" height="10" rx="2"/>
+                        <path d="M6 7V5M10 7V5M14 7V5M18 7V5"/>
+                        <path d="M6 17v2M10 17v2M14 17v2M18 17v2"/>
+                        <line x1="1" y1="12" x2="4" y2="12"/>
+                        <line x1="20" y1="12" x2="23" y2="12"/>
+                    </svg>
+                    <span class="nav-text">GPU</span>
+                </button>
+
                 <button class="nav-item" data-page="system">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="2" y="3" width="20" height="14" rx="2"/>
@@ -1033,6 +1044,125 @@
                         </div>
                     </div>
 
+                </div>
+
+                <!-- ── GPU Page ───────────────────────────────────── -->
+                <div id="page-gpu" class="page">
+                    <div class="page-header">
+                        <h1>GPU</h1>
+                        <p class="page-subtitle">Vendor-specific GPU optimization tools for your hardware.</p>
+                    </div>
+
+                    <!-- Scanning state: shown first, neutral black/silver -->
+                    <div id="gpu-scan-state">
+                        <div class="gpu-scan-card glass">
+
+                            <!-- Icon + title + progress -->
+                            <div class="gpu-scan-inner">
+                                <div class="gpu-scan-orb-wrap">
+                                    <div class="gpu-scan-orb"></div>
+                                    <div class="gpu-scan-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="1" y="7" width="22" height="10" rx="2"/>
+                                            <path d="M6 7V5M10 7V5M14 7V5M18 7V5"/>
+                                            <path d="M6 17v2M10 17v2M14 17v2M18 17v2"/>
+                                            <line x1="1" y1="12" x2="4" y2="12"/>
+                                            <line x1="20" y1="12" x2="23" y2="12"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="gpu-scan-text">
+                                    <h2 class="gpu-scan-title">Detecting Graphics Hardware</h2>
+                                    <p class="gpu-scan-status" id="gpu-scan-status">Reading hardware info...</p>
+                                </div>
+                                <div class="gpu-scan-track">
+                                    <div class="gpu-scan-bar" id="gpu-scan-bar"></div>
+                                </div>
+                            </div>
+
+                            <!-- Scan checklist -->
+                            <div class="gpu-scan-checklist">
+                                <div class="gpu-check-row" id="gpu-check-1">
+                                    <span class="gpu-check-dot"></span>
+                                    <span class="gpu-check-text">Checking installed display adapters</span>
+                                </div>
+                                <div class="gpu-check-row" id="gpu-check-2">
+                                    <span class="gpu-check-dot"></span>
+                                    <span class="gpu-check-text">Filtering virtual adapters</span>
+                                </div>
+                                <div class="gpu-check-row" id="gpu-check-3">
+                                    <span class="gpu-check-dot"></span>
+                                    <span class="gpu-check-text">Preparing vendor-specific tools</span>
+                                </div>
+                                <div class="gpu-check-row gpu-check-row--note" id="gpu-check-4">
+                                    <span class="gpu-check-dot"></span>
+                                    <span class="gpu-check-text">Virtual display adapters filtered automatically</span>
+                                </div>
+                            </div>
+
+                            <!-- Bottom mini info cards -->
+                            <div class="gpu-scan-meta-cards">
+                                <div class="gpu-meta-card">
+                                    <div class="gpu-meta-card-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <polyline points="12 6 12 12 16 14"/>
+                                        </svg>
+                                    </div>
+                                    <div class="gpu-meta-card-text">
+                                        <span class="gpu-meta-card-label">Scan</span>
+                                        <span class="gpu-meta-card-value" id="gpu-meta-scan-value">In Progress</span>
+                                    </div>
+                                </div>
+                                <div class="gpu-meta-card">
+                                    <div class="gpu-meta-card-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="gpu-meta-card-text">
+                                        <span class="gpu-meta-card-label">Safe</span>
+                                        <span class="gpu-meta-card-value">Local Only</span>
+                                    </div>
+                                </div>
+                                <div class="gpu-meta-card">
+                                    <div class="gpu-meta-card-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                                        </svg>
+                                    </div>
+                                    <div class="gpu-meta-card-text">
+                                        <span class="gpu-meta-card-label">Focus</span>
+                                        <span class="gpu-meta-card-value">Performance</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Results state: revealed after detection -->
+                    <div id="gpu-results-state" hidden>
+                        <div class="gpu-results-header" id="gpu-results-header">
+                            <div class="gpu-results-info" id="gpu-results-info"></div>
+                            <div class="gpu-vendor-tabs" id="gpu-vendor-tabs"></div>
+                        </div>
+                        <div id="gpu-vendor-sections"></div>
+                    </div>
+
+                    <!-- Error state -->
+                    <div id="gpu-error-state" hidden>
+                        <div class="gpu-error-inner">
+                            <svg class="gpu-error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="8" x2="12" y2="12"/>
+                                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                            </svg>
+                            <h3 class="gpu-error-title">Detection Failed</h3>
+                            <p class="gpu-error-msg" id="gpu-error-msg">Could not read GPU hardware information.</p>
+                            <button class="hero-cta-ghost" id="gpu-retry-btn">Try Again</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="page-system" class="page">

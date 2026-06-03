@@ -18,6 +18,7 @@ function initializeApp() {
     initializeSystemScanModal(sysInfoApi);
     loadSystemInfo();
     startLiveMonitoring();
+    initializeGpuPage();
 }
 
 function initializeExternalLinks() {
@@ -1990,3 +1991,316 @@ document.addEventListener('DOMContentLoaded', () => {
         enhanceNetworkCards();
     }, 0);
 });
+
+// ── GPU Page ──────────────────────────────────────────────────
+function initializeGpuPage() {
+    const gpuNavBtn      = document.querySelector('[data-page="gpu"]');
+    const gpuScanState   = document.getElementById('gpu-scan-state');
+    const gpuResultsState = document.getElementById('gpu-results-state');
+    const gpuErrorState  = document.getElementById('gpu-error-state');
+    const gpuScanBar     = document.getElementById('gpu-scan-bar');
+    const gpuScanStatus  = document.getElementById('gpu-scan-status');
+    const gpuResultsInfo = document.getElementById('gpu-results-info');
+    const gpuVendorTabs  = document.getElementById('gpu-vendor-tabs');
+    const gpuSections    = document.getElementById('gpu-vendor-sections');
+    const gpuRetryBtn    = document.getElementById('gpu-retry-btn');
+    const gpuErrorMsg    = document.getElementById('gpu-error-msg');
+
+    if (!gpuNavBtn || !gpuScanState) return;
+
+    let detectionDone = false;
+    let detectedGpus  = [];
+
+    // ── Card definitions per vendor ───────────────────────────
+    const GPU_CARDS = {
+        nvidia: [
+            { icon: 'zap',      title: 'Low Latency Mode',       desc: 'Configure NVIDIA Ultra-Low Latency mode for competitive play.',         badge: 'soon' },
+            { icon: 'chart',    title: 'VRAM Monitor',           desc: 'Installed VRAM detected for your NVIDIA GPU.',                          badge: 'info' },
+            { icon: 'trash',    title: 'Shader Cache Cleanup',   desc: 'Clear the NVIDIA shader cache to resolve stutter from stale entries.',  badge: 'soon' },
+            { icon: 'info',     title: 'Driver Info',            desc: 'Installed driver version and release date for your NVIDIA GPU.',        badge: 'info' },
+            { icon: 'sliders',  title: 'Performance Preference', desc: 'Set NVIDIA Power Management mode to Maximum Performance.',              badge: 'soon' },
+            { icon: 'activity', title: 'Reflex Ready Check',     desc: 'Verify your NVIDIA Reflex configuration in supported titles.',          badge: 'soon' },
+            { icon: 'power',    title: 'GPU Power Mode',         desc: 'Inspect and configure GPU power delivery preferences.',                 badge: 'soon' },
+            { icon: 'settings', title: 'Profile Inspector',      desc: 'Advanced per-application NVIDIA profile controls.',                     badge: 'soon' },
+        ],
+        amd: [
+            { icon: 'zap',      title: 'Radeon Anti-Lag',        desc: 'Enable AMD Anti-Lag for reduced input latency in supported games.',     badge: 'soon' },
+            { icon: 'chart',    title: 'VRAM Monitor',           desc: 'Installed VRAM detected for your AMD GPU.',                            badge: 'info' },
+            { icon: 'trash',    title: 'Shader Cache Cleanup',   desc: 'Clear Radeon shader cache to fix stuttering from outdated entries.',   badge: 'soon' },
+            { icon: 'info',     title: 'Driver Info',            desc: 'Installed driver version and release date for your AMD GPU.',          badge: 'info' },
+            { icon: 'sliders',  title: 'Performance Mode',       desc: 'Configure Radeon Power Management for maximum performance output.',    badge: 'soon' },
+            { icon: 'activity', title: 'Anti-Lag Ready Check',   desc: 'Verify AMD Anti-Lag configuration in supported titles.',              badge: 'soon' },
+            { icon: 'power',    title: 'GPU Power Mode',         desc: 'Inspect and configure GPU power delivery preferences.',                badge: 'soon' },
+            { icon: 'settings', title: 'Adrenalin Profile',      desc: 'AMD Adrenalin software profile configuration.',                       badge: 'soon' },
+        ],
+        intel: [
+            { icon: 'info',     title: 'Arc Driver Info',        desc: 'Installed driver version and release date for your Intel GPU.',        badge: 'info' },
+            { icon: 'chart',    title: 'VRAM Monitor',           desc: 'Installed VRAM detected for your Intel GPU.',                          badge: 'info' },
+            { icon: 'sliders',  title: 'Power / Performance',    desc: 'Configure Intel GPU power preference for performance or efficiency.',  badge: 'soon' },
+            { icon: 'trash',    title: 'Shader Cache Cleanup',   desc: 'Clear Intel GPU shader cache to resolve driver-related stutter.',      badge: 'soon' },
+            { icon: 'monitor',  title: 'Display Settings',       desc: 'Verify display configuration, refresh rate, and color settings.',     badge: 'soon' },
+            { icon: 'power',    title: 'GPU Power Mode',         desc: 'Inspect and configure GPU power delivery preferences.',               badge: 'soon' },
+            { icon: 'cpu',      title: 'Integrated GPU Mode',    desc: 'Check active GPU routing for Intel integrated graphics.',              badge: 'soon' },
+            { icon: 'settings', title: 'Intel Command Center',   desc: 'Intel Arc Control software integration.',                             badge: 'soon' },
+        ],
+        unknown: [
+            { icon: 'info',     title: 'GPU Info',               desc: 'Basic GPU information from your system.',                             badge: 'info' },
+            { icon: 'chart',    title: 'VRAM Monitor',           desc: 'Installed VRAM detected for your GPU.',                               badge: 'info' },
+            { icon: 'sliders',  title: 'Performance Settings',   desc: 'General GPU performance configuration options.',                      badge: 'soon' },
+            { icon: 'trash',    title: 'Shader Cache Cleanup',   desc: 'Clear GPU shader cache to resolve stutter from stale entries.',       badge: 'soon' },
+            { icon: 'monitor',  title: 'Display Settings',       desc: 'Verify display configuration and refresh rate settings.',             badge: 'soon' },
+            { icon: 'power',    title: 'GPU Power Mode',         desc: 'Inspect and configure GPU power delivery preferences.',               badge: 'soon' },
+            { icon: 'activity', title: 'Performance Profile',    desc: 'Hardware-specific GPU performance profile.',                          badge: 'soon' },
+            { icon: 'settings', title: 'Advanced Settings',      desc: 'Advanced GPU configuration tools.',                                   badge: 'soon' },
+        ],
+    };
+
+    const ICON_PATHS = {
+        zap:      '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>',
+        trash:    '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/>',
+        info:     '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+        sliders:  '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+        activity: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+        settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+        monitor:  '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
+        cpu:      '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>',
+        chart:    '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+        power:    '<path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>',
+    };
+
+    const VENDOR_NAME = { nvidia: 'NVIDIA', amd: 'AMD', intel: 'Intel', unknown: 'Unknown' };
+    const BADGE_LABEL = { soon: 'Coming Soon', info: 'Info', safe: 'Safe', admin: 'Admin Required' };
+    const BADGE_CLASS = { soon: 'gpu-badge--soon', info: 'gpu-badge--info', safe: 'gpu-badge--safe', admin: 'gpu-badge--admin' };
+
+    function iconSvg(name) {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON_PATHS[name] || ICON_PATHS.info}</svg>`;
+    }
+
+    // ── Detection ─────────────────────────────────────────────
+    async function runDetection() {
+        // Reset to scan state
+        gpuScanState.classList.remove('gpu-scan-fading');
+        gpuScanState.hidden = false;
+        gpuResultsState.hidden = true;
+        gpuErrorState.hidden = true;
+        gpuScanBar.style.transition = 'none';
+        gpuScanBar.style.width = '0%';
+        gpuScanStatus.textContent = 'Reading hardware info...';
+        gpuScanStatus.classList.remove('fading');
+
+        // Reset checklist rows
+        const chkRows = [1,2,3,4].map(i => document.getElementById(`gpu-check-${i}`));
+        chkRows.forEach(r => r?.classList.remove('visible', 'active', 'done'));
+        const metaScanVal = document.getElementById('gpu-meta-scan-value');
+        if (metaScanVal) metaScanVal.textContent = 'In Progress';
+
+        requestAnimationFrame(() => { gpuScanBar.style.transition = 'width 0.12s linear'; });
+
+        const ANIM_MS   = 2600;
+        const startTime = Date.now();
+
+        const progressTimer = setInterval(() => {
+            const pct = Math.min(((Date.now() - startTime) / ANIM_MS) * 82, 82);
+            gpuScanBar.style.width = pct + '%';
+        }, 60);
+
+        const statusMessages = ['Reading hardware info...', 'Identifying GPU vendor...', 'Filtering display adapters...'];
+        let msgIdx = 0;
+        const msgTimer = setInterval(() => {
+            msgIdx = Math.min(msgIdx + 1, statusMessages.length - 1);
+            gpuScanStatus.classList.add('fading');
+            setTimeout(() => {
+                gpuScanStatus.textContent = statusMessages[msgIdx];
+                gpuScanStatus.classList.remove('fading');
+            }, 200);
+        }, 900);
+
+        // Checklist step animations — timed across ANIM_MS
+        const chkStep = (rowIdx, delay, prevIdx) => setTimeout(() => {
+            if (prevIdx >= 0) {
+                chkRows[prevIdx]?.classList.remove('active');
+                chkRows[prevIdx]?.classList.add('done');
+            }
+            chkRows[rowIdx]?.classList.add('visible');
+            if (rowIdx < 3) chkRows[rowIdx]?.classList.add('active'); // row 3 is a note, no pulse
+        }, delay);
+
+        const chkTimers = [
+            chkStep(0, 360, -1),
+            chkStep(1, 860, 0),
+            chkStep(2, 1520, 1),
+            chkStep(3, 2060, 2),
+        ];
+
+        let result = null;
+        try {
+            result = await window.electronAPI.getGpuInfo();
+        } catch (err) {
+            result = { success: false, error: err.message, gpus: [] };
+        }
+
+        const elapsed   = Date.now() - startTime;
+        const remaining = Math.max(0, ANIM_MS - elapsed);
+        await new Promise(r => setTimeout(r, remaining));
+
+        clearInterval(progressTimer);
+        clearInterval(msgTimer);
+        chkTimers.forEach(clearTimeout);
+        gpuScanBar.style.width = '100%';
+        await new Promise(r => setTimeout(r, 260));
+
+        if (!result || !result.success || !result.gpus || result.gpus.length === 0) {
+            gpuScanState.hidden = true;
+            gpuErrorState.hidden = false;
+            gpuErrorMsg.textContent = (result && result.error) || 'No real GPU detected. Hardware info may be unavailable.';
+            return;
+        }
+
+        // Mark all checklist rows done, update meta card
+        chkRows.forEach(r => { r?.classList.remove('active'); r?.classList.add('visible', 'done'); });
+        if (metaScanVal) metaScanVal.textContent = 'Complete';
+
+        detectedGpus  = result.gpus;
+        detectionDone = true;
+
+        // Brief pause so user sees completed checklist
+        await new Promise(r => setTimeout(r, 480));
+
+        gpuScanState.classList.add('gpu-scan-fading');
+        await new Promise(r => setTimeout(r, 300));
+        gpuScanState.hidden = true;
+        gpuScanState.classList.remove('gpu-scan-fading');
+        renderGpuPage(detectedGpus);
+    }
+
+    // ── Render GPU page ───────────────────────────────────────
+    function renderGpuPage(gpus) {
+        // Deduplicate by vendor
+        const seen = new Set();
+        const uniqueGpus = gpus.filter(g => { if (seen.has(g.vendor)) return false; seen.add(g.vendor); return true; });
+
+        // Prefer NVIDIA > AMD > Intel > unknown when choosing the default tab
+        const PRIORITY = ['nvidia', 'amd', 'intel', 'unknown'];
+        const defaultVendor = PRIORITY.find(v => uniqueGpus.some(g => g.vendor === v)) || uniqueGpus[0].vendor;
+
+        // ── Results info card ────────────────────────────────
+        const primaryGpu = uniqueGpus.find(g => g.vendor === defaultVendor) || uniqueGpus[0];
+        const gpuResultsHeader = document.getElementById('gpu-results-header');
+
+        function buildInfoHtml(gpu) {
+            return `
+                <div class="gpu-ri-vendor-row">
+                    <span class="gpu-ri-dot gpu-ri-dot--${gpu.vendor}"></span>
+                    <span class="gpu-ri-vendor-name">${VENDOR_NAME[gpu.vendor]}</span>
+                </div>
+                <span class="gpu-ri-name">${gpu.name}</span>
+                <div class="gpu-ri-pills">
+                    ${gpu.driverVersion ? `<span class="gpu-ri-pill">Driver ${gpu.driverVersion}</span>` : ''}
+                    ${gpu.vram ? `<span class="gpu-ri-pill">${gpu.vram} VRAM</span>` : ''}
+                </div>
+            `;
+        }
+
+        gpuResultsInfo.innerHTML = buildInfoHtml(primaryGpu);
+        if (gpuResultsHeader) gpuResultsHeader.className = `gpu-results-header gpu-results-header--${primaryGpu.vendor}`;
+
+        // ── Vendor tabs (only if multiple vendors) ────────────
+        gpuVendorTabs.textContent = '';
+        if (uniqueGpus.length > 1) {
+            uniqueGpus.forEach(gpu => {
+                const btn = document.createElement('button');
+                btn.className = 'gpu-vendor-tab' + (gpu.vendor === defaultVendor ? ' active' : '');
+                btn.dataset.vendor = gpu.vendor;
+                btn.textContent = VENDOR_NAME[gpu.vendor];
+                btn.addEventListener('click', () => {
+                    gpuVendorTabs.querySelectorAll('.gpu-vendor-tab').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    gpuSections.querySelectorAll('.gpu-vendor-section').forEach(s => {
+                        s.hidden = s.dataset.vendor !== gpu.vendor;
+                    });
+                    const g = uniqueGpus.find(x => x.vendor === gpu.vendor);
+                    if (g) {
+                        gpuResultsInfo.innerHTML = buildInfoHtml(g);
+                        if (gpuResultsHeader) gpuResultsHeader.className = `gpu-results-header gpu-results-header--${g.vendor}`;
+                    }
+                });
+                gpuVendorTabs.appendChild(btn);
+            });
+        }
+
+        // ── Build vendor sections ─────────────────────────────
+        gpuSections.textContent = '';
+        uniqueGpus.forEach((gpu, idx) => {
+            const section = buildVendorSection(gpu, idx);
+            section.dataset.vendor = gpu.vendor;
+            if (uniqueGpus.length > 1 && gpu.vendor !== defaultVendor) {
+                section.hidden = true;
+            }
+            gpuSections.appendChild(section);
+        });
+
+        gpuResultsState.hidden = false;
+    }
+
+    function buildVendorSection(gpu, idx) {
+        const v     = gpu.vendor;
+        const cards = GPU_CARDS[v] || GPU_CARDS.unknown;
+
+        const section = document.createElement('div');
+        section.className = `gpu-vendor-section gpu-vendor-section--${v}`;
+        section.style.animationDelay = `${idx * 0.08}s`;
+
+        // Thin section label
+        const label = document.createElement('div');
+        label.className = `gpu-section-label gpu-section-label--${v}`;
+        label.innerHTML = `<span class="gpu-section-label-dot"></span>${VENDOR_NAME[v]} Tools`;
+        section.appendChild(label);
+
+        // Card grid
+        const grid = document.createElement('div');
+        grid.className = 'gpu-card-grid';
+
+        cards.forEach(c => {
+            const card = document.createElement('div');
+            card.className = `gpu-card gpu-card--${v}`;
+            card.innerHTML = `
+                <div class="gpu-card-aurora" aria-hidden="true"></div>
+                <div class="gpu-card-top">
+                    <div class="gpu-card-icon gpu-card-icon--${v}">${iconSvg(c.icon)}</div>
+                    <div class="gpu-card-body">
+                        <h4 class="gpu-card-title">${c.title}</h4>
+                        <p class="gpu-card-desc">${c.desc}</p>
+                    </div>
+                </div>
+                <div class="gpu-card-foot">
+                    <span class="gpu-card-badge ${BADGE_CLASS[c.badge] || 'gpu-badge--soon'}">${BADGE_LABEL[c.badge] || 'Coming Soon'}</span>
+                    <button class="gpu-card-btn" disabled>Locked</button>
+                </div>
+            `;
+
+            // Pointer-tracking aurora (same pattern as toggle-card)
+            card.addEventListener('pointermove', e => {
+                const r = card.getBoundingClientRect();
+                card.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
+                card.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
+            });
+
+            grid.appendChild(card);
+        });
+
+        section.appendChild(grid);
+        return section;
+    }
+
+    // ── Event wiring ──────────────────────────────────────────
+    gpuRetryBtn?.addEventListener('click', () => {
+        detectionDone = false;
+        runDetection();
+    });
+
+    gpuNavBtn.addEventListener('click', () => {
+        if (!detectionDone) {
+            setTimeout(runDetection, 60);
+        }
+    });
+}

@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return ipcRenderer.invoke('get-full-system-info');
     },
     runSystemScan: () => ipcRenderer.invoke('run-system-scan'),
+    getGpuInfo: () => ipcRenderer.invoke('get-gpu-info'),
     getLiveStats: () => ipcRenderer.invoke('get-live-stats'),
     getNetworkInfo: () => ipcRenderer.invoke('get-network-info'),
     flushDns: () => ipcRenderer.invoke('network-flush-dns'),

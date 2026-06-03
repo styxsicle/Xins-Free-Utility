@@ -1418,3 +1418,67 @@ ipcMain.handle('save-toggle-state', async (event, toggleId, state) => {
     saveToggleStates(states);
     return { success: true };
 });
+
+// ── GPU Info ──────────────────────────────────────────────────
+function detectGpuVendor(name) {
+    const n = (name || '').toLowerCase();
+    if (n.includes('nvidia') || n.includes('geforce') || n.includes('rtx') ||
+        n.includes('gtx') || n.includes('quadro') || n.includes('tesla')) return 'nvidia';
+    if (n.includes('amd') || n.includes('radeon') || n.includes('rx ') ||
+        n.includes('vega') || n.includes('navi') || n.includes('rdna')) return 'amd';
+    if (n.includes('intel') || n.includes('arc ') || n.includes('iris') ||
+        n.includes('uhd graphics') || n.includes('hd graphics') || n.includes('xe graphics')) return 'intel';
+    return 'unknown';
+}
+
+// Patterns that identify virtual / non-physical display adapters.
+// These are filtered out silently so only real GPUs are shown.
+const VIRTUAL_GPU_PATTERNS = [
+    'microsoft basic display',
+    'microsoft remote display',
+    'parsec',
+    'virtual display',
+    'indirect display',
+    'vmware',
+    'virtualbox',
+    'vbox',
+    'remotefx',
+    'remote fx',
+    'rdp',
+    'teamviewer',
+    'anydesk',
+    'parallels display',
+    'citrix',
+    'idd ',  // Indirect Display Driver prefix
+];
+
+function isVirtualGpuAdapter(name) {
+    const n = (name || '').toLowerCase();
+    return VIRTUAL_GPU_PATTERNS.some(p => n.includes(p));
+}
+
+ipcMain.handle('get-gpu-info', async () => {
+    console.log('[GPU INFO] Query starts');
+    try {
+        const script = `@(Get-CimInstance -ClassName Win32_VideoController | Select-Object Name,DriverVersion,AdapterRAM,DriverDate) | ConvertTo-Json -Compress`;
+        const raw = await runPowerShellJson('gpu-info', script, 8000);
+        const list = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+        const gpus = list
+            .filter(g => g && g.Name && !isVirtualGpuAdapter(g.Name))
+            .map(gpu => {
+                const name = unknownIfEmpty(gpu.Name, 'Unknown GPU');
+                return {
+                    name,
+                    vendor: detectGpuVendor(name),
+                    driverVersion: unknownIfEmpty(gpu.DriverVersion, null),
+                    vram: gpu.AdapterRAM ? formatBytesForDisplay(gpu.AdapterRAM) : null,
+                    driverDate: gpu.DriverDate ? String(gpu.DriverDate).substring(0, 10) : null
+                };
+            });
+        console.log(`[GPU INFO] Found ${gpus.length} real GPU(s):`, gpus.map(g => `${g.vendor}:${g.name}`).join(', '));
+        return { success: true, gpus };
+    } catch (err) {
+        console.error('[GPU INFO] Query failed:', err.message);
+        return { success: false, error: err.message, gpus: [] };
+    }
+});
