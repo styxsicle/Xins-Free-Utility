@@ -67,6 +67,12 @@ function initializeNavigation() {
                     page.classList.add('active');
                 }
             });
+
+            if (targetPage === 'ai-tweaker') {
+                document.body.classList.add('ai-tweaker-active');
+            } else {
+                document.body.classList.remove('ai-tweaker-active');
+            }
         });
     });
 }
@@ -2437,13 +2443,77 @@ function initializeAiTweaker() {
         XTWEAKS_AI_MODEL: 'llama3.2',
         XTWEAKS_AI_SYSTEM_PROMPT:
             'You are AI Tweaker, the premium assistant inside XTweaks Premium Utility. ' +
-            'Help users understand gaming performance, input delay, Fortnite optimization, ' +
-            'Windows tweaks, startup apps, CPU/GPU/RAM usage, network issues, and safe system tuning. ' +
-            'Be clear, practical, and never claim you applied a tweak unless the app actually performed that action.'
+            'Help users with gaming performance, input delay, Fortnite optimization, Windows tweaks, ' +
+            'startup apps, CPU/GPU/RAM usage, network issues, and safe system tuning. ' +
+            'Be clear and practical. When you suggest improvements, describe them in plain language — ' +
+            'the app will offer pre-approved safe actions the user can choose to apply. ' +
+            'Never claim you directly applied a tweak or ran a command. ' +
+            'Never invent permissions or system access not provided by the app. ' +
+            'Always let the user confirm before any changes are made.'
     };
 
-    let chatHistory = [];
-    let aiReady = false;
+    const AI_ALLOWED_TWEAKS = {
+        'disable-game-bar':            { title: 'Disable Game Bar',            reason: 'Removes overlay that causes FPS stutters & recording lag',    risk: 'safe'   },
+        'gpu-scheduling':              { title: 'Hardware GPU Scheduling',      reason: 'Reduces GPU latency and improves frame pacing',               risk: 'safe'   },
+        'game-priority':               { title: 'Boost Game Process Priority',  reason: 'Ensures games get CPU priority over background processes',    risk: 'safe'   },
+        'optimize-visual-effects':     { title: 'Optimize Visual Effects',      reason: 'Frees CPU from rendering Windows animations',                 risk: 'safe'   },
+        'disable-xbox-services':       { title: 'Disable Xbox Services',        reason: 'Stops background Xbox processes consuming CPU & RAM',         risk: 'safe'   },
+        'optimize-power-plan':         { title: 'High Performance Power Plan',  reason: 'Maximizes CPU/GPU clocks for consistent frame rates',         risk: 'safe'   },
+        'disable-power-throttling':    { title: 'Disable Power Throttling',     reason: 'Prevents Windows from throttling CPU-intensive apps',         risk: 'safe'   },
+        'optimize-network-throttling': { title: 'Remove Network Throttling',    reason: 'Removes artificial network delay limits for lower ping',      risk: 'safe'   },
+        'disable-nagle':               { title: 'Disable Nagle Algorithm',      reason: 'Reduces TCP latency for lower ping in online games',          risk: 'safe'   },
+        'disable-mouse-accel':         { title: 'Disable Mouse Acceleration',   reason: 'Ensures raw 1:1 mouse movement for aim accuracy',            risk: 'safe'   },
+        'disable-background-apps':     { title: 'Disable Background Apps',      reason: 'Prevents background UWP apps from consuming resources',      risk: 'safe'   },
+        'clean-temp':                  { title: 'Clean Temporary Files',        reason: 'Frees disk space and removes leftover junk files',           risk: 'safe'   },
+        'fortnite-priority':           { title: 'Fortnite Process Priority',    reason: 'Gives Fortnite high CPU scheduling priority',                risk: 'safe'   },
+        'fortnite-clear-cache':        { title: 'Clear Fortnite Shader Cache',  reason: 'Fixes stutters caused by stale shader & asset cache',        risk: 'safe'   },
+        'timer-resolution':            { title: 'Optimize Timer Resolution',    reason: 'Improves input timing precision — may need restart',          risk: 'review' },
+        'disable-superfetch':          { title: 'Disable SysMain / Superfetch', reason: 'Reduces background disk & RAM usage on gaming PCs',          risk: 'review' },
+        'disable-telemetry':           { title: 'Disable Windows Telemetry',    reason: 'Stops background data collection from using resources',       risk: 'review' },
+        'bcdedit-tweaks':              { title: 'Boot & Kernel Optimizations',  reason: 'Applies low-level Windows kernel timing tweaks',              risk: 'review' },
+    };
+
+    const AI_INTENT_PATTERNS = [
+        {
+            patterns: ['fortnite', 'fn fps', 'fortnite fps', 'fortnite tweak', 'fn optimize'],
+            tweakIds: ['disable-game-bar', 'fortnite-priority', 'fortnite-clear-cache', 'optimize-power-plan', 'optimize-visual-effects', 'disable-xbox-services'],
+            label: 'Fortnite Optimization'
+        },
+        {
+            patterns: ['input delay', 'input latency', 'click delay', 'mouse delay', 'response time', 'click latency', 'reduce latency'],
+            tweakIds: ['disable-mouse-accel', 'timer-resolution', 'disable-power-throttling', 'disable-nagle', 'gpu-scheduling', 'optimize-power-plan'],
+            label: 'Input Latency Reduction'
+        },
+        {
+            patterns: ['network', 'ping', 'lag', 'packet loss', 'lower ping', 'reduce ping', 'internet lag', 'online gaming'],
+            tweakIds: ['optimize-network-throttling', 'disable-nagle', 'disable-background-apps'],
+            label: 'Network Optimization'
+        },
+        {
+            patterns: ['clean', 'cleanup', 'junk', 'temp files', 'slow pc', 'bloat', 'disk space', 'clean up'],
+            tweakIds: ['clean-temp', 'disable-superfetch', 'disable-background-apps'],
+            label: 'System Cleanup'
+        },
+        {
+            patterns: ['gaming', 'fps', 'frame rate', 'game performance', 'stutter', 'frame drop', 'boost fps', 'optimize', 'performance', 'speed up', 'faster', 'best tweaks'],
+            tweakIds: ['disable-game-bar', 'gpu-scheduling', 'game-priority', 'optimize-visual-effects', 'optimize-power-plan', 'disable-xbox-services'],
+            label: 'Gaming Performance'
+        }
+    ];
+
+    function detectIntent(text) {
+        const lower = text.toLowerCase();
+        for (const intent of AI_INTENT_PATTERNS) {
+            if (intent.patterns.some(p => lower.includes(p))) return intent;
+        }
+        return null;
+    }
+
+    let chatHistory   = [];
+    let aiReady       = false;
+    let pcContext     = null;
+    let pcContextTime = null;
+    let tweakStates   = {};
     let pullProgressUnsubscribe = null;
     let ctaInstallAction = null;
 
@@ -2585,6 +2655,455 @@ function initializeAiTweaker() {
 
     recheckBtn.addEventListener('click', checkOllama);
 
+    /* ── Recommendation card helpers ── */
+    function setTweakRowStatus(card, tweakId, status) {
+        const row = card.querySelector(`.ai-tweak-row[data-tweak-id="${tweakId}"]`);
+        if (!row) return;
+        const statusEl = row.querySelector('.ai-tweak-status');
+        const textEl   = row.querySelector('.ai-tweak-status-text');
+        if (!statusEl || !textEl) return;
+        statusEl.className = `ai-tweak-status ${status}`;
+        const labels = { idle: 'Ready', pending: 'Queued', running: 'Applying…', done: 'Applied ✓', failed: 'Failed', skipped: 'Skipped' };
+        textEl.textContent = labels[status] || status;
+    }
+
+    async function applyTweaksFromCard(card, tweakIds) {
+        const actionsEl  = card.querySelector('.ai-apply-actions');
+        const confirmEl  = card.querySelector('.ai-confirm-inline');
+        if (actionsEl) actionsEl.style.display = 'none';
+        if (confirmEl) confirmEl.style.display = 'none';
+
+        const toApply   = tweakIds.filter(id => tweakStates[id] !== true);
+        const alreadyOn = tweakIds.filter(id => tweakStates[id] === true);
+
+        toApply.forEach(id => setTweakRowStatus(card, id, 'pending'));
+
+        if (toApply.length === 0) {
+            const summary = document.createElement('div');
+            summary.className = 'ai-rec-summary';
+            summary.innerHTML = `<span class="ai-sum-info">All ${alreadyOn.length} tweak${alreadyOn.length !== 1 ? 's' : ''} already applied</span>`;
+            card.appendChild(summary);
+            return;
+        }
+
+        const progressUnsub = window.electronAPI.onTweakProgress
+            ? window.electronAPI.onTweakProgress(data => {
+                if (!data || !data.id) return;
+                const s = data.status;
+                if (s === 'running' || s === 'done' || s === 'failed' || s === 'skipped')
+                    setTweakRowStatus(card, data.id, s);
+            })
+            : null;
+
+        let results = [];
+        try {
+            const res = await window.electronAPI.applyRecommendedTweaks(toApply);
+            results = res.results || [];
+        } catch (e) {
+            results = toApply.map(id => ({ id, success: false, message: 'Connection error' }));
+        }
+
+        if (progressUnsub) progressUnsub();
+        results.forEach(r => setTweakRowStatus(card, r.id, r.success ? 'done' : 'failed'));
+
+        const applied = results.filter(r => r.success).length;
+        const failed  = results.filter(r => !r.success).length;
+        const summary = document.createElement('div');
+        summary.className = 'ai-rec-summary';
+        const parts = [];
+        if (applied > 0)      parts.push(`<span class="ai-sum-good">${applied} applied</span>`);
+        if (failed  > 0)      parts.push(`<span class="ai-sum-bad">${failed} failed</span>`);
+        if (alreadyOn.length) parts.push(`<span class="ai-sum-info">${alreadyOn.length} already on</span>`);
+        if (parts.length) { summary.innerHTML = parts.join(' \xb7 '); card.appendChild(summary); }
+    }
+
+    function buildRecommendationCard(intent) {
+        const tweakIds = (intent.tweakIds || []).filter(id => AI_ALLOWED_TWEAKS[id]);
+        if (tweakIds.length === 0) return null;
+
+        const safeCount    = tweakIds.filter(id => AI_ALLOWED_TWEAKS[id].risk === 'safe').length;
+        const reviewCount  = tweakIds.filter(id => AI_ALLOWED_TWEAKS[id].risk === 'review').length;
+        const appliedCount = tweakIds.filter(id => tweakStates[id] === true).length;
+
+        const subtitleParts = [];
+        if (safeCount > 0)   subtitleParts.push(`${safeCount} safe`);
+        if (reviewCount > 0) subtitleParts.push(`${reviewCount} review`);
+        if (appliedCount > 0) subtitleParts.push(`${appliedCount} already on`);
+        subtitleParts.push('confirm before applying');
+
+        const card = document.createElement('div');
+        card.className = 'ai-recommendation-card';
+
+        const hdr = document.createElement('div');
+        hdr.className = 'ai-rec-header';
+        hdr.innerHTML =
+            '<div class="ai-rec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg></div>' +
+            '<div class="ai-rec-header-text">' +
+            `<div class="ai-rec-title">Recommended: ${escapeAiHtml(intent.label)}</div>` +
+            `<div class="ai-rec-subtitle">${subtitleParts.join(' \xb7 ')}</div>` +
+            '</div>';
+        card.appendChild(hdr);
+
+        const list = document.createElement('div');
+        list.className = 'ai-rec-tweak-list';
+        tweakIds.forEach((id, i) => {
+            const t         = AI_ALLOWED_TWEAKS[id];
+            const isApplied = tweakStates[id] === true;
+            const row = document.createElement('div');
+            row.className       = isApplied ? 'ai-tweak-row already-applied' : 'ai-tweak-row';
+            row.dataset.tweakId = id;
+            row.style.animationDelay = `${0.06 + i * 0.055}s`;
+            const riskLabel   = t.risk === 'safe' ? 'Safe' : 'Review';
+            const statusClass = isApplied ? 'already-applied' : 'idle';
+            const statusLabel = isApplied ? 'Already On' : 'Ready';
+            row.innerHTML =
+                '<div class="ai-tweak-row-info">' +
+                `<span class="ai-tweak-row-name">${escapeAiHtml(t.title)}</span>` +
+                `<span class="ai-tweak-row-reason">${escapeAiHtml(t.reason)}</span>` +
+                '</div>' +
+                `<span class="ai-risk-badge ${t.risk}">${riskLabel}</span>` +
+                `<div class="ai-tweak-status ${statusClass}"><span class="ai-tweak-status-dot"></span><span class="ai-tweak-status-text">${statusLabel}</span></div>`;
+            list.appendChild(row);
+        });
+        card.appendChild(list);
+
+        const actions = document.createElement('div');
+        actions.className = 'ai-apply-actions';
+        actions.innerHTML =
+            '<button class="ai-rec-apply-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Apply Recommended</button>' +
+            '<button class="ai-rec-review-btn">Review First</button>' +
+            '<button class="ai-rec-cancel-btn">Skip</button>';
+        card.appendChild(actions);
+
+        const confirm = document.createElement('div');
+        confirm.className = 'ai-confirm-inline';
+        confirm.style.display = 'none';
+        confirm.innerHTML =
+            `<p class="ai-confirm-text">Apply ${tweakIds.length} tweak${tweakIds.length !== 1 ? 's' : ''} now?` +
+            (reviewCount > 0 ? ' Some may need a restart.' : '') + '</p>' +
+            '<div class="ai-confirm-buttons"><button class="ai-confirm-apply-btn">Apply Now</button><button class="ai-confirm-cancel-btn">Cancel</button></div>';
+        card.appendChild(confirm);
+
+        actions.querySelector('.ai-rec-apply-btn').addEventListener('click', () => {
+            actions.style.display = 'none';
+            confirm.style.display = 'flex';
+        });
+        actions.querySelector('.ai-rec-review-btn').addEventListener('click', () => {
+            openReviewModal(tweakIds);
+        });
+        actions.querySelector('.ai-rec-cancel-btn').addEventListener('click', () => {
+            card.classList.add('ai-rec-dismissed');
+            setTimeout(() => { if (card.parentNode) card.parentNode.removeChild(card); }, 320);
+        });
+        confirm.querySelector('.ai-confirm-apply-btn').addEventListener('click', () => {
+            applyTweaksFromCard(card, tweakIds);
+        });
+        confirm.querySelector('.ai-confirm-cancel-btn').addEventListener('click', () => {
+            confirm.style.display = 'none';
+            actions.style.display = 'flex';
+        });
+
+        return card;
+    }
+
+    /* ── Review First modal ── */
+    function openReviewModal(tweakIds) {
+        const validIds = tweakIds.filter(id => AI_ALLOWED_TWEAKS[id]);
+        if (!validIds.length) return;
+
+        const TWEAK_EXTRA = {
+            'disable-game-bar':            { category: 'Gaming',   detail: 'Game Bar runs background recording and overlay processes that cause FPS stutters and input lag spikes even when not actively recording. Disabling it is safe for all gaming setups — OBS and Discord capture still work fine.' },
+            'gpu-scheduling':              { category: 'Gaming',   detail: 'Hardware-Accelerated GPU Scheduling moves frame queue management from the CPU to the GPU itself, removing one hop of latency on the render pipeline. Works best on RTX 20xx+, RX 5xxx+, and Intel Arc GPUs.' },
+            'game-priority':               { category: 'Gaming',   detail: 'Raises the game process priority in the Windows CPU scheduler so it gets first access to CPU time before background tasks, directly reducing micro-stutters during CPU-bound moments.' },
+            'optimize-visual-effects':     { category: 'System',   detail: 'Disables Windows UI animations, transparency, and visual flair. Equivalent to "Adjust for best performance" in Visual Effects settings — frees measurable CPU and GPU headroom with zero functional loss.' },
+            'disable-xbox-services':       { category: 'Gaming',   detail: 'Xbox Game Monitoring and Xbox Live Auth Manager run silently even without Xbox hardware, consuming CPU and RAM. Disabling them has no impact on non-Xbox PC gaming, Steam, or Epic Games titles.' },
+            'optimize-power-plan':         { category: 'System',   detail: 'Switches to the High Performance power plan, preventing the CPU and GPU from downclocking during idle periods between frames. Keeps frequencies stable for consistent frame pacing and lower 1% lows.' },
+            'disable-power-throttling':    { category: 'System',   detail: 'Windows power throttling can reduce CPU frequency for background tasks — and sometimes game processes get incorrectly flagged. Disabling it ensures the CPU always runs at full speed for your game.' },
+            'optimize-network-throttling': { category: 'Network',  detail: 'Windows reserves up to 20% of bandwidth for system services via QoS. Disabling this releases all available bandwidth to your game connection, lowering baseline ping and reducing jitter.' },
+            'disable-nagle':               { category: 'Network',  detail: 'Nagle\'s algorithm batches small TCP packets for efficiency, but adds 50–200ms of artificial latency per packet. Disabling it forces immediate packet delivery — essential for competitive real-time gaming.' },
+            'disable-mouse-accel':         { category: 'Gaming',   detail: 'Enhance Pointer Precision adjusts cursor travel distance based on movement speed, creating inconsistent aim. Disabling it gives raw 1:1 mouse input, which is essential for muscle memory and precise aiming.' },
+            'disable-background-apps':     { category: 'System',   detail: 'Windows Store / UWP apps silently run and update in the background. Disabling this prevents them from consuming CPU, RAM, and disk I/O during gameplay, especially during loading screens.' },
+            'clean-temp':                  { category: 'Cleanup',  detail: 'Removes files from Windows Temp folders and application caches. Frees disk space and can improve load times on near-full drives. Fully reversible — Windows creates new temp files automatically.' },
+            'fortnite-priority':           { category: 'Gaming',   detail: 'Sets the FortniteClient process to High CPU priority, giving it prioritized scheduling time. Works alongside Game Priority for best Fortnite-specific scheduling performance.' },
+            'fortnite-clear-cache':        { category: 'Gaming',   detail: 'Deletes Fortnite\'s shader and DerivedDataCache files. Fortnite rebuilds them cleanly on the next launch, fixing stutters caused by corrupted or outdated cache entries accumulated through patches.' },
+            'timer-resolution':            { category: 'System',   detail: 'Windows uses a 15.6ms system timer by default. Reducing this to 0.5ms sharpens sleep and wake cycles for game loops and input polling. A slight idle CPU usage increase is expected — recommended for competitive play.' },
+            'disable-superfetch':          { category: 'System',   detail: 'SysMain preloads frequently used apps into RAM, but on gaming PCs this can cause disk thrashing and RAM spikes mid-game. Recommended for systems with 16 GB+ RAM and an SSD.' },
+            'disable-telemetry':           { category: 'System',   detail: 'Disables Windows Diagnostic Data collection services that run background tasks using CPU, disk, and network. No Windows features, gaming functionality, or Windows Update behavior is affected.' },
+            'bcdedit-tweaks':              { category: 'System',   detail: 'Applies Boot Configuration Data tweaks affecting kernel interrupt timing. Advanced low-level optimization — a full system restart is required before changes take effect.' },
+        };
+        const riskNotes = {
+            safe:   'Fully reversible. No restart required.',
+            review: 'Tested safe for most systems. A restart may be needed.',
+            manual: 'Manual review recommended before applying.',
+        };
+
+        const checkedIds = new Set(validIds.filter(id => AI_ALLOWED_TWEAKS[id].risk === 'safe' && tweakStates[id] !== true));
+
+        /* ── DOM ── */
+        const overlay = document.createElement('div');
+        overlay.className = 'ai-review-overlay';
+
+        const modal = document.createElement('div');
+        modal.className = 'ai-review-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        overlay.appendChild(modal);
+
+        // Header
+        const hdrEl = document.createElement('div');
+        hdrEl.className = 'ai-review-header';
+        hdrEl.innerHTML =
+            '<div class="ai-review-header-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg></div>' +
+            '<div class="ai-review-header-text"><h2 class="ai-review-title">Review Recommended Tweaks</h2>' +
+            '<p class="ai-review-subtitle">Choose which tweaks you want to apply.</p></div>' +
+            '<button class="ai-review-close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">' +
+            '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+        modal.appendChild(hdrEl);
+
+        // Body
+        const bodyEl = document.createElement('div');
+        bodyEl.className = 'ai-review-body';
+
+        // List (left)
+        const listEl = document.createElement('div');
+        listEl.className = 'ai-review-list';
+
+        validIds.forEach((id, i) => {
+            const t         = AI_ALLOWED_TWEAKS[id];
+            const isApplied = tweakStates[id] === true;
+            const riskLabel = t.risk === 'safe' ? 'Safe' : t.risk === 'review' ? 'Review' : 'Manual';
+            const isChecked = checkedIds.has(id);
+
+            const row = document.createElement('div');
+            row.className = `ai-review-row${isChecked ? ' checked' : ''}${isApplied ? ' already-applied' : ''}`;
+            row.dataset.tweakId = id;
+            row.style.animationDelay = `${0.05 + i * 0.04}s`;
+
+            const lbl = document.createElement('label');
+            lbl.className = 'ai-review-row-label';
+
+            const cb = document.createElement('input');
+            cb.type     = 'checkbox';
+            cb.className = 'ai-review-checkbox';
+            cb.checked  = isChecked;
+            if (isApplied) { cb.disabled = true; }
+
+            const mark = document.createElement('span');
+            mark.className = 'ai-review-checkmark';
+
+            const info = document.createElement('div');
+            info.className = 'ai-review-row-info';
+            info.innerHTML =
+                `<span class="ai-review-row-name">${escapeAiHtml(t.title)}</span>` +
+                `<span class="ai-review-row-reason">${escapeAiHtml(t.reason)}</span>`;
+
+            const badge = document.createElement('span');
+            badge.className = `ai-review-risk-badge ${t.risk}`; badge.textContent = riskLabel;
+
+            const statusEl = document.createElement('div');
+            statusEl.className = isApplied ? 'ai-review-row-status already-applied' : 'ai-review-row-status';
+            if (isApplied) statusEl.textContent = 'Already On';
+
+            lbl.appendChild(cb); lbl.appendChild(mark); lbl.appendChild(info);
+            lbl.appendChild(badge); lbl.appendChild(statusEl);
+            row.appendChild(lbl);
+
+            if (!isApplied) {
+                cb.addEventListener('change', () => {
+                    if (cb.checked) { checkedIds.add(id); row.classList.add('checked'); }
+                    else { checkedIds.delete(id); row.classList.remove('checked'); }
+                    updateApplyBtn();
+                });
+            }
+            row.addEventListener('mouseenter', () => showDetail(id));
+            row.addEventListener('focusin',    () => showDetail(id));
+            listEl.appendChild(row);
+        });
+
+        bodyEl.appendChild(listEl);
+
+        // Detail panel (right)
+        const detailEl = document.createElement('div');
+        detailEl.className = 'ai-review-detail';
+        detailEl.innerHTML =
+            '<div class="ai-review-detail-empty">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="28" height="28">' +
+            '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+            '<p>Hover a tweak<br>to see details</p></div>';
+        bodyEl.appendChild(detailEl);
+        modal.appendChild(bodyEl);
+
+        // Footer
+        const footerEl = document.createElement('div');
+        footerEl.className = 'ai-review-footer';
+
+        // Checklist footer
+        const clFooter = document.createElement('div');
+        clFooter.className = 'ai-review-checklist-footer';
+        clFooter.innerHTML =
+            '<div class="ai-review-footer-left">' +
+            '<button class="ai-review-sel-safe-btn">Select All Safe</button>' +
+            '<button class="ai-review-clear-sel-btn">Clear All</button>' +
+            '</div>' +
+            '<div class="ai-review-footer-right">' +
+            '<button class="ai-review-cancel-btn">Cancel</button>' +
+            '<button class="ai-review-apply-btn" disabled>Apply Selected</button>' +
+            '</div>';
+        footerEl.appendChild(clFooter);
+
+        // Confirm footer (hidden initially)
+        const cfFooter = document.createElement('div');
+        cfFooter.className = 'ai-review-confirm-footer';
+        cfFooter.style.display = 'none';
+
+        const cfText = document.createElement('p');
+        cfText.className = 'ai-review-confirm-text';
+
+        const cfBtns = document.createElement('div');
+        cfBtns.className = 'ai-review-footer-right';
+        cfBtns.innerHTML =
+            '<button class="ai-review-back-btn">← Back</button>' +
+            '<button class="ai-review-cancel2-btn">Cancel</button>' +
+            '<button class="ai-review-applynow-btn">Apply Now</button>';
+
+        cfFooter.appendChild(cfText);
+        cfFooter.appendChild(cfBtns);
+        footerEl.appendChild(cfFooter);
+        modal.appendChild(footerEl);
+
+        /* ── Mount ── */
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => overlay.classList.add('open'));
+
+        /* ── Helpers ── */
+        function showDetail(id) {
+            const t     = AI_ALLOWED_TWEAKS[id];
+            const extra = TWEAK_EXTRA[id] || { category: 'System', detail: t.reason };
+            const riskLabel = t.risk === 'safe' ? 'Safe' : t.risk === 'review' ? 'Review' : 'Manual';
+            detailEl.innerHTML =
+                '<div class="ai-review-detail-content">' +
+                `<div class="ai-review-detail-title">${escapeAiHtml(t.title)}</div>` +
+                `<div class="ai-review-detail-meta"><span class="ai-review-risk-badge ${t.risk} large">${riskLabel}</span>` +
+                `<span class="ai-review-detail-cat">${escapeAiHtml(extra.category)}</span></div>` +
+                `<p class="ai-review-detail-desc">${escapeAiHtml(extra.detail)}</p>` +
+                `<p class="ai-review-detail-risk-note">${escapeAiHtml(riskNotes[t.risk] || '')}</p>` +
+                '</div>';
+        }
+
+        function updateApplyBtn() {
+            const btn = clFooter.querySelector('.ai-review-apply-btn');
+            const n   = checkedIds.size;
+            btn.textContent = n > 0 ? `Apply Selected (${n})` : 'Apply Selected';
+            btn.disabled    = n === 0;
+        }
+
+        function setRowStatus(id, status) {
+            const row = listEl.querySelector(`.ai-review-row[data-tweak-id="${id}"]`);
+            if (!row) return;
+            const el = row.querySelector('.ai-review-row-status');
+            if (!el) return;
+            const labels = { pending: 'Queued', running: 'Applying…', done: 'Done ✓', failed: 'Failed', skipped: 'Skipped' };
+            el.className   = `ai-review-row-status ${status}`;
+            el.textContent = labels[status] || '';
+        }
+
+        async function applyChecked() {
+            const ids     = [...checkedIds];
+            const toApply = ids.filter(id => tweakStates[id] !== true);
+            if (!toApply.length) return;
+
+            cfFooter.style.display = 'none';
+            modal.classList.add('applying');
+            toApply.forEach(id => setRowStatus(id, 'pending'));
+
+            const progressUnsub = window.electronAPI.onTweakProgress
+                ? window.electronAPI.onTweakProgress(data => {
+                    if (!data || !data.id) return;
+                    if (['running','done','failed','skipped'].includes(data.status)) setRowStatus(data.id, data.status);
+                }) : null;
+
+            let results = [];
+            try {
+                const res = await window.electronAPI.applyRecommendedTweaks(toApply);
+                results = res.results || [];
+            } catch (e) {
+                results = toApply.map(id => ({ id, success: false }));
+            }
+
+            if (progressUnsub) progressUnsub();
+            results.forEach(r => setRowStatus(r.id, r.success ? 'done' : 'failed'));
+
+            const applied = results.filter(r => r.success).length;
+            const failed  = results.filter(r => !r.success).length;
+            const parts   = [];
+            if (applied > 0) parts.push(`<span class="ai-sum-good">${applied} applied</span>`);
+            if (failed  > 0) parts.push(`<span class="ai-sum-bad">${failed} failed</span>`);
+
+            const doneFooter = document.createElement('div');
+            doneFooter.className = 'ai-review-done-footer';
+            doneFooter.innerHTML = (parts.length ? `<span class="ai-review-done-summary">${parts.join(' \xb7 ')}</span>` : '<span></span>') +
+                '<button class="ai-review-done-close-btn">Close</button>';
+            footerEl.appendChild(doneFooter);
+            doneFooter.querySelector('.ai-review-done-close-btn').addEventListener('click', closeModal);
+        }
+
+        function closeModal() {
+            overlay.classList.remove('open');
+            setTimeout(() => { overlay.remove(); document.removeEventListener('keydown', handleEsc); }, 220);
+        }
+        function handleEsc(e) { if (e.key === 'Escape') closeModal(); }
+        document.addEventListener('keydown', handleEsc);
+        overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+        /* ── Wire buttons ── */
+        hdrEl.querySelector('.ai-review-close').addEventListener('click', closeModal);
+
+        clFooter.querySelector('.ai-review-sel-safe-btn').addEventListener('click', () => {
+            validIds.forEach(id => {
+                if (AI_ALLOWED_TWEAKS[id].risk === 'safe' && tweakStates[id] !== true) {
+                    checkedIds.add(id);
+                    const row = listEl.querySelector(`.ai-review-row[data-tweak-id="${id}"]`);
+                    if (row) { const cb = row.querySelector('.ai-review-checkbox'); if (cb) cb.checked = true; row.classList.add('checked'); }
+                }
+            });
+            updateApplyBtn();
+        });
+
+        clFooter.querySelector('.ai-review-clear-sel-btn').addEventListener('click', () => {
+            checkedIds.clear();
+            listEl.querySelectorAll('.ai-review-row').forEach(row => {
+                const cb = row.querySelector('.ai-review-checkbox');
+                if (cb) cb.checked = false;
+                row.classList.remove('checked');
+            });
+            updateApplyBtn();
+        });
+
+        clFooter.querySelector('.ai-review-cancel-btn').addEventListener('click', closeModal);
+
+        clFooter.querySelector('.ai-review-apply-btn').addEventListener('click', () => {
+            if (!checkedIds.size) return;
+            const n = checkedIds.size;
+            const reviewCount = [...checkedIds].filter(id => AI_ALLOWED_TWEAKS[id].risk === 'review').length;
+            cfText.innerHTML =
+                `<strong>Apply ${n} tweak${n !== 1 ? 's' : ''} now?</strong>` +
+                (reviewCount > 0 ? ` <span class="ai-review-confirm-note">${reviewCount} may need a restart.</span>` : '');
+            clFooter.style.display = 'none';
+            cfFooter.style.display = 'flex';
+        });
+
+        cfBtns.querySelector('.ai-review-back-btn').addEventListener('click', () => {
+            cfFooter.style.display = 'none';
+            clFooter.style.display = 'flex';
+        });
+        cfBtns.querySelector('.ai-review-cancel2-btn').addEventListener('click', closeModal);
+        cfBtns.querySelector('.ai-review-applynow-btn').addEventListener('click', applyChecked);
+
+        updateApplyBtn();
+    }
+
     if (ctaInstallBtn) {
         ctaInstallBtn.addEventListener('click', () => {
             if (ctaInstallAction) ctaInstallAction();
@@ -2661,14 +3180,17 @@ function initializeAiTweaker() {
 
         sendBtn.disabled = true;
 
+        let aiResponseText = null;
         try {
-            const messages = [{ role: 'system', content: XTWEAKS_AI_SYSTEM_PROMPT }, ...chatHistory];
-            const result   = await window.electronAPI.aiChat(messages);
+            const sysContent = XTWEAKS_AI_SYSTEM_PROMPT + (pcContext ? '\n\n' + pcContext : '');
+            const messages   = [{ role: 'system', content: sysContent }, ...chatHistory];
+            const result     = await window.electronAPI.aiChat(messages);
             typingEl.remove();
 
             if (result.success) {
                 chatHistory.push({ role: 'assistant', content: result.message });
                 renderMessage('assistant', result.message);
+                aiResponseText = result.message;
             } else {
                 renderMessage('assistant', 'Sorry, there was an error communicating with the AI engine. Please check that it is still running and try again.');
             }
@@ -2679,6 +3201,19 @@ function initializeAiTweaker() {
 
         sendBtn.disabled = false;
         chatHistEl.scrollTop = chatHistEl.scrollHeight;
+
+        if (aiResponseText) {
+            const intent = detectIntent(trimmed);
+            if (intent) {
+                setTimeout(() => {
+                    const recCard = buildRecommendationCard(intent);
+                    if (recCard) {
+                        chatHistEl.appendChild(recCard);
+                        chatHistEl.scrollTop = chatHistEl.scrollHeight;
+                    }
+                }, 440);
+            }
+        }
     }
 
     function renderMessage(role, content) {
@@ -2708,10 +3243,30 @@ function initializeAiTweaker() {
     }
 
     function formatAiText(text) {
-        return escapeAiHtml(text)
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/`([^`\n]+)`/g, '<code>$1</code>')
-            .replace(/\n/g, '<br>');
+        const lines = escapeAiHtml(text).split('\n');
+        let html = '';
+        let listType = null;
+
+        const closeList = () => { if (listType) { html += `</${listType}>`; listType = null; } };
+
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i]
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>');
+
+            if (/^[\-\*•]\s+/.test(line)) {
+                if (listType !== 'ul') { closeList(); html += '<ul class="ai-msg-list">'; listType = 'ul'; }
+                html += '<li>' + line.replace(/^[\-\*•]\s+/, '') + '</li>';
+            } else if (/^\d+\.\s+/.test(line)) {
+                if (listType !== 'ol') { closeList(); html += '<ol class="ai-msg-list">'; listType = 'ol'; }
+                html += '<li>' + line.replace(/^\d+\.\s+/, '') + '</li>';
+            } else {
+                closeList();
+                html += line.trim() === '' ? '<br>' : line + (i < lines.length - 1 ? '<br>' : '');
+            }
+        }
+        closeList();
+        return html.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>');
     }
 
     sendBtn.addEventListener('click', () => sendMessage(chatInput.value));
@@ -2737,15 +3292,125 @@ function initializeAiTweaker() {
     const aiNavItem = document.querySelector('[data-page="ai-tweaker"]');
     if (aiNavItem) {
         aiNavItem.addEventListener('click', () => {
-            const page = document.getElementById('page-ai-tweaker');
-            if (page) {
-                page.classList.remove('ai-entered');
-                void page.offsetWidth;
-                page.classList.add('ai-entered');
-            }
             if (!aiReady) setTimeout(checkOllama, 80);
         });
     }
+
+    function clearChat() {
+        chatHistory = [];
+        chatHistEl.querySelectorAll('.ai-message, .ai-recommendation-card').forEach(m => m.remove());
+        if (welcomeEl)    welcomeEl.style.display    = '';
+        if (quickPrompts) quickPrompts.style.display = '';
+    }
+
+    async function buildPCContext() {
+        const ctxIndicator = document.getElementById('ai-ctx-indicator');
+        const ctxDot       = document.getElementById('ai-ctx-dot');
+        if (ctxIndicator) ctxIndicator.textContent = 'Loading PC context…';
+        if (ctxDot)       ctxDot.className = 'ai-ctx-dot';
+
+        try {
+            const raw   = await window.electronAPI.getAISystemContext();
+            const lines = [];
+
+            // CPU
+            const cpuModel = raw.sys?.cpu?.model || '';
+            const cpuCores = raw.sys?.cpu?.cores;
+            if (cpuModel) lines.push(`CPU: ${cpuModel}${cpuCores ? ` (${cpuCores} cores)` : ''}`);
+
+            const cpuPct   = raw.live?.cpuUsage;
+            const cpuTemp  = raw.live?.cpuTemp;
+            const cpuState = [cpuPct != null && `Usage ${Math.round(cpuPct)}%`, cpuTemp && `Temp ${Math.round(cpuTemp)}°C`].filter(Boolean).join(', ');
+            if (cpuState) lines.push(`CPU State: ${cpuState}`);
+
+            // RAM
+            const memTotal = raw.sys?.memory?.total;
+            const memPct   = raw.live?.memoryUsage;
+            if (memTotal) {
+                const gb   = (memTotal / 1073741824).toFixed(0);
+                const used = memPct != null ? `, ${Math.round(memPct)}% used` : '';
+                lines.push(`RAM: ${gb} GB total${used}`);
+            }
+
+            // GPU
+            const gpu0 = Array.isArray(raw.gpu?.gpus) ? raw.gpu.gpus[0] : null;
+            if (gpu0?.name) {
+                const vram = gpu0.vram          ? ` | VRAM ${gpu0.vram}`            : '';
+                const drv  = gpu0.driverVersion ? ` | Driver ${gpu0.driverVersion}` : '';
+                lines.push(`GPU: ${gpu0.name}${vram}${drv}`);
+            }
+
+            const gpuPct   = raw.live?.gpuUsage ?? raw.gpuLive?.usage;
+            const gpuTemp  = raw.live?.gpuTemp  ?? raw.gpuLive?.temp;
+            const gpuState = [gpuPct != null && `Usage ${Math.round(gpuPct)}%`, gpuTemp && `Temp ${Math.round(gpuTemp)}°C`].filter(Boolean).join(', ');
+            if (gpuState) lines.push(`GPU State: ${gpuState}`);
+
+            // Power plan + Windows
+            const powerPlan = raw.gpuLive?.powerPlan;
+            if (powerPlan) lines.push(`Power Plan: ${powerPlan}`);
+
+            const winVer = raw.sys?.os?.release;
+            if (winVer) lines.push(`Windows: ${winVer}`);
+
+            if (lines.length === 0) {
+                pcContext   = null;
+                tweakStates = {};
+                if (ctxIndicator) ctxIndicator.textContent = 'No PC context available';
+                return;
+            }
+
+            // Tweak states — from app toggle state; cross-ref power plan for accuracy
+            tweakStates = Object.assign({}, raw.toggles || {});
+            if (powerPlan && /high.?perf/i.test(powerPlan)) tweakStates['optimize-power-plan'] = true;
+
+            const tweakLines = Object.keys(AI_ALLOWED_TWEAKS).map(id => {
+                const s = tweakStates[id];
+                const label = s === true ? 'Already Applied' : s === false ? 'Not Applied' : 'Unknown';
+                return `${id}: ${label}`;
+            });
+
+            const time    = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            pcContextTime = time;
+            pcContext     =
+                `[Safe PC Snapshot — ${time}]\n${lines.join('\n')}` +
+                `\n\n[XTweaks Tweak States]\n${tweakLines.join('\n')}`;
+
+            if (ctxIndicator) ctxIndicator.textContent = `PC Context Attached  (${time})`;
+            if (ctxDot)       ctxDot.className = 'ai-ctx-dot loaded';
+        } catch {
+            pcContext   = null;
+            tweakStates = {};
+            if (ctxIndicator) ctxIndicator.textContent = 'PC context unavailable';
+            if (ctxDot)       ctxDot.className = 'ai-ctx-dot';
+        }
+    }
+
+    function wireSettingsGear() {
+        const dropdown = document.getElementById('ai-settings-dropdown');
+        const gearBtn  = document.getElementById('ai-settings-btn');
+        if (!dropdown || !gearBtn) return;
+
+        gearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('open');
+        });
+        document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target) && e.target !== gearBtn) {
+                dropdown.classList.remove('open');
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') dropdown.classList.remove('open');
+        });
+
+        document.getElementById('ai-settings-clear-chat')?.addEventListener('click', () => {
+            clearChat();
+            dropdown.classList.remove('open');
+        });
+    }
+
+    wireSettingsGear();
+    document.getElementById('ai-ctx-refresh')?.addEventListener('click', buildPCContext);
 
     // Start with input disabled; trigger entrance animation
     setInputEnabled(false);
@@ -2756,4 +3421,6 @@ function initializeAiTweaker() {
         void page.offsetWidth;
         page.classList.add('ai-entered');
     }
+
+    buildPCContext();
 }

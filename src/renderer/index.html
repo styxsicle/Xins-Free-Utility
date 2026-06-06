@@ -2059,6 +2059,16 @@
                         </div>
                         <h1 class="ai-hero-title">Welcome to your personal <span class="ai-hero-accent">AI Tweaker</span></h1>
                         <p class="ai-hero-sub">Your intelligent assistant for gaming performance, latency reduction,<br>cleanup, and deep system optimization.</p>
+
+                        <!-- AI Tweaker settings gear -->
+                        <div class="ai-settings-wrap" id="ai-settings-wrap">
+                            <button class="ai-settings-btn" id="ai-settings-btn" title="Settings">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                            </button>
+                            <div class="ai-settings-dropdown" id="ai-settings-dropdown">
+                                <button class="ai-settings-item" id="ai-settings-clear-chat">Clear Chat</button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- ── Content: center + right ── -->
@@ -2121,6 +2131,13 @@
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 8H8v4H6"/><path d="M10 10h2"/><circle cx="17" cy="12" r="1"/><circle cx="14" cy="9" r="1"/></svg>
                                         Best settings for my game
                                     </button>
+                                </div>
+
+                                <!-- PC context indicator -->
+                                <div class="ai-ctx-bar">
+                                    <span class="ai-ctx-dot" id="ai-ctx-dot"></span>
+                                    <span class="ai-ctx-label" id="ai-ctx-indicator">Loading PC context…</span>
+                                    <button class="ai-ctx-refresh" id="ai-ctx-refresh" title="Refresh PC context">↺ Refresh</button>
                                 </div>
 
                                 <!-- Input bar -->
@@ -2256,6 +2273,18 @@
                                     <li>Startup &amp; system tweaks</li>
                                     <li>Safe Windows optimizations</li>
                                 </ul>
+                            </div>
+
+                            <div class="ai-info-card">
+                                <div class="ai-info-card-hdr">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                                    <span>SAFE APPLY FLOW</span>
+                                </div>
+                                <ol class="ai-apply-steps">
+                                    <li>AI recommends tweaks</li>
+                                    <li>You review &amp; select</li>
+                                    <li>XTweaks applies safely</li>
+                                </ol>
                             </div>
 
                             <div class="ai-info-card ai-note-card">

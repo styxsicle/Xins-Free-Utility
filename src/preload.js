@@ -34,6 +34,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     openExternal: (url) => ipcRenderer.invoke('open-external', url),
 
+    getAISystemContext: async () => {
+        const out = {};
+        try { out.sys     = await ipcRenderer.invoke('get-system-info');   } catch {}
+        try { out.live    = await ipcRenderer.invoke('get-live-stats');     } catch {}
+        try { out.gpu     = await ipcRenderer.invoke('get-gpu-info');       } catch {}
+        try { out.gpuLive = await ipcRenderer.invoke('get-gpu-live-stats'); } catch {}
+        try { out.toggles = await ipcRenderer.invoke('get-toggle-states'); } catch {}
+        return out;
+    },
+
     aiDetect: () => ipcRenderer.invoke('ollama-detect'),
     aiChat: (messages) => ipcRenderer.invoke('ollama-chat', messages),
     aiPullModel: (model) => ipcRenderer.invoke('ollama-pull-model', model),
