@@ -4,6 +4,7 @@ const { exec, execFile, spawn } = require('child_process');
 const os = require('os');
 const fs = require('fs');
 const https = require('https');
+const http = require('http');
 
 const xinAuth = require('./xin-auth');
 const firebaseConfig = require('./firebase-config');
@@ -794,14 +795,16 @@ function startStatsMonitor() {
                     currentSystemStats.networkUp = Math.round(stats.netUp / 1024);
                     currentSystemStats.networkDown = Math.round(stats.netDown / 1024);
 
-                    // GPU (If available via WMI, else simulate based on CPU)
+                    // GPU — real WMI value when available, simulated fallback for dashboard only
                     if (stats.gpu !== -1 && stats.gpu !== undefined) {
                         currentSystemStats.gpuUsage = Math.min(100, Math.round(stats.gpu));
+                        _gpuUsageIsReal = true;
                     } else {
-                        // Better Simulation if WMI fails
+                        // Simulated fallback used by dashboard bars only; stat strip will show N/A
                         let baseGpu = Math.random() * 15;
-                        if (currentSystemStats.cpuUsage > 40) baseGpu += 30; // Gaming load assumption
+                        if (currentSystemStats.cpuUsage > 40) baseGpu += 30;
                         currentSystemStats.gpuUsage = Math.round(Math.min(100, baseGpu + (Math.random() * 10)));
+                        _gpuUsageIsReal = false;
                     }
 
                     // Temps (Simulated based on Load)
@@ -1386,6 +1389,103 @@ ipcMain.handle('open-external', async (event, url) => {
     shell.openExternal(url);
 });
 
+// ── Ollama AI Tweaker ──────────────────────────────────────────────────────
+
+function ollamaHttpRequest(path, method, body, timeoutMs) {
+    return new Promise((resolve, reject) => {
+        const postBody = body ? JSON.stringify(body) : null;
+        const options = {
+            hostname: '127.0.0.1',
+            port: 11434,
+            path,
+            method,
+            headers: postBody
+                ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postBody) }
+                : {}
+        };
+
+        const req = http.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => { data += chunk; });
+            res.on('end', () => {
+                try { resolve(JSON.parse(data)); } catch { resolve(data); }
+            });
+        });
+
+        req.setTimeout(timeoutMs || 5000, () => {
+            req.destroy();
+            reject(new Error('Ollama request timed out'));
+        });
+
+        req.on('error', reject);
+        if (postBody) req.write(postBody);
+        req.end();
+    });
+}
+
+ipcMain.handle('ollama-detect', async () => {
+    // Step 1: Check if the ollama binary exists in PATH (Windows: where, Unix: which)
+    const installed = await new Promise((resolve) => {
+        exec('where ollama', (error) => resolve(!error));
+    });
+
+    // Step 2: Check if the Ollama API is responding
+    let apiData = null;
+    try {
+        apiData = await ollamaHttpRequest('/api/tags', 'GET', null, 4000);
+    } catch (_) {
+        // Not running — intentionally ignored
+    }
+
+    const running = apiData !== null;
+    const models  = running && Array.isArray(apiData.models) ? apiData.models : [];
+
+    return { installed, running, models };
+});
+
+ipcMain.handle('ollama-chat', async (event, messages) => {
+    try {
+        const data = await ollamaHttpRequest(
+            '/api/chat', 'POST',
+            { model: 'llama3.2', messages, stream: false },
+            90000
+        );
+        return { success: true, message: data?.message?.content || '' };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+});
+
+ipcMain.handle('ollama-pull-model', async (event, model) => {
+    return new Promise((resolve) => {
+        let settled = false;
+
+        let proc;
+        try {
+            proc = spawn('ollama', ['pull', model]);
+        } catch (spawnErr) {
+            console.error('[AI Tweaker] spawn failed:', spawnErr.message);
+            return resolve({ success: false, pathError: true, error: spawnErr.message });
+        }
+
+        proc.stdout.on('data', (d) => event.sender.send('ollama-pull-progress', { chunk: d.toString() }));
+        proc.stderr.on('data', (d) => event.sender.send('ollama-pull-progress', { chunk: d.toString() }));
+
+        proc.on('error', (e) => {
+            if (settled) return;
+            settled = true;
+            console.error('[AI Tweaker] ollama pull error:', e.message);
+            resolve({ success: false, pathError: e.code === 'ENOENT', error: e.message });
+        });
+
+        proc.on('close', (code) => {
+            if (settled) return;
+            settled = true;
+            resolve({ success: code === 0 });
+        });
+    });
+});
+
 // Save/Load toggle states
 const toggleStatesPath = path.join(app.getPath('userData'), 'toggle-states.json');
 
@@ -1420,6 +1520,7 @@ ipcMain.handle('save-toggle-state', async (event, toggleId, state) => {
 });
 
 // ── GPU Live Stats (real temp via nvidia-smi, power plan, usage) ──
+let _gpuUsageIsReal = false; // true only when WMI returns a valid reading
 let _gpuLiveCache   = { temp: null, powerPlan: null };
 let _gpuTempTs      = 0;
 let _gpuPlanTs      = 0;
@@ -1475,7 +1576,7 @@ ipcMain.handle('get-gpu-live-stats', async () => {
     if (tasks.length) await Promise.all(tasks);
 
     return {
-        usage:     Math.min(100, Math.max(0, Math.round(currentSystemStats.gpuUsage ?? 0))),
+        usage:     _gpuUsageIsReal ? Math.min(100, Math.max(0, Math.round(currentSystemStats.gpuUsage))) : null,
         temp:      _gpuLiveCache.temp,      // integer °C, or null if unavailable
         powerPlan: _gpuLiveCache.powerPlan  // string, or null if unavailable
     };

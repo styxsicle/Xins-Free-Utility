@@ -130,6 +130,17 @@
                     <span class="nav-text">Memory</span>
                 </button>
 
+                <button class="nav-item" data-page="ai-tweaker">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                        <path d="M5 3v4"/>
+                        <path d="M19 17v4"/>
+                        <path d="M3 5h4"/>
+                        <path d="M17 19h4"/>
+                    </svg>
+                    <span class="nav-text">AI Tweaker</span>
+                </button>
+
                 <div class="nav-category">Tools</div>
                 <button class="nav-item" data-page="cleanup">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -2024,6 +2035,253 @@
                         <p class="copyright">&copy; 2026 Rimadevs. All rights reserved.</p>
                     </div>
                 </div>
+
+                <div id="page-ai-tweaker" class="page">
+
+                    <!-- ── Hero ── -->
+                    <div class="ai-hero">
+                        <svg class="ai-hero-arc" viewBox="0 0 900 90" preserveAspectRatio="none" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%"   stop-color="rgba(139,92,246,0)"/>
+                                    <stop offset="50%"  stop-color="rgba(139,92,246,0.38)"/>
+                                    <stop offset="100%" stop-color="rgba(139,92,246,0)"/>
+                                </linearGradient>
+                            </defs>
+                            <path d="M 0 80 Q 450 -10 900 80" stroke="url(#arcGrad)" stroke-width="1.5" fill="none"/>
+                            <path d="M 60 82 Q 450 8 840 82" stroke="url(#arcGrad)" stroke-width="0.8" fill="none" opacity="0.5"/>
+                        </svg>
+                        <div class="ai-hero-orb ai-hero-orb-1" aria-hidden="true"></div>
+                        <div class="ai-hero-orb ai-hero-orb-2" aria-hidden="true"></div>
+                        <div class="ai-hero-badge">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                            PREMIUM FEATURE
+                        </div>
+                        <h1 class="ai-hero-title">Welcome to your personal <span class="ai-hero-accent">AI Tweaker</span></h1>
+                        <p class="ai-hero-sub">Your intelligent assistant for gaming performance, latency reduction,<br>cleanup, and deep system optimization.</p>
+                    </div>
+
+                    <!-- ── Content: center + right ── -->
+                    <div class="ai-content-layout">
+
+                        <!-- Center column -->
+                        <div class="ai-center-col">
+
+                            <!-- Main AI card (always shown) -->
+                            <div class="ai-main-card" id="ai-main-card">
+
+                                <!-- Card header strip -->
+                                <div class="ai-card-hdr">
+                                    <div class="ai-card-avatar">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+                                    </div>
+                                    <span class="ai-card-name">AI Tweaker</span>
+                                    <div class="ai-online-pill">
+                                        <span class="ai-online-dot checking" id="ai-status-dot"></span>
+                                        <span class="ai-online-label" id="ai-status-text">CHECKING</span>
+                                    </div>
+                                    <button class="ai-card-recheck" id="ai-recheck-btn" title="Recheck AI engine">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+                                    </button>
+                                </div>
+
+                                <!-- Chat / welcome area -->
+                                <div class="ai-chat-area" id="ai-chat-history">
+                                    <div class="ai-welcome-bubble" id="ai-chat-welcome">
+                                        <p class="ai-welcome-greeting"><strong>Hey! I'm AI Tweaker, your personal optimization assistant.</strong></p>
+                                        <p>I can help you improve FPS, reduce input delay, clean up your system, and tune Windows for peak gaming performance.</p>
+                                        <p>What would you like to optimize today?</p>
+                                        <span class="ai-bubble-time">Just now</span>
+                                    </div>
+                                </div>
+
+                                <!-- Quick action chips (2 rows × 3) -->
+                                <div class="ai-chip-grid" id="ai-quick-prompts">
+                                    <button class="ai-chip" data-prompt="How do I optimize for higher FPS?">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                                        Optimize for higher FPS
+                                    </button>
+                                    <button class="ai-chip" data-prompt="How do I reduce input latency?">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        Reduce input latency
+                                    </button>
+                                    <button class="ai-chip" data-prompt="How do I clean up my system?">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+                                        Clean up my system
+                                    </button>
+                                    <button class="ai-chip" data-prompt="How do I fix stuttering and frame drops?">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                                        Fix stuttering &amp; frame drops
+                                    </button>
+                                    <button class="ai-chip" data-prompt="How do I optimize my network settings?">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                        Network optimization
+                                    </button>
+                                    <button class="ai-chip" data-prompt="What are the best settings for gaming?">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 8H8v4H6"/><path d="M10 10h2"/><circle cx="17" cy="12" r="1"/><circle cx="14" cy="9" r="1"/></svg>
+                                        Best settings for my game
+                                    </button>
+                                </div>
+
+                                <!-- Input bar -->
+                                <div class="ai-input-bar">
+                                    <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI Tweaker anything..." rows="1"></textarea>
+                                    <button class="ai-send-btn" id="ai-send-btn" title="Send">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                    </button>
+                                </div>
+
+                            </div><!-- /ai-main-card -->
+
+                            <!-- CTA row (shown when engine not ready) -->
+                            <div class="ai-cta-row" id="ai-cta-row" style="display:none">
+                                <button class="ai-cta-install" id="ai-cta-install-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Install AI Engine
+                                </button>
+                                <button class="ai-cta-secondary" id="ai-cta-advanced-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                                    Advanced Setup
+                                </button>
+                            </div>
+
+                            <!-- Privacy strip (always shown) -->
+                            <div class="ai-privacy-strip">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                Private &bull; Local &bull; No data leaves your PC
+                            </div>
+
+                            <!-- Setup card (shown when Advanced Setup clicked / not ready) -->
+                            <div class="ai-setup-card" id="ai-setup-card" style="display:none">
+                                <div class="ai-setup-header">
+                                    <div class="ai-setup-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                    </div>
+                                    <div class="ai-setup-header-text">
+                                        <h3 id="ai-setup-title">AI Engine Setup Required</h3>
+                                        <p id="ai-setup-desc">AI Tweaker needs the local AI engine to be installed and running before it can respond.</p>
+                                    </div>
+                                </div>
+                                <div class="ai-setup-steps">
+                                    <div class="ai-setup-step">
+                                        <div class="ai-setup-step-num">1</div>
+                                        <div class="ai-setup-step-text">
+                                            <strong>Install AI Engine</strong>
+                                            <span>Download and install the local AI engine (see Advanced Setup below)</span>
+                                        </div>
+                                    </div>
+                                    <div class="ai-setup-step">
+                                        <div class="ai-setup-step-num">2</div>
+                                        <div class="ai-setup-step-text">
+                                            <strong>Start the Engine</strong>
+                                            <span>Launch it as a background service, then click Recheck</span>
+                                        </div>
+                                    </div>
+                                    <div class="ai-setup-step">
+                                        <div class="ai-setup-step-num">3</div>
+                                        <div class="ai-setup-step-text">
+                                            <strong>Download AI Model</strong>
+                                            <span>Once the engine is running, use the download button that appears</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <details class="ai-adv-setup" id="ai-serve-cmd">
+                                    <summary class="ai-adv-summary">Advanced Setup</summary>
+                                    <div class="ai-adv-content">
+                                        <div class="ai-adv-row"><span class="ai-adv-lbl">Engine</span><span class="ai-adv-val">Ollama</span></div>
+                                        <div class="ai-adv-row"><span class="ai-adv-lbl">Install</span><a href="https://ollama.com" class="ai-link">ollama.com</a></div>
+                                        <div class="ai-adv-row"><span class="ai-adv-lbl">Start</span><code class="ai-code">ollama serve</code></div>
+                                        <div class="ai-adv-row"><span class="ai-adv-lbl">Model</span><code class="ai-code">ollama pull llama3.2</code></div>
+                                    </div>
+                                </details>
+                            </div>
+
+                            <!-- Pull model progress card -->
+                            <div class="ai-pull-card" id="ai-pull-card" style="display:none">
+                                <div class="ai-pull-header">
+                                    <div class="ai-pull-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    </div>
+                                    <div class="ai-pull-header-text">
+                                        <h4>AI Model Required</h4>
+                                        <p>AI Engine is active but the model is not yet installed. Click below to download (~2 GB).</p>
+                                    </div>
+                                </div>
+                                <button class="ai-pull-btn" id="ai-pull-model-btn">Download AI Model</button>
+                                <div class="ai-pull-progress" id="ai-pull-progress" style="display:none"></div>
+                            </div>
+
+                        </div><!-- /ai-center-col -->
+
+                        <!-- Right column -->
+                        <div class="ai-right-col ai-info-col">
+
+                            <div class="ai-info-card">
+                                <div class="ai-info-card-hdr">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                                    <span>AI STATUS</span>
+                                </div>
+                                <div class="ai-info-rows">
+                                    <div class="ai-info-row">
+                                        <span class="ai-info-lbl">Engine</span>
+                                        <span class="ai-info-val">Premium AI Engine</span>
+                                    </div>
+                                    <div class="ai-info-row">
+                                        <span class="ai-info-lbl">Model</span>
+                                        <span class="ai-info-val">XTweaks AI v1</span>
+                                    </div>
+                                    <div class="ai-info-row">
+                                        <span class="ai-info-lbl">Privacy</span>
+                                        <span class="ai-info-val ai-info-accent">On-Device</span>
+                                    </div>
+                                    <div class="ai-info-row">
+                                        <span class="ai-info-lbl">Status</span>
+                                        <span class="ai-info-val" id="ai-info-status-val">Checking...</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ai-info-card">
+                                <div class="ai-info-card-hdr">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                    <span>CAN HELP WITH</span>
+                                </div>
+                                <ul class="ai-caps-list">
+                                    <li>Gaming optimization &amp; FPS</li>
+                                    <li>Input delay &amp; latency</li>
+                                    <li>Cleanup &amp; junk removal</li>
+                                    <li>Fortnite &amp; game tweaks</li>
+                                    <li>GPU &amp; hardware tuning</li>
+                                    <li>Network tuning</li>
+                                    <li>Startup &amp; system tweaks</li>
+                                    <li>Safe Windows optimizations</li>
+                                </ul>
+                            </div>
+
+                            <div class="ai-info-card ai-note-card">
+                                <div class="ai-info-card-hdr">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                    <span>PRIVACY NOTE</span>
+                                </div>
+                                <p class="ai-note-text">AI Tweaker runs locally on your device. Your data stays on this PC and is never sent to any server.</p>
+                            </div>
+
+                        </div><!-- /ai-right-col -->
+
+                    </div><!-- /ai-content-layout -->
+
+                    <!-- ── Footer status bar ── -->
+                    <div class="ai-footer-bar">
+                        <div class="ai-footer-left">
+                            <span class="ai-footer-dot checking" id="ai-footer-dot"></span>
+                            <span id="ai-footer-status-text">Status: Checking</span>
+                        </div>
+                        <div class="ai-footer-center">+ Ask anything</div>
+                        <div class="ai-footer-right">Extended</div>
+                    </div>
+
+                </div>
+
                 </div>
             </main>
         </div>
@@ -2350,6 +2608,7 @@
         <div id="notification-container"></div>
     </div>
 
+    <script src="ai-client.js"></script>
     <script src="renderer.js"></script>
 </body>
 

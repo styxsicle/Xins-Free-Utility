@@ -32,5 +32,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveToggleState: (toggleId, state) => ipcRenderer.invoke('save-toggle-state', toggleId, state),
     runCleanup: (type) => ipcRenderer.invoke('run-cleanup', type),
 
-    openExternal: (url) => ipcRenderer.invoke('open-external', url)
+    openExternal: (url) => ipcRenderer.invoke('open-external', url),
+
+    aiDetect: () => ipcRenderer.invoke('ollama-detect'),
+    aiChat: (messages) => ipcRenderer.invoke('ollama-chat', messages),
+    aiPullModel: (model) => ipcRenderer.invoke('ollama-pull-model', model),
+    onAiModelPullProgress: (cb) => {
+        const handler = (_, data) => cb(data);
+        ipcRenderer.on('ollama-pull-progress', handler);
+        return () => ipcRenderer.removeListener('ollama-pull-progress', handler);
+    }
 });

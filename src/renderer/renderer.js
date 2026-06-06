@@ -19,6 +19,7 @@ function initializeApp() {
     loadSystemInfo();
     startLiveMonitoring();
     initializeGpuPage();
+    initializeAiTweaker();
 }
 
 function initializeExternalLinks() {
@@ -2124,20 +2125,23 @@ function initializeGpuPage() {
         }
 
         async function tick() {
-            // ── GPU Load (mirrors live-polled value, no extra IPC) ──
-            const rawUsage = parseFloat(
-                document.getElementById('gpu-usage')?.textContent || '0'
-            ) || 0;
-            gpuUsageHist.push(rawUsage);
-            while (gpuUsageHist.length > GPU_SC_LEN) gpuUsageHist.shift();
-
-            const usageValEl = document.getElementById('gpu-sc-usage-val');
-            if (usageValEl) usageValEl.textContent = Math.round(rawUsage);
-            updateSparkline('gpu-sc-usage-line', 'gpu-sc-usage-fill', gpuUsageHist);
-
-            // ── Temp + Power Plan (backend-cached, cheap) ──
+            // ── Temp + Power Plan + real GPU Load (backend-cached) ──
             try {
                 const stats = await window.electronAPI.getGpuLiveStats();
+
+                // GPU Load — only show when WMI returns a real value; N/A otherwise
+                const usageValEl  = document.getElementById('gpu-sc-usage-val');
+                const usageUnitEl = document.querySelector('#gpu-sc-usage .gpu-sc-unit');
+                if (stats.usage !== null && stats.usage !== undefined) {
+                    if (usageValEl)  usageValEl.textContent  = stats.usage;
+                    if (usageUnitEl) usageUnitEl.textContent = '%';
+                    gpuUsageHist.push(stats.usage);
+                    while (gpuUsageHist.length > GPU_SC_LEN) gpuUsageHist.shift();
+                    updateSparkline('gpu-sc-usage-line', 'gpu-sc-usage-fill', gpuUsageHist);
+                } else {
+                    if (usageValEl)  usageValEl.textContent  = 'N/A';
+                    if (usageUnitEl) usageUnitEl.textContent = '';
+                }
 
                 const tempVal  = document.getElementById('gpu-sc-temp-val');
                 const tempUnit = document.getElementById('gpu-sc-temp-unit');
@@ -2426,4 +2430,330 @@ function initializeGpuPage() {
             setTimeout(runDetection, 60);
         }
     });
+}
+
+function initializeAiTweaker() {
+    const { XTWEAKS_AI_MODEL, XTWEAKS_AI_SYSTEM_PROMPT } = window.XTweaksAI || {
+        XTWEAKS_AI_MODEL: 'llama3.2',
+        XTWEAKS_AI_SYSTEM_PROMPT:
+            'You are AI Tweaker, the premium assistant inside XTweaks Premium Utility. ' +
+            'Help users understand gaming performance, input delay, Fortnite optimization, ' +
+            'Windows tweaks, startup apps, CPU/GPU/RAM usage, network issues, and safe system tuning. ' +
+            'Be clear, practical, and never claim you applied a tweak unless the app actually performed that action.'
+    };
+
+    let chatHistory = [];
+    let aiReady = false;
+    let pullProgressUnsubscribe = null;
+    let ctaInstallAction = null;
+
+    const statusDot        = document.getElementById('ai-status-dot');
+    const statusText       = document.getElementById('ai-status-text');
+    const recheckBtn       = document.getElementById('ai-recheck-btn');
+    const setupCard        = document.getElementById('ai-setup-card');
+    const pullCard         = document.getElementById('ai-pull-card');
+    const chatHistEl       = document.getElementById('ai-chat-history');
+    const welcomeEl        = document.getElementById('ai-chat-welcome');
+    const chatInput        = document.getElementById('ai-chat-input');
+    const sendBtn          = document.getElementById('ai-send-btn');
+    const pullBtn          = document.getElementById('ai-pull-model-btn');
+    const pullProgress     = document.getElementById('ai-pull-progress');
+    const quickPrompts     = document.getElementById('ai-quick-prompts');
+    const infoStatusVal    = document.getElementById('ai-info-status-val');
+    const ctaRow           = document.getElementById('ai-cta-row');
+    const ctaInstallBtn    = document.getElementById('ai-cta-install-btn');
+    const ctaAdvancedBtn   = document.getElementById('ai-cta-advanced-btn');
+    const footerDot        = document.getElementById('ai-footer-dot');
+    const footerStatusText = document.getElementById('ai-footer-status-text');
+    const setupTitle       = document.getElementById('ai-setup-title');
+    const setupDesc        = document.getElementById('ai-setup-desc');
+    const advSetup         = document.getElementById('ai-serve-cmd');
+
+    if (!statusDot) return;
+
+    function setStatus(type, shortLabel) {
+        statusDot.className = `ai-online-dot ${type}`;
+        if (statusText)       statusText.textContent       = shortLabel.toUpperCase();
+        if (footerDot)        footerDot.className          = `ai-footer-dot ${type}`;
+        if (footerStatusText) footerStatusText.textContent = `Status: ${shortLabel}`;
+    }
+
+    function setInfoStatus(cssClass, text) {
+        if (!infoStatusVal) return;
+        infoStatusVal.className   = `ai-info-val ${cssClass}`;
+        infoStatusVal.textContent = text;
+    }
+
+    function setCta(label, action) {
+        if (!ctaRow || !ctaInstallBtn) return;
+        ctaRow.style.display = 'flex';
+        const svg = ctaInstallBtn.querySelector('svg');
+        ctaInstallBtn.textContent = '';
+        if (svg) ctaInstallBtn.appendChild(svg);
+        ctaInstallBtn.appendChild(document.createTextNode(' ' + label));
+        ctaInstallAction = action;
+    }
+
+    function hideCta() {
+        if (ctaRow) ctaRow.style.display = 'none';
+    }
+
+    function setInputEnabled(enabled) {
+        if (chatInput) {
+            chatInput.disabled    = !enabled;
+            chatInput.placeholder = enabled ? 'Ask AI Tweaker anything...' : 'Start AI engine to chat...';
+        }
+        if (sendBtn) sendBtn.disabled = !enabled;
+        if (quickPrompts) {
+            quickPrompts.querySelectorAll('.ai-chip').forEach(c => { c.disabled = !enabled; });
+        }
+    }
+
+    function applySetupState(state) {
+        if (state === 'not-running') {
+            if (setupTitle) setupTitle.textContent = 'AI Engine Not Running';
+            if (setupDesc)  setupDesc.textContent  = 'Start the AI engine, then click Recheck.';
+            if (advSetup)   advSetup.open = true;
+        } else {
+            if (setupTitle) setupTitle.textContent = 'AI Engine Setup Required';
+            if (setupDesc)  setupDesc.textContent  = 'AI Tweaker needs the local AI engine to be installed and running before it can respond.';
+            if (advSetup)   advSetup.open = false;
+        }
+    }
+
+    async function checkOllama() {
+        setStatus('checking', 'Checking...');
+        setInfoStatus('', 'Checking...');
+        setupCard.style.display = 'none';
+        pullCard.style.display  = 'none';
+        hideCta();
+        setInputEnabled(false);
+        aiReady = false;
+
+        let result;
+        try {
+            result = await window.electronAPI.aiDetect();
+        } catch (e) {
+            result = { installed: false, running: false, models: [] };
+        }
+
+        const { installed = false, running = false, models = [] } = result;
+
+        if (!running && !installed) {
+            setStatus('error', 'Not Found');
+            setInfoStatus('ai-info-err', 'Not Found');
+            applySetupState('not-found');
+            setCta('Install AI Engine', () => {
+                setupCard.style.display = 'block';
+                setupCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+            return;
+        }
+
+        if (!running && installed) {
+            setStatus('warning', 'Not Running');
+            setInfoStatus('ai-info-warn', 'Not Running');
+            applySetupState('not-running');
+            setupCard.style.display = 'block';
+            setCta('Start AI Engine', () => {
+                if (advSetup) advSetup.open = true;
+                setupCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+            return;
+        }
+
+        const modelReady = models.some(m => m.name && m.name.startsWith('llama3.2'));
+
+        if (!modelReady) {
+            setStatus('warning', 'Model Required');
+            setInfoStatus('ai-info-warn', 'Model Required');
+            pullCard.style.display = 'block';
+            setCta('Download AI Model', () => {
+                pullCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                if (pullBtn) pullBtn.focus();
+            });
+            return;
+        }
+
+        setStatus('connected', 'Ready');
+        setInfoStatus('ai-info-accent', 'Ready');
+        aiReady = true;
+        hideCta();
+        setInputEnabled(true);
+        if (footerStatusText) footerStatusText.textContent = 'Status: Ready';
+    }
+
+    recheckBtn.addEventListener('click', checkOllama);
+
+    if (ctaInstallBtn) {
+        ctaInstallBtn.addEventListener('click', () => {
+            if (ctaInstallAction) ctaInstallAction();
+        });
+    }
+
+    if (ctaAdvancedBtn) {
+        ctaAdvancedBtn.addEventListener('click', () => {
+            setupCard.style.display = 'block';
+            if (advSetup) advSetup.open = true;
+            setupCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+    }
+
+    if (pullBtn) {
+        pullBtn.addEventListener('click', async () => {
+            pullBtn.disabled     = true;
+            pullBtn.textContent  = 'Downloading...';
+            pullProgress.style.display = 'block';
+            pullProgress.textContent   = 'Starting download...';
+
+            if (pullProgressUnsubscribe) pullProgressUnsubscribe();
+            pullProgressUnsubscribe = window.electronAPI.onAiModelPullProgress((data) => {
+                if (data.chunk) {
+                    const lines = data.chunk.trim().split('\n').filter(Boolean);
+                    if (lines.length) pullProgress.textContent = lines[lines.length - 1];
+                }
+            });
+
+            const result = await window.electronAPI.aiPullModel(XTWEAKS_AI_MODEL);
+
+            if (pullProgressUnsubscribe) {
+                pullProgressUnsubscribe();
+                pullProgressUnsubscribe = null;
+            }
+
+            if (result.success) {
+                pullProgress.textContent = 'Model downloaded successfully!';
+                setTimeout(checkOllama, 800);
+            } else if (result.pathError) {
+                pullProgress.textContent = 'AI engine not found in PATH. See Advanced Setup in the setup card for manual instructions.';
+                pullBtn.disabled    = false;
+                pullBtn.textContent = 'Retry Download';
+            } else {
+                pullProgress.textContent = 'Download failed. Make sure the AI engine is installed and running.';
+                pullBtn.disabled    = false;
+                pullBtn.textContent = 'Retry Download';
+            }
+        });
+    }
+
+    async function sendMessage(text) {
+        if (!aiReady || !text.trim()) return;
+
+        const trimmed = text.trim();
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+        if (quickPrompts) quickPrompts.style.display = 'none';
+        if (welcomeEl)    welcomeEl.style.display    = 'none';
+
+        chatHistory.push({ role: 'user', content: trimmed });
+        renderMessage('user', trimmed);
+
+        const typingEl = document.createElement('div');
+        typingEl.className = 'ai-message assistant';
+        typingEl.innerHTML =
+            '<div class="ai-message-avatar">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>' +
+            '</svg></div>' +
+            '<div class="ai-typing-dots"><span></span><span></span><span></span></div>';
+        chatHistEl.appendChild(typingEl);
+        chatHistEl.scrollTop = chatHistEl.scrollHeight;
+
+        sendBtn.disabled = true;
+
+        try {
+            const messages = [{ role: 'system', content: XTWEAKS_AI_SYSTEM_PROMPT }, ...chatHistory];
+            const result   = await window.electronAPI.aiChat(messages);
+            typingEl.remove();
+
+            if (result.success) {
+                chatHistory.push({ role: 'assistant', content: result.message });
+                renderMessage('assistant', result.message);
+            } else {
+                renderMessage('assistant', 'Sorry, there was an error communicating with the AI engine. Please check that it is still running and try again.');
+            }
+        } catch (e) {
+            typingEl.remove();
+            renderMessage('assistant', 'Connection error. Make sure the AI engine is running and click Recheck.');
+        }
+
+        sendBtn.disabled = false;
+        chatHistEl.scrollTop = chatHistEl.scrollHeight;
+    }
+
+    function renderMessage(role, content) {
+        const el = document.createElement('div');
+        el.className = `ai-message ${role}`;
+
+        if (role === 'user') {
+            el.innerHTML = `<div class="ai-message-bubble user">${escapeAiHtml(content)}</div>`;
+        } else {
+            el.innerHTML =
+                '<div class="ai-message-avatar">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>' +
+                '</svg></div>' +
+                `<div class="ai-message-bubble assistant">${formatAiText(content)}</div>`;
+        }
+
+        chatHistEl.appendChild(el);
+    }
+
+    function escapeAiHtml(str) {
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function formatAiText(text) {
+        return escapeAiHtml(text)
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+            .replace(/\n/g, '<br>');
+    }
+
+    sendBtn.addEventListener('click', () => sendMessage(chatInput.value));
+
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage(chatInput.value);
+        }
+    });
+
+    chatInput.addEventListener('input', () => {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+    });
+
+    document.querySelectorAll('.ai-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.dataset.prompt && aiReady) sendMessage(btn.dataset.prompt);
+        });
+    });
+
+    const aiNavItem = document.querySelector('[data-page="ai-tweaker"]');
+    if (aiNavItem) {
+        aiNavItem.addEventListener('click', () => {
+            const page = document.getElementById('page-ai-tweaker');
+            if (page) {
+                page.classList.remove('ai-entered');
+                void page.offsetWidth;
+                page.classList.add('ai-entered');
+            }
+            if (!aiReady) setTimeout(checkOllama, 80);
+        });
+    }
+
+    // Start with input disabled; trigger entrance animation
+    setInputEnabled(false);
+
+    const page = document.getElementById('page-ai-tweaker');
+    if (page) {
+        page.classList.remove('ai-entered');
+        void page.offsetWidth;
+        page.classList.add('ai-entered');
+    }
 }
