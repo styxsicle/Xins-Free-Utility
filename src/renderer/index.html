@@ -2043,9 +2043,9 @@
                         <svg class="ai-hero-arc" viewBox="0 0 900 90" preserveAspectRatio="none" aria-hidden="true">
                             <defs>
                                 <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%"   stop-color="rgba(139,92,246,0)"/>
-                                    <stop offset="50%"  stop-color="rgba(139,92,246,0.38)"/>
-                                    <stop offset="100%" stop-color="rgba(139,92,246,0)"/>
+                                    <stop offset="0%"   stop-color="rgba(255,255,255,0)"/>
+                                    <stop offset="50%"  stop-color="rgba(255,255,255,0.12)"/>
+                                    <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
                                 </linearGradient>
                             </defs>
                             <path d="M 0 80 Q 450 -10 900 80" stroke="url(#arcGrad)" stroke-width="1.5" fill="none"/>
@@ -2067,6 +2067,7 @@
                             </button>
                             <div class="ai-settings-dropdown" id="ai-settings-dropdown">
                                 <button class="ai-settings-item" id="ai-settings-clear-chat">Clear Chat</button>
+                                <button class="ai-settings-item" id="ai-settings-show-welcome">Show Welcome Popup</button>
                             </div>
                         </div>
                     </div>
@@ -2148,69 +2149,30 @@
                                     </button>
                                 </div>
 
-                            </div><!-- /ai-main-card -->
+                                <!-- Premium setup notice -->
+                                <div class="ai-not-running-notice" id="ai-not-running-notice" style="display:none">
+                                    <div class="ai-nrn-row">
+                                        <svg class="ai-nrn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                                        <div class="ai-nrn-body">
+                                            <span class="ai-nrn-title" id="ai-not-running-title">Set up AI Tweaker</span>
+                                            <span class="ai-nrn-sub" id="ai-not-running-sub">Install the Premium AI Engine to start chatting and get personalized optimization help.</span>
+                                        </div>
+                                        <div class="ai-nrn-actions">
+                                            <button class="ai-nrn-primary" id="ai-nrn-primary-btn">Set Up AI Engine</button>
+                                            <button class="ai-nrn-recheck" id="ai-not-running-recheck-btn">Recheck</button>
+                                        </div>
+                                    </div>
+                                    <div class="ai-nrn-progress" id="ai-nrn-progress" style="display:none">
+                                        <div class="ai-nrn-progress-bar"></div>
+                                    </div>
+                                </div>
 
-                            <!-- CTA row (shown when engine not ready) -->
-                            <div class="ai-cta-row" id="ai-cta-row" style="display:none">
-                                <button class="ai-cta-install" id="ai-cta-install-btn">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    Install AI Engine
-                                </button>
-                                <button class="ai-cta-secondary" id="ai-cta-advanced-btn">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-                                    Advanced Setup
-                                </button>
-                            </div>
+                            </div><!-- /ai-main-card -->
 
                             <!-- Privacy strip (always shown) -->
                             <div class="ai-privacy-strip">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                                 Private &bull; Local &bull; No data leaves your PC
-                            </div>
-
-                            <!-- Setup card (shown when Advanced Setup clicked / not ready) -->
-                            <div class="ai-setup-card" id="ai-setup-card" style="display:none">
-                                <div class="ai-setup-header">
-                                    <div class="ai-setup-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                    </div>
-                                    <div class="ai-setup-header-text">
-                                        <h3 id="ai-setup-title">AI Engine Setup Required</h3>
-                                        <p id="ai-setup-desc">AI Tweaker needs the local AI engine to be installed and running before it can respond.</p>
-                                    </div>
-                                </div>
-                                <div class="ai-setup-steps">
-                                    <div class="ai-setup-step">
-                                        <div class="ai-setup-step-num">1</div>
-                                        <div class="ai-setup-step-text">
-                                            <strong>Install AI Engine</strong>
-                                            <span>Download and install the local AI engine (see Advanced Setup below)</span>
-                                        </div>
-                                    </div>
-                                    <div class="ai-setup-step">
-                                        <div class="ai-setup-step-num">2</div>
-                                        <div class="ai-setup-step-text">
-                                            <strong>Start the Engine</strong>
-                                            <span>Launch it as a background service, then click Recheck</span>
-                                        </div>
-                                    </div>
-                                    <div class="ai-setup-step">
-                                        <div class="ai-setup-step-num">3</div>
-                                        <div class="ai-setup-step-text">
-                                            <strong>Download AI Model</strong>
-                                            <span>Once the engine is running, use the download button that appears</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <details class="ai-adv-setup" id="ai-serve-cmd">
-                                    <summary class="ai-adv-summary">Advanced Setup</summary>
-                                    <div class="ai-adv-content">
-                                        <div class="ai-adv-row"><span class="ai-adv-lbl">Engine</span><span class="ai-adv-val">Ollama</span></div>
-                                        <div class="ai-adv-row"><span class="ai-adv-lbl">Install</span><a href="https://ollama.com" class="ai-link">ollama.com</a></div>
-                                        <div class="ai-adv-row"><span class="ai-adv-lbl">Start</span><code class="ai-code">ollama serve</code></div>
-                                        <div class="ai-adv-row"><span class="ai-adv-lbl">Model</span><code class="ai-code">ollama pull llama3.2</code></div>
-                                    </div>
-                                </details>
                             </div>
 
                             <!-- Pull model progress card -->
@@ -2220,8 +2182,8 @@
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                     </div>
                                     <div class="ai-pull-header-text">
-                                        <h4>AI Model Required</h4>
-                                        <p>AI Engine is active but the model is not yet installed. Click below to download (~2 GB).</p>
+                                        <h4>Finalizing AI Setup</h4>
+                                        <p>One last step — download the AI Model to complete setup. This only happens once (~2 GB).</p>
                                     </div>
                                 </div>
                                 <button class="ai-pull-btn" id="ai-pull-model-btn">Download AI Model</button>
@@ -2313,6 +2275,26 @@
 
                 </div>
             </main>
+        <!-- ── AI Tweaker Welcome Modal ──────────────────────────────── -->
+        <div class="ai-welcome-overlay" id="ai-welcome-overlay" role="dialog" aria-modal="true" aria-label="Welcome to AI Tweaker">
+            <canvas class="ai-welcome-canvas" id="ai-welcome-canvas" aria-hidden="true"></canvas>
+            <div class="ai-welcome-ambient" aria-hidden="true"></div>
+            <div class="ai-welcome-modal" id="ai-welcome-modal">
+
+                <!-- SVG main visual -->
+                <img class="ai-welcome-svg-asset" src="assets/ai_tweaker.svg" alt="Welcome to AI Tweaker" draggable="false">
+
+                <!-- Footer controls -->
+                <div class="ai-welcome-footer">
+                    <label class="ai-welcome-dismiss-label">
+                        <input type="checkbox" class="ai-welcome-dismiss-check" id="ai-welcome-dismiss-check">
+                        <span class="ai-welcome-dismiss-text">Don't show this again</span>
+                    </label>
+                    <button class="ai-welcome-continue-btn" id="ai-welcome-continue-btn">Continue</button>
+                </div>
+
+            </div>
+        </div>
         </div>
 
         <!-- ── System Scan Results Modal ─────────────────────────── -->

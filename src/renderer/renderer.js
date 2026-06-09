@@ -1,3 +1,5 @@
+let aiWelcomeShownThisSession = false;
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
 });
@@ -70,6 +72,20 @@ function initializeNavigation() {
 
             if (targetPage === 'ai-tweaker') {
                 document.body.classList.add('ai-tweaker-active');
+                // Re-run entrance animation on every visit
+                const aiPage = document.getElementById('page-ai-tweaker');
+                if (aiPage) {
+                    aiPage.classList.remove('ai-entered');
+                    void aiPage.offsetWidth;
+                    aiPage.classList.add('ai-entered');
+                }
+                if (!aiWelcomeShownThisSession && !localStorage.getItem('xtweaks-ai-welcome-seen')) {
+                    aiWelcomeShownThisSession = true;
+                    setTimeout(() => {
+                        const ov = document.getElementById('ai-welcome-overlay');
+                        if (ov) { ov.classList.remove('is-closing'); ov.classList.add('is-open'); }
+                    }, 60);
+                }
             } else {
                 document.body.classList.remove('ai-tweaker-active');
             }
@@ -2442,14 +2458,19 @@ function initializeAiTweaker() {
     const { XTWEAKS_AI_MODEL, XTWEAKS_AI_SYSTEM_PROMPT } = window.XTweaksAI || {
         XTWEAKS_AI_MODEL: 'llama3.2',
         XTWEAKS_AI_SYSTEM_PROMPT:
-            'You are AI Tweaker, the premium assistant inside XTweaks Premium Utility. ' +
-            'Help users with gaming performance, input delay, Fortnite optimization, Windows tweaks, ' +
-            'startup apps, CPU/GPU/RAM usage, network issues, and safe system tuning. ' +
-            'Be clear and practical. When you suggest improvements, describe them in plain language — ' +
-            'the app will offer pre-approved safe actions the user can choose to apply. ' +
-            'Never claim you directly applied a tweak or ran a command. ' +
-            'Never invent permissions or system access not provided by the app. ' +
-            'Always let the user confirm before any changes are made.'
+            'You are AI Tweaker inside XTweaks Premium Utility. ' +
+            'Use the provided PC specs, running apps, startup apps, and service context to give specific, practical advice. ' +
+            'Help with gaming performance, input delay, background app cleanup, startup optimization, Windows services, ' +
+            'Fortnite optimization, CPU/GPU/RAM usage, network issues, and safe system tuning. ' +
+            'When recommending background apps to close or startup items to disable, be specific — name the apps, ' +
+            'explain why they affect performance, and give a risk level (Safe / Review). ' +
+            'Do not recommend disabling critical Windows services (audio, network, security, RPC, WMI, etc.). ' +
+            'Do not recommend closing security software. ' +
+            'If something is already optimized, say so rather than inventing improvements. ' +
+            'Always say XTweaks will handle the action — never claim you directly closed or disabled anything. ' +
+            'Always let the user confirm before any changes are made. ' +
+            'Never recommend closing or disabling XTweaks itself, the XTweaks AI Engine, or any process required for AI Tweaker to function. ' +
+            'If you do not see relevant background apps in the context, say the scan may need a refresh.'
     };
 
     const AI_ALLOWED_TWEAKS = {
@@ -2501,10 +2522,31 @@ function initializeAiTweaker() {
         }
     ];
 
+    const AI_BG_INTENT_PATTERNS = [
+        'background app', 'background apps', 'what should i close', 'what can i close',
+        'unnecessary app', 'unnecessary apps', 'what is running', 'what apps are running',
+        'close background', 'startup app', 'startup apps', 'disable startup', 'boot time',
+        'what services', 'services can i disable', 'services disable', 'background process',
+        'background processes', 'apps using ram', 'apps using cpu', 'reduce ram',
+        'free up ram', 'free up memory', 'why is my pc slow', 'why is my computer slow',
+        'what is slowing', 'optimize gaming', 'optimize my pc', 'kill background', 'check my background',
+        'overlays', 'overlay apps', 'rgb software',
+    ];
+
+    const PC_CONTEXT_KEYWORDS = [
+        'spec', 'slow', 'optim', 'fortnite', 'background app', 'startup',
+        'temp', 'gpu', 'ram', 'cpu', 'latency', 'input delay', 'fps',
+        'performance', 'lag', 'ping', 'usage', 'memory', 'apps', 'services',
+        'processor', 'graphics', 'hardware', 'running'
+    ];
+
     function detectIntent(text) {
         const lower = text.toLowerCase();
+        if (AI_BG_INTENT_PATTERNS.some(p => lower.includes(p))) {
+            return { type: 'background', label: 'Background Optimization Review' };
+        }
         for (const intent of AI_INTENT_PATTERNS) {
-            if (intent.patterns.some(p => lower.includes(p))) return intent;
+            if (intent.patterns.some(p => lower.includes(p))) return { type: 'tweaks', ...intent };
         }
         return null;
     }
@@ -2515,29 +2557,34 @@ function initializeAiTweaker() {
     let pcContextTime = null;
     let tweakStates   = {};
     let pullProgressUnsubscribe = null;
-    let ctaInstallAction = null;
+    let aiSetupInProgress = false;
+    let pcContextInFlight = null;
+    let bgContext         = null;
+    let bgContextTime     = 0;
+    const BG_CONTEXT_TTL  = 60000;
+    let pcContextFetchedAt = 0;
+    const PC_CONTEXT_TTL   = 90000;
 
-    const statusDot        = document.getElementById('ai-status-dot');
-    const statusText       = document.getElementById('ai-status-text');
-    const recheckBtn       = document.getElementById('ai-recheck-btn');
-    const setupCard        = document.getElementById('ai-setup-card');
-    const pullCard         = document.getElementById('ai-pull-card');
-    const chatHistEl       = document.getElementById('ai-chat-history');
-    const welcomeEl        = document.getElementById('ai-chat-welcome');
-    const chatInput        = document.getElementById('ai-chat-input');
-    const sendBtn          = document.getElementById('ai-send-btn');
-    const pullBtn          = document.getElementById('ai-pull-model-btn');
-    const pullProgress     = document.getElementById('ai-pull-progress');
-    const quickPrompts     = document.getElementById('ai-quick-prompts');
-    const infoStatusVal    = document.getElementById('ai-info-status-val');
-    const ctaRow           = document.getElementById('ai-cta-row');
-    const ctaInstallBtn    = document.getElementById('ai-cta-install-btn');
-    const ctaAdvancedBtn   = document.getElementById('ai-cta-advanced-btn');
-    const footerDot        = document.getElementById('ai-footer-dot');
-    const footerStatusText = document.getElementById('ai-footer-status-text');
-    const setupTitle       = document.getElementById('ai-setup-title');
-    const setupDesc        = document.getElementById('ai-setup-desc');
-    const advSetup         = document.getElementById('ai-serve-cmd');
+    const statusDot           = document.getElementById('ai-status-dot');
+    const statusText          = document.getElementById('ai-status-text');
+    const recheckBtn          = document.getElementById('ai-recheck-btn');
+    const pullCard            = document.getElementById('ai-pull-card');
+    const chatHistEl          = document.getElementById('ai-chat-history');
+    const welcomeEl           = document.getElementById('ai-chat-welcome');
+    const chatInput           = document.getElementById('ai-chat-input');
+    const sendBtn             = document.getElementById('ai-send-btn');
+    const pullBtn             = document.getElementById('ai-pull-model-btn');
+    const pullProgress        = document.getElementById('ai-pull-progress');
+    const quickPrompts        = document.getElementById('ai-quick-prompts');
+    const infoStatusVal       = document.getElementById('ai-info-status-val');
+    const footerDot           = document.getElementById('ai-footer-dot');
+    const footerStatusText    = document.getElementById('ai-footer-status-text');
+    const notRunningNotice    = document.getElementById('ai-not-running-notice');
+    const notRunningTitle     = document.getElementById('ai-not-running-title');
+    const notRunningSub       = document.getElementById('ai-not-running-sub');
+    const notRunningPrimaryBtn = document.getElementById('ai-nrn-primary-btn');
+    const notRunningBtn       = document.getElementById('ai-not-running-recheck-btn');
+    const noticeProgress      = document.getElementById('ai-nrn-progress');
 
     if (!statusDot) return;
 
@@ -2554,24 +2601,47 @@ function initializeAiTweaker() {
         infoStatusVal.textContent = text;
     }
 
-    function setCta(label, action) {
-        if (!ctaRow || !ctaInstallBtn) return;
-        ctaRow.style.display = 'flex';
-        const svg = ctaInstallBtn.querySelector('svg');
-        ctaInstallBtn.textContent = '';
-        if (svg) ctaInstallBtn.appendChild(svg);
-        ctaInstallBtn.appendChild(document.createTextNode(' ' + label));
-        ctaInstallAction = action;
+    function setNoticeProgress(visible) {
+        if (noticeProgress) noticeProgress.style.display = visible ? 'block' : 'none';
     }
 
-    function hideCta() {
-        if (ctaRow) ctaRow.style.display = 'none';
+    function showNotice(title, sub, mode, state) {
+        if (!notRunningNotice) return;
+        if (notRunningTitle) notRunningTitle.textContent = title;
+        if (notRunningSub)   notRunningSub.textContent   = sub;
+        if (notRunningPrimaryBtn) {
+            const labels = { install: 'Set Up AI Engine', start: 'Start AI Engine', retry: 'Retry' };
+            notRunningPrimaryBtn.textContent       = labels[mode] || 'Set Up AI Engine';
+            notRunningPrimaryBtn.disabled          = false;
+            notRunningPrimaryBtn.style.display     = '';
+            notRunningPrimaryBtn.dataset.setupMode = (mode === 'retry') ? 'install' : (mode || 'install');
+        }
+        if (notRunningBtn) notRunningBtn.style.display = '';
+        notRunningNotice.className     = 'ai-not-running-notice' + (state === 'error' ? ' error' : '');
+        notRunningNotice.style.display = 'flex';
+        setNoticeProgress(false);
+    }
+
+    function showNoticeProgress(title, sub) {
+        if (!notRunningNotice) return;
+        if (notRunningTitle) notRunningTitle.textContent = title;
+        if (notRunningSub)   notRunningSub.textContent   = sub;
+        if (notRunningPrimaryBtn) { notRunningPrimaryBtn.disabled = true; notRunningPrimaryBtn.style.display = 'none'; }
+        if (notRunningBtn)        notRunningBtn.style.display = 'none';
+        notRunningNotice.className     = 'ai-not-running-notice';
+        notRunningNotice.style.display = 'flex';
+        setNoticeProgress(true);
+    }
+
+    function hideNotice() {
+        if (notRunningNotice) notRunningNotice.style.display = 'none';
+        setNoticeProgress(false);
     }
 
     function setInputEnabled(enabled) {
         if (chatInput) {
             chatInput.disabled    = !enabled;
-            chatInput.placeholder = enabled ? 'Ask AI Tweaker anything...' : 'Start AI engine to chat...';
+            chatInput.placeholder = enabled ? 'Ask AI Tweaker anything…' : 'Set up AI Engine to chat…';
         }
         if (sendBtn) sendBtn.disabled = !enabled;
         if (quickPrompts) {
@@ -2579,24 +2649,61 @@ function initializeAiTweaker() {
         }
     }
 
-    function applySetupState(state) {
-        if (state === 'not-running') {
-            if (setupTitle) setupTitle.textContent = 'AI Engine Not Running';
-            if (setupDesc)  setupDesc.textContent  = 'Start the AI engine, then click Recheck.';
-            if (advSetup)   advSetup.open = true;
-        } else {
-            if (setupTitle) setupTitle.textContent = 'AI Engine Setup Required';
-            if (setupDesc)  setupDesc.textContent  = 'AI Tweaker needs the local AI engine to be installed and running before it can respond.';
-            if (advSetup)   advSetup.open = false;
+    async function runEngineSetup() {
+        if (aiSetupInProgress) return;
+        aiSetupInProgress = true;
+
+        if (notRunningPrimaryBtn) {
+            notRunningPrimaryBtn.disabled    = true;
+            notRunningPrimaryBtn.textContent = 'Setting up…';
         }
+        if (notRunningBtn) notRunningBtn.style.display = 'none';
+        if (notRunningTitle) notRunningTitle.textContent = 'Setting up AI Tweaker';
+        if (notRunningSub)   notRunningSub.textContent   = 'Preparing AI Engine…';
+        if (notRunningNotice) notRunningNotice.className = 'ai-not-running-notice';
+        setNoticeProgress(true);
+        setStatus('preparing', 'Preparing');
+        setInfoStatus('', 'Preparing');
+
+        let progUnsub;
+        try {
+            progUnsub = window.electronAPI.onAiEngineProgress((data) => {
+                if (data.message && notRunningSub) notRunningSub.textContent = data.message;
+            });
+        } catch (_) { progUnsub = null; }
+
+        let result;
+        try { result = await window.electronAPI.aiEngineSetup(); }
+        catch (e) { result = { success: false, error: e.message }; }
+
+        if (progUnsub) progUnsub();
+        aiSetupInProgress = false;
+        setNoticeProgress(false);
+
+        if (!result.success) {
+            if (notRunningPrimaryBtn) {
+                notRunningPrimaryBtn.style.display = '';
+                notRunningPrimaryBtn.disabled = false;
+            }
+            if (notRunningBtn) notRunningBtn.style.display = '';
+            showNotice('AI Engine setup failed', 'Restart XTweaks and try again.', 'retry', 'error');
+            setStatus('preparing', 'Setup Needed');
+            setInfoStatus('', 'Setup Needed');
+            return;
+        }
+
+        if (notRunningSub) notRunningSub.textContent = 'AI Tweaker is ready.';
+        if (notRunningBtn) notRunningBtn.style.display = '';
+        setTimeout(checkOllama, 600);
     }
 
     async function checkOllama() {
-        setStatus('checking', 'Checking...');
-        setInfoStatus('', 'Checking...');
-        setupCard.style.display = 'none';
-        pullCard.style.display  = 'none';
-        hideCta();
+        if (aiSetupInProgress) return;
+
+        setStatus('preparing', 'Checking');
+        setInfoStatus('', 'Checking');
+        pullCard.style.display = 'none';
+        hideNotice();
         setInputEnabled(false);
         aiReady = false;
 
@@ -2609,51 +2716,47 @@ function initializeAiTweaker() {
 
         const { installed = false, running = false, models = [] } = result;
 
-        if (!running && !installed) {
-            setStatus('error', 'Not Found');
-            setInfoStatus('ai-info-err', 'Not Found');
-            applySetupState('not-found');
-            setCta('Install AI Engine', () => {
-                setupCard.style.display = 'block';
-                setupCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            });
+        if (!installed) {
+            setStatus('preparing', 'Setup Needed');
+            setInfoStatus('', 'Setup Needed');
+            showNotice(
+                'Set up AI Tweaker',
+                'Enable the Premium AI Engine to start chatting.',
+                'install'
+            );
             return;
         }
 
-        if (!running && installed) {
-            setStatus('warning', 'Not Running');
-            setInfoStatus('ai-info-warn', 'Not Running');
-            applySetupState('not-running');
-            setupCard.style.display = 'block';
-            setCta('Start AI Engine', () => {
-                if (advSetup) advSetup.open = true;
-                setupCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            });
+        if (!running) {
+            setStatus('preparing', 'Setup Needed');
+            setInfoStatus('', 'Setup Needed');
+            showNotice(
+                'Set up AI Tweaker',
+                'Enable the Premium AI Engine to start chatting.',
+                'start'
+            );
             return;
         }
 
-        const modelReady = models.some(m => m.name && m.name.startsWith('llama3.2'));
+        const modelReady = (models || []).some(m => m.name && m.name.startsWith('llama3.2'));
 
         if (!modelReady) {
-            setStatus('warning', 'Model Required');
-            setInfoStatus('ai-info-warn', 'Model Required');
+            setStatus('preparing', 'Setup Needed');
+            setInfoStatus('', 'Setup Needed');
             pullCard.style.display = 'block';
-            setCta('Download AI Model', () => {
-                pullCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                if (pullBtn) pullBtn.focus();
-            });
             return;
         }
 
         setStatus('connected', 'Ready');
         setInfoStatus('ai-info-accent', 'Ready');
         aiReady = true;
-        hideCta();
+        hideNotice();
         setInputEnabled(true);
         if (footerStatusText) footerStatusText.textContent = 'Status: Ready';
     }
 
-    recheckBtn.addEventListener('click', checkOllama);
+    recheckBtn.addEventListener('click', () => { if (!aiSetupInProgress) checkOllama(); });
+    if (notRunningBtn) notRunningBtn.addEventListener('click', () => { if (!aiSetupInProgress) checkOllama(); });
 
     /* ── Recommendation card helpers ── */
     function setTweakRowStatus(card, tweakId, status) {
@@ -3104,32 +3207,477 @@ function initializeAiTweaker() {
         updateApplyBtn();
     }
 
-    if (ctaInstallBtn) {
-        ctaInstallBtn.addEventListener('click', () => {
-            if (ctaInstallAction) ctaInstallAction();
-        });
+    /* ── Background context helpers ── */
+    function formatBgContextForAI(ctx) {
+        if (!ctx) return '';
+        const lines = [];
+
+        if (ctx.processes && ctx.processes.length > 0) {
+            lines.push('Background Apps & Processes (currently running):');
+            ctx.processes.forEach(p => {
+                const ram  = p.ramMB ? `, ${p.ramMB} MB RAM` : '';
+                const note = p.safeToClose ? '— can close to free resources' : '— review only';
+                lines.push(`- ${p.name} (${p.category}) — Running${ram} ${note}`);
+            });
+        }
+
+        if (ctx.startups && ctx.startups.length > 0) {
+            lines.push('\nStartup Apps (launch automatically at boot):');
+            ctx.startups.forEach(s => {
+                const safe = s.safeToDisable ? '— safe to disable from startup' : '— review first';
+                lines.push(`- ${s.name} (${s.category || 'Unknown'}) — Startup Enabled ${safe}`);
+            });
+        }
+
+        if (ctx.services && ctx.services.length > 0) {
+            lines.push('\nNotable Services (running):');
+            ctx.services.forEach(sv => {
+                const note = sv.critical
+                    ? '— DO NOT DISABLE (critical Windows service)'
+                    : `— ${sv.category} — review before disabling`;
+                lines.push(`- ${sv.display} ${note}`);
+            });
+        }
+
+        return lines.length > 0 ? lines.join('\n') : '';
     }
 
-    if (ctaAdvancedBtn) {
-        ctaAdvancedBtn.addEventListener('click', () => {
-            setupCard.style.display = 'block';
-            if (advSetup) advSetup.open = true;
-            setupCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    /* ── Background Optimization Card ── */
+    const BG_DETAIL_MAP = {
+        'Browser':           { why: 'Open browsers consume significant RAM and can cause I/O spikes during disk-heavy operations like game loading.',       action: 'Close browser windows before gaming to free RAM and reduce disk activity.'       },
+        'Game Launcher':     { why: 'Game launchers run background services for friends lists and auto-updates, consuming CPU cycles even when idle.',      action: 'Close launchers not currently in use. Re-open them when you need them.'         },
+        'Chat/Voice':        { why: 'Chat apps run audio processing and network activity in the background, adding CPU and network overhead during gaming.', action: 'Close or minimize to free CPU. Discord can be used via browser if needed.'      },
+        'Overlay':           { why: 'Overlays hook into the graphics pipeline and can add frame delivery latency, especially with multiple active at once.', action: 'Disable overlays not in use. Keep only one active overlay if needed.'          },
+        'RGB/Peripheral':    { why: 'RGB and peripheral software run background USB polling loops that occasionally cause input spikes or DPC latency.',     action: 'Close RGB software while gaming. Lighting effects will pause — hardware stays on.'  },
+        'Cloud Sync':        { why: 'Cloud sync apps continuously scan files and upload changes, causing disk I/O spikes and network usage during gameplay.', action: 'Pause or close cloud sync while gaming. Files sync again when you re-open.'     },
+        'Updater':           { why: 'Auto-updaters wake up periodically to download updates, causing unexpected disk and network bursts during gaming.',      action: 'Disable from startup. Updates can be triggered manually when convenient.'      },
+        'Recording/Capture': { why: 'Capture software reserves GPU encoder bandwidth even when not recording, reducing available GPU headroom for games.',   action: 'Close capture software when not streaming or recording.'                      },
+        'Desktop App':       { why: 'Desktop apps like Wallpaper Engine use GPU continuously to animate backgrounds, competing with game rendering.',        action: 'Pause or close the app before gaming. Resume it afterwards.'                  },
+        'Remote Access':     { why: 'Remote access apps keep network ports open and run background services that add CPU and network overhead.',             action: 'Close when not in use for remote sessions.'                                   },
+        'Unknown':           { why: 'App running in the background — exact impact unknown.',                                                                action: 'Review manually if unsure. Close if you are not using it.'                    },
+    };
+
+    function buildBackgroundOptCard() {
+        if (!bgContext) return null;
+
+        const items = [];
+
+        (bgContext.processes || []).forEach((p, i) => {
+            if (!p.safeToClose && !p.safeToDisableStartup) return;
+            // Chat/Voice apps are optional — user may be in a call
+            const isChatVoice = p.category === 'Chat/Voice';
+            items.push({
+                id:             `proc-${i}`,
+                name:           p.name,
+                category:       p.category,
+                type:           'process',
+                state:          'Running',
+                ramMB:          p.ramMB,
+                recommendation: p.safeToClose ? (isChatVoice ? 'optional' : 'close') : 'leave',
+                risk:           p.safeToClose ? 'safe' : 'review',
+                pid:            p.pid,
+                processName:    p.processName,
+            });
+        });
+
+        (bgContext.startups || []).forEach((s, i) => {
+            items.push({
+                id:              `startup-${i}`,
+                name:            s.name,
+                category:        s.category || 'Unknown',
+                type:            'startup',
+                state:           'Startup Enabled',
+                ramMB:           null,
+                recommendation:  s.safeToDisable ? 'disable-startup' : 'review',
+                risk:            s.safeToDisable ? 'safe' : 'review',
+                startupName:     s.name,
+                startupLocation: s.location,
+            });
+        });
+
+        (bgContext.services || []).forEach((sv, i) => {
+            if (sv.critical) return;
+            items.push({
+                id:             `svc-${i}`,
+                name:           sv.display,
+                category:       sv.category,
+                type:           'service',
+                state:          'Service Running',
+                ramMB:          null,
+                recommendation: 'review',
+                risk:           'review',
+            });
+        });
+
+        if (items.length === 0) return null;
+
+        // Cap at 8 items (processes first, then startups, then services)
+        const shown = items.slice(0, 8);
+
+        const safeCount   = shown.filter(it => it.risk === 'safe').length;
+        const reviewCount = shown.filter(it => it.risk === 'review').length;
+        const subtitle    = [safeCount > 0 && `${safeCount} safe to change`, reviewCount > 0 && `${reviewCount} to review`].filter(Boolean).join(' · ');
+
+        const card = document.createElement('div');
+        card.className = 'ai-recommendation-card ai-bg-opt-card';
+
+        // Header
+        const hdr = document.createElement('div');
+        hdr.className = 'ai-rec-header';
+        hdr.innerHTML =
+            '<div class="ai-rec-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+            '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>' +
+            '<div><div class="ai-rec-title">Background Optimization Review</div>' +
+            `<div class="ai-rec-subtitle">${escapeAiHtml(subtitle)}</div></div>`;
+        card.appendChild(hdr);
+
+        // Rows
+        const list = document.createElement('div');
+        list.className = 'ai-rec-tweak-list';
+
+        shown.forEach((item, i) => {
+            const row = document.createElement('div');
+            row.className = 'ai-tweak-row ai-bg-row';
+            row.style.animationDelay = `${0.04 + i * 0.045}s`;
+
+            const actionLabels  = { close: 'Close App', optional: 'Optional', 'disable-startup': 'Disable Startup', review: 'Review', leave: 'Leave Alone' };
+            const riskLabel     = item.risk === 'safe' ? 'Safe' : 'Review';
+            const stateLabel    = item.state;
+            const ram           = item.ramMB ? `${item.ramMB} MB` : '';
+
+            row.innerHTML =
+                `<div class="ai-tweak-row-info">` +
+                `<span class="ai-tweak-row-name">${escapeAiHtml(item.name)}</span>` +
+                `<span class="ai-tweak-row-reason ai-bg-cat">${escapeAiHtml(item.category)}</span>` +
+                `</div>` +
+                `<div class="ai-bg-row-meta">` +
+                (ram ? `<span class="ai-bg-usage">${escapeAiHtml(ram)}</span>` : '') +
+                `<span class="ai-bg-state">${escapeAiHtml(stateLabel)}</span>` +
+                `<span class="ai-bg-action ${item.recommendation}">${escapeAiHtml(actionLabels[item.recommendation] || 'Review')}</span>` +
+                `<span class="ai-review-risk-badge ${item.risk}">${riskLabel}</span>` +
+                `</div>`;
+
+            list.appendChild(row);
+        });
+        card.appendChild(list);
+
+        // Actions
+        const actions = document.createElement('div');
+        actions.className = 'ai-apply-actions';
+        const hasSafe = shown.some(it => it.risk === 'safe' && (it.recommendation === 'close' || it.recommendation === 'disable-startup'));
+        actions.innerHTML =
+            (hasSafe ? '<button class="ai-rec-apply-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Apply Safe Changes</button>' : '') +
+            '<button class="ai-rec-review-btn">Review Changes</button>' +
+            '<button class="ai-rec-cancel-btn">Skip</button>';
+        card.appendChild(actions);
+
+        if (hasSafe) {
+            actions.querySelector('.ai-rec-apply-btn').addEventListener('click', () => {
+                actions.style.display = 'none';
+                const safeItems = shown.filter(it => it.risk === 'safe' && (it.recommendation === 'close' || it.recommendation === 'disable-startup'));
+                applyBgChanges(card, safeItems);
+            });
+        }
+        actions.querySelector('.ai-rec-review-btn').addEventListener('click', () => {
+            openBgReviewModal(shown);
+        });
+        actions.querySelector('.ai-rec-cancel-btn').addEventListener('click', () => {
+            card.classList.add('ai-rec-dismissed');
+            setTimeout(() => { if (card.parentNode) card.parentNode.removeChild(card); }, 320);
+        });
+
+        return card;
+    }
+
+    async function applyBgChanges(card, items) {
+        const progressEl = document.createElement('div');
+        progressEl.className = 'ai-bg-apply-progress';
+        progressEl.textContent = 'Applying changes…';
+        card.appendChild(progressEl);
+
+        let applied = 0, failed = 0;
+        for (const item of items) {
+            try {
+                if (item.type === 'process' && typeof item.pid === 'number') {
+                    const r = await window.electronAPI.closeProcess(item.pid, item.processName);
+                    r.success ? applied++ : failed++;
+                } else if (item.type === 'startup') {
+                    const r = await window.electronAPI.disableStartupEntry(item.startupName, item.startupLocation);
+                    r.success ? applied++ : failed++;
+                } else {
+                    failed++;
+                }
+            } catch { failed++; }
+        }
+
+        // Invalidate bg context so next query gets fresh data
+        bgContext = null; bgContextTime = 0;
+
+        const parts = [];
+        if (applied) parts.push(`${applied} applied`);
+        if (failed)  parts.push(`${failed} failed`);
+        progressEl.textContent = parts.join(', ') || 'Done.';
+    }
+
+    /* ── Background Review Modal ── */
+    function openBgReviewModal(items) {
+        if (!items || !items.length) return;
+
+        const actionLabels = { close: 'Close App', optional: 'Optional', 'disable-startup': 'Disable Startup', review: 'Review Only', leave: 'Leave Alone' };
+        // Optional (Chat/Voice) items start unchecked — user may be in a call
+        const checkedIds   = new Set(items.filter(it => it.risk === 'safe' && it.recommendation !== 'leave' && it.recommendation !== 'review' && it.recommendation !== 'optional').map(it => it.id));
+
+        const overlay = document.createElement('div');
+        overlay.className = 'ai-review-overlay';
+
+        const modal = document.createElement('div');
+        modal.className = 'ai-review-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        overlay.appendChild(modal);
+
+        // Header
+        const hdrEl = document.createElement('div');
+        hdrEl.className = 'ai-review-header';
+        hdrEl.innerHTML =
+            '<div class="ai-review-header-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+            '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>' +
+            '<div class="ai-review-header-text"><h2 class="ai-review-title">Background Optimization Review</h2>' +
+            '<p class="ai-review-subtitle">Choose which apps and startup items to change.</p></div>' +
+            '<button class="ai-review-close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">' +
+            '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+        modal.appendChild(hdrEl);
+
+        // Body
+        const bodyEl = document.createElement('div');
+        bodyEl.className = 'ai-review-body';
+
+        const listEl = document.createElement('div');
+        listEl.className = 'ai-review-list';
+
+        items.forEach((item, i) => {
+            const isReviewOnly = item.recommendation === 'review' || item.recommendation === 'leave';
+            const isChecked    = checkedIds.has(item.id);
+
+            const row = document.createElement('div');
+            row.className = `ai-review-row${isChecked ? ' checked' : ''}${isReviewOnly ? ' already-applied' : ''}`;
+            row.dataset.bgId = item.id;
+            row.style.animationDelay = `${0.05 + i * 0.04}s`;
+
+            const lbl = document.createElement('label');
+            lbl.className = 'ai-review-row-label';
+
+            const cb = document.createElement('input');
+            cb.type    = 'checkbox';
+            cb.className = 'ai-review-checkbox';
+            cb.checked  = isChecked;
+            if (isReviewOnly) cb.disabled = true;
+
+            const mark = document.createElement('span');
+            mark.className = 'ai-review-checkmark';
+
+            const info = document.createElement('div');
+            info.className = 'ai-review-row-info';
+            const ramStr = item.ramMB ? ` · ${item.ramMB} MB` : '';
+            info.innerHTML =
+                `<span class="ai-review-row-name">${escapeAiHtml(item.name)}</span>` +
+                `<span class="ai-review-row-reason">${escapeAiHtml(item.category)}${escapeAiHtml(ramStr)} · ${escapeAiHtml(actionLabels[item.recommendation] || 'Review')}</span>`;
+
+            const badge = document.createElement('span');
+            badge.className = `ai-review-risk-badge ${item.risk}`;
+            badge.textContent = item.risk === 'safe' ? 'Safe' : 'Review';
+
+            const statusEl = document.createElement('div');
+            statusEl.className = isReviewOnly ? 'ai-review-row-status already-applied' : 'ai-review-row-status';
+            if (isReviewOnly) statusEl.textContent = 'Review Only';
+
+            lbl.appendChild(cb); lbl.appendChild(mark); lbl.appendChild(info);
+            lbl.appendChild(badge); lbl.appendChild(statusEl);
+            row.appendChild(lbl);
+
+            if (!isReviewOnly) {
+                cb.addEventListener('change', () => {
+                    if (cb.checked) { checkedIds.add(item.id); row.classList.add('checked'); }
+                    else { checkedIds.delete(item.id); row.classList.remove('checked'); }
+                    updateApplyBtn();
+                });
+            }
+
+            row.addEventListener('mouseenter', () => showDetail(item));
+            row.addEventListener('focusin',    () => showDetail(item));
+            listEl.appendChild(row);
+        });
+
+        bodyEl.appendChild(listEl);
+
+        // Detail panel
+        const detailEl = document.createElement('div');
+        detailEl.className = 'ai-review-detail';
+        detailEl.innerHTML =
+            '<div class="ai-review-detail-empty">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="28" height="28">' +
+            '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+            '<p>Hover an item<br>to see details</p></div>';
+        bodyEl.appendChild(detailEl);
+        modal.appendChild(bodyEl);
+
+        // Footer
+        const footerEl  = document.createElement('div');
+        footerEl.className = 'ai-review-footer';
+        const clFooter  = document.createElement('div');
+        clFooter.className = 'ai-review-checklist-footer';
+        clFooter.innerHTML =
+            '<div class="ai-review-footer-left">' +
+            '<button class="ai-review-sel-safe-btn">Select All Safe</button>' +
+            '<button class="ai-review-clear-sel-btn">Clear All</button>' +
+            '</div>' +
+            '<div class="ai-review-footer-right">' +
+            '<button class="ai-review-cancel-btn">Cancel</button>' +
+            '<button class="ai-review-apply-btn" disabled>Apply Selected</button>' +
+            '</div>';
+        footerEl.appendChild(clFooter);
+        modal.appendChild(footerEl);
+
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => overlay.classList.add('open'));
+
+        function showDetail(item) {
+            const info = BG_DETAIL_MAP[item.category] || BG_DETAIL_MAP['Unknown'];
+            const riskNote = item.risk === 'safe' ? 'Fully reversible. Re-open the app anytime.' : 'Review manually before applying.';
+            detailEl.innerHTML =
+                '<div class="ai-review-detail-content">' +
+                `<div class="ai-review-detail-title">${escapeAiHtml(item.name)}</div>` +
+                `<div class="ai-review-detail-meta">` +
+                `<span class="ai-review-risk-badge ${item.risk} large">${item.risk === 'safe' ? 'Safe' : 'Review'}</span>` +
+                `<span class="ai-review-detail-cat">${escapeAiHtml(item.category)}</span>` +
+                `<span class="ai-review-detail-cat">${escapeAiHtml(item.state)}</span>` +
+                `</div>` +
+                `<p class="ai-review-detail-desc">${escapeAiHtml(info.why)}</p>` +
+                `<p class="ai-review-detail-desc" style="margin-top:6px"><strong>Suggested action:</strong> ${escapeAiHtml(info.action)}</p>` +
+                `<p class="ai-review-detail-risk-note">${escapeAiHtml(riskNote)}</p>` +
+                '</div>';
+        }
+
+        function updateApplyBtn() {
+            const btn = clFooter.querySelector('.ai-review-apply-btn');
+            const n   = checkedIds.size;
+            btn.textContent = n > 0 ? `Apply Selected (${n})` : 'Apply Selected';
+            btn.disabled    = n === 0;
+        }
+
+        function setRowStatus(id, status) {
+            const row = listEl.querySelector(`.ai-review-row[data-bg-id="${id}"]`);
+            if (!row) return;
+            const el = row.querySelector('.ai-review-row-status');
+            if (!el) return;
+            const labels = { pending: 'Queued', running: 'Applying…', done: 'Done ✓', failed: 'Failed' };
+            el.className   = `ai-review-row-status ${status}`;
+            el.textContent = labels[status] || '';
+        }
+
+        async function applyChecked() {
+            const toApply = items.filter(it => checkedIds.has(it.id));
+            if (!toApply.length) return;
+
+            clFooter.style.display = 'none';
+
+            const doneFooter = document.createElement('div');
+            doneFooter.className = 'ai-review-done-footer';
+            doneFooter.innerHTML = '<span class="ai-review-done-summary">Applying changes…</span>';
+            footerEl.appendChild(doneFooter);
+
+            toApply.forEach(it => setRowStatus(it.id, 'running'));
+
+            let applied = 0, failed = 0;
+            for (const item of toApply) {
+                try {
+                    let ok = false;
+                    if (item.type === 'process' && typeof item.pid === 'number') {
+                        const r = await window.electronAPI.closeProcess(item.pid, item.processName);
+                        ok = r.success;
+                    } else if (item.type === 'startup') {
+                        const r = await window.electronAPI.disableStartupEntry(item.startupName, item.startupLocation);
+                        ok = r.success;
+                    }
+                    setRowStatus(item.id, ok ? 'done' : 'failed');
+                    ok ? applied++ : failed++;
+                } catch {
+                    setRowStatus(item.id, 'failed');
+                    failed++;
+                }
+            }
+
+            bgContext = null; bgContextTime = 0;
+
+            const parts = [];
+            if (applied) parts.push(`<span class="ai-sum-good">${applied} applied</span>`);
+            if (failed)  parts.push(`<span class="ai-sum-bad">${failed} failed</span>`);
+            doneFooter.innerHTML = (parts.length ? `<span class="ai-review-done-summary">${parts.join(' · ')}</span>` : '<span></span>') +
+                '<button class="ai-review-done-close-btn">Close</button>';
+            doneFooter.querySelector('.ai-review-done-close-btn').addEventListener('click', closeModal);
+        }
+
+        function closeModal() {
+            overlay.classList.remove('open');
+            setTimeout(() => { overlay.remove(); document.removeEventListener('keydown', handleEsc); }, 220);
+        }
+        function handleEsc(e) { if (e.key === 'Escape') closeModal(); }
+        document.addEventListener('keydown', handleEsc);
+        overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+        hdrEl.querySelector('.ai-review-close').addEventListener('click', closeModal);
+        clFooter.querySelector('.ai-review-sel-safe-btn').addEventListener('click', () => {
+            items.forEach(it => {
+                // optional = Chat/Voice; user must choose those individually
+                if (it.risk === 'safe' && it.recommendation !== 'leave' && it.recommendation !== 'optional') {
+                    checkedIds.add(it.id);
+                    const row = listEl.querySelector(`.ai-review-row[data-bg-id="${it.id}"]`);
+                    if (row) { const cb = row.querySelector('.ai-review-checkbox'); if (cb) cb.checked = true; row.classList.add('checked'); }
+                }
+            });
+            updateApplyBtn();
+        });
+        clFooter.querySelector('.ai-review-clear-sel-btn').addEventListener('click', () => {
+            checkedIds.clear();
+            listEl.querySelectorAll('.ai-review-row').forEach(row => {
+                const cb = row.querySelector('.ai-review-checkbox');
+                if (cb) cb.checked = false;
+                row.classList.remove('checked');
+            });
+            updateApplyBtn();
+        });
+        clFooter.querySelector('.ai-review-cancel-btn').addEventListener('click', closeModal);
+        clFooter.querySelector('.ai-review-apply-btn').addEventListener('click', applyChecked);
+
+        updateApplyBtn();
+    }
+
+    if (notRunningPrimaryBtn) {
+        notRunningPrimaryBtn.addEventListener('click', () => {
+            const mode = notRunningPrimaryBtn.dataset.setupMode || 'start';
+            runEngineSetup(mode);
         });
     }
 
     if (pullBtn) {
         pullBtn.addEventListener('click', async () => {
+            if (aiSetupInProgress) return;
+            aiSetupInProgress = true;
             pullBtn.disabled     = true;
-            pullBtn.textContent  = 'Downloading...';
+            pullBtn.textContent  = 'Downloading…';
             pullProgress.style.display = 'block';
-            pullProgress.textContent   = 'Starting download...';
+            pullProgress.textContent   = 'Starting AI Model download…';
 
             if (pullProgressUnsubscribe) pullProgressUnsubscribe();
             pullProgressUnsubscribe = window.electronAPI.onAiModelPullProgress((data) => {
-                if (data.chunk) {
-                    const lines = data.chunk.trim().split('\n').filter(Boolean);
-                    if (lines.length) pullProgress.textContent = lines[lines.length - 1];
+                if (!data.chunk) return;
+                const text = data.chunk.trim().toLowerCase();
+                if (text.includes('success')) {
+                    pullProgress.textContent = 'AI Model ready!';
+                } else if (text.includes('verif') || text.includes('writing manifest')) {
+                    pullProgress.textContent = 'Verifying AI Model…';
+                } else {
+                    pullProgress.textContent = 'Downloading AI Model…';
                 }
             });
 
@@ -3141,16 +3689,19 @@ function initializeAiTweaker() {
             }
 
             if (result.success) {
-                pullProgress.textContent = 'Model downloaded successfully!';
+                pullProgress.textContent = 'AI Model downloaded successfully!';
+                aiSetupInProgress = false;
                 setTimeout(checkOllama, 800);
             } else if (result.pathError) {
-                pullProgress.textContent = 'AI engine not found in PATH. See Advanced Setup in the setup card for manual instructions.';
+                pullProgress.textContent = 'AI Engine could not be found. Try restarting XTweaks.';
+                aiSetupInProgress = false;
                 pullBtn.disabled    = false;
-                pullBtn.textContent = 'Retry Download';
+                pullBtn.textContent = 'Retry';
             } else {
-                pullProgress.textContent = 'Download failed. Make sure the AI engine is installed and running.';
+                pullProgress.textContent = 'Download failed. Try restarting XTweaks.';
+                aiSetupInProgress = false;
                 pullBtn.disabled    = false;
-                pullBtn.textContent = 'Retry Download';
+                pullBtn.textContent = 'Retry';
             }
         });
     }
@@ -3180,6 +3731,8 @@ function initializeAiTweaker() {
 
         sendBtn.disabled = true;
 
+        await getPCContextForMessage(trimmed);
+
         let aiResponseText = null;
         try {
             const sysContent = XTWEAKS_AI_SYSTEM_PROMPT + (pcContext ? '\n\n' + pcContext : '');
@@ -3205,13 +3758,30 @@ function initializeAiTweaker() {
         if (aiResponseText) {
             const intent = detectIntent(trimmed);
             if (intent) {
-                setTimeout(() => {
-                    const recCard = buildRecommendationCard(intent);
-                    if (recCard) {
-                        chatHistEl.appendChild(recCard);
-                        chatHistEl.scrollTop = chatHistEl.scrollHeight;
-                    }
-                }, 440);
+                if (intent.type === 'background') {
+                    // Refresh bg context if stale, then show bg card
+                    const needRefresh = !bgContext || (Date.now() - bgContextTime) > BG_CONTEXT_TTL;
+                    (needRefresh
+                        ? window.electronAPI.getBackgroundContext().then(d => { if (d) { bgContext = d; bgContextTime = Date.now(); } }).catch(() => {})
+                        : Promise.resolve()
+                    ).then(() => {
+                        setTimeout(() => {
+                            const bgCard = buildBackgroundOptCard();
+                            if (bgCard) {
+                                chatHistEl.appendChild(bgCard);
+                                chatHistEl.scrollTop = chatHistEl.scrollHeight;
+                            }
+                        }, 440);
+                    });
+                } else {
+                    setTimeout(() => {
+                        const recCard = buildRecommendationCard(intent);
+                        if (recCard) {
+                            chatHistEl.appendChild(recCard);
+                            chatHistEl.scrollTop = chatHistEl.scrollHeight;
+                        }
+                    }, 440);
+                }
             }
         }
     }
@@ -3298,91 +3868,115 @@ function initializeAiTweaker() {
 
     function clearChat() {
         chatHistory = [];
-        chatHistEl.querySelectorAll('.ai-message, .ai-recommendation-card').forEach(m => m.remove());
+        chatHistEl.querySelectorAll('.ai-message, .ai-recommendation-card, .ai-bg-opt-card').forEach(m => m.remove());
         if (welcomeEl)    welcomeEl.style.display    = '';
         if (quickPrompts) quickPrompts.style.display = '';
     }
 
-    async function buildPCContext() {
+    function buildPCContext() {
+        if (pcContextInFlight) return pcContextInFlight;
+
         const ctxIndicator = document.getElementById('ai-ctx-indicator');
         const ctxDot       = document.getElementById('ai-ctx-dot');
-        if (ctxIndicator) ctxIndicator.textContent = 'Loading PC context…';
+        if (ctxIndicator) ctxIndicator.textContent = 'Reading PC context…';
         if (ctxDot)       ctxDot.className = 'ai-ctx-dot';
 
-        try {
-            const raw   = await window.electronAPI.getAISystemContext();
-            const lines = [];
+        const p = (async () => {
+            try {
+                const [raw, bgRaw] = await Promise.all([
+                    window.electronAPI.getAISystemContext(),
+                    window.electronAPI.getBackgroundContext().catch(() => null)
+                ]);
+                if (bgRaw) { bgContext = bgRaw; bgContextTime = Date.now(); }
+                const lines = [];
 
-            // CPU
-            const cpuModel = raw.sys?.cpu?.model || '';
-            const cpuCores = raw.sys?.cpu?.cores;
-            if (cpuModel) lines.push(`CPU: ${cpuModel}${cpuCores ? ` (${cpuCores} cores)` : ''}`);
+                // CPU
+                const cpuModel = raw.sys?.cpu?.model || '';
+                const cpuCores = raw.sys?.cpu?.cores;
+                if (cpuModel) lines.push(`CPU: ${cpuModel}${cpuCores ? ` (${cpuCores} cores)` : ''}`);
 
-            const cpuPct   = raw.live?.cpuUsage;
-            const cpuTemp  = raw.live?.cpuTemp;
-            const cpuState = [cpuPct != null && `Usage ${Math.round(cpuPct)}%`, cpuTemp && `Temp ${Math.round(cpuTemp)}°C`].filter(Boolean).join(', ');
-            if (cpuState) lines.push(`CPU State: ${cpuState}`);
+                const cpuPct   = raw.live?.cpuUsage;
+                const cpuTemp  = raw.live?.cpuTemp;
+                const cpuState = [cpuPct != null && `Usage ${Math.round(cpuPct)}%`, cpuTemp && `Temp ${Math.round(cpuTemp)}°C`].filter(Boolean).join(', ');
+                if (cpuState) lines.push(`CPU State: ${cpuState}`);
 
-            // RAM
-            const memTotal = raw.sys?.memory?.total;
-            const memPct   = raw.live?.memoryUsage;
-            if (memTotal) {
-                const gb   = (memTotal / 1073741824).toFixed(0);
-                const used = memPct != null ? `, ${Math.round(memPct)}% used` : '';
-                lines.push(`RAM: ${gb} GB total${used}`);
-            }
+                // RAM
+                const memTotal = raw.sys?.memory?.total;
+                const memPct   = raw.live?.memoryUsage;
+                if (memTotal) {
+                    const gb   = (memTotal / 1073741824).toFixed(0);
+                    const used = memPct != null ? `, ${Math.round(memPct)}% used` : '';
+                    lines.push(`RAM: ${gb} GB total${used}`);
+                }
 
-            // GPU
-            const gpu0 = Array.isArray(raw.gpu?.gpus) ? raw.gpu.gpus[0] : null;
-            if (gpu0?.name) {
-                const vram = gpu0.vram          ? ` | VRAM ${gpu0.vram}`            : '';
-                const drv  = gpu0.driverVersion ? ` | Driver ${gpu0.driverVersion}` : '';
-                lines.push(`GPU: ${gpu0.name}${vram}${drv}`);
-            }
+                // GPU
+                const gpu0 = Array.isArray(raw.gpu?.gpus) ? raw.gpu.gpus[0] : null;
+                if (gpu0?.name) {
+                    const vram = gpu0.vram          ? ` | VRAM ${gpu0.vram}`            : '';
+                    const drv  = gpu0.driverVersion ? ` | Driver ${gpu0.driverVersion}` : '';
+                    lines.push(`GPU: ${gpu0.name}${vram}${drv}`);
+                }
 
-            const gpuPct   = raw.live?.gpuUsage ?? raw.gpuLive?.usage;
-            const gpuTemp  = raw.live?.gpuTemp  ?? raw.gpuLive?.temp;
-            const gpuState = [gpuPct != null && `Usage ${Math.round(gpuPct)}%`, gpuTemp && `Temp ${Math.round(gpuTemp)}°C`].filter(Boolean).join(', ');
-            if (gpuState) lines.push(`GPU State: ${gpuState}`);
+                const gpuPct   = raw.live?.gpuUsage ?? raw.gpuLive?.usage;
+                const gpuTemp  = raw.live?.gpuTemp  ?? raw.gpuLive?.temp;
+                const gpuState = [gpuPct != null && `Usage ${Math.round(gpuPct)}%`, gpuTemp && `Temp ${Math.round(gpuTemp)}°C`].filter(Boolean).join(', ');
+                if (gpuState) lines.push(`GPU State: ${gpuState}`);
 
-            // Power plan + Windows
-            const powerPlan = raw.gpuLive?.powerPlan;
-            if (powerPlan) lines.push(`Power Plan: ${powerPlan}`);
+                // Power plan + Windows
+                const powerPlan = raw.gpuLive?.powerPlan;
+                if (powerPlan) lines.push(`Power Plan: ${powerPlan}`);
 
-            const winVer = raw.sys?.os?.release;
-            if (winVer) lines.push(`Windows: ${winVer}`);
+                const winVer = raw.sys?.os?.release;
+                if (winVer) lines.push(`Windows: ${winVer}`);
 
-            if (lines.length === 0) {
+                if (lines.length === 0) {
+                    pcContext   = null;
+                    tweakStates = {};
+                    if (ctxIndicator) ctxIndicator.textContent = 'No PC context available';
+                    return;
+                }
+
+                // Tweak states — from app toggle state; cross-ref power plan for accuracy
+                tweakStates = Object.assign({}, raw.toggles || {});
+                if (powerPlan && /high.?perf/i.test(powerPlan)) tweakStates['optimize-power-plan'] = true;
+
+                const tweakLines = Object.keys(AI_ALLOWED_TWEAKS).map(id => {
+                    const s = tweakStates[id];
+                    const label = s === true ? 'Already Applied' : s === false ? 'Not Applied' : 'Unknown';
+                    return `${id}: ${label}`;
+                });
+
+                const time    = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                pcContextTime      = time;
+                pcContextFetchedAt = Date.now();
+                pcContext     =
+                    `Current PC details:\n${lines.join('\n')}` +
+                    `\n\nXTweaks tweak states:\n${tweakLines.join('\n')}`;
+
+                const bgStr = formatBgContextForAI(bgContext);
+                if (bgStr) pcContext += '\n\n' + bgStr;
+
+                if (ctxIndicator) ctxIndicator.textContent = `PC Context Attached  (${time})`;
+                if (ctxDot)       ctxDot.className = 'ai-ctx-dot loaded';
+            } catch {
                 pcContext   = null;
                 tweakStates = {};
-                if (ctxIndicator) ctxIndicator.textContent = 'No PC context available';
-                return;
+                if (ctxIndicator) ctxIndicator.textContent = 'PC context unavailable';
+                if (ctxDot)       ctxDot.className = 'ai-ctx-dot';
+            } finally {
+                pcContextInFlight = null;
             }
+        })();
 
-            // Tweak states — from app toggle state; cross-ref power plan for accuracy
-            tweakStates = Object.assign({}, raw.toggles || {});
-            if (powerPlan && /high.?perf/i.test(powerPlan)) tweakStates['optimize-power-plan'] = true;
+        pcContextInFlight = p;
+        return p;
+    }
 
-            const tweakLines = Object.keys(AI_ALLOWED_TWEAKS).map(id => {
-                const s = tweakStates[id];
-                const label = s === true ? 'Already Applied' : s === false ? 'Not Applied' : 'Unknown';
-                return `${id}: ${label}`;
-            });
-
-            const time    = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            pcContextTime = time;
-            pcContext     =
-                `[Safe PC Snapshot — ${time}]\n${lines.join('\n')}` +
-                `\n\n[XTweaks Tweak States]\n${tweakLines.join('\n')}`;
-
-            if (ctxIndicator) ctxIndicator.textContent = `PC Context Attached  (${time})`;
-            if (ctxDot)       ctxDot.className = 'ai-ctx-dot loaded';
-        } catch {
-            pcContext   = null;
-            tweakStates = {};
-            if (ctxIndicator) ctxIndicator.textContent = 'PC context unavailable';
-            if (ctxDot)       ctxDot.className = 'ai-ctx-dot';
-        }
+    async function getPCContextForMessage(text) {
+        const lower = text.toLowerCase();
+        if (!PC_CONTEXT_KEYWORDS.some(k => lower.includes(k))) return;
+        if (pcContext && (Date.now() - pcContextFetchedAt) < PC_CONTEXT_TTL) return;
+        await buildPCContext();
     }
 
     function wireSettingsGear() {
@@ -3407,20 +4001,170 @@ function initializeAiTweaker() {
             clearChat();
             dropdown.classList.remove('open');
         });
+
+        document.getElementById('ai-settings-show-welcome')?.addEventListener('click', () => {
+            localStorage.removeItem('xtweaks-ai-welcome-seen');
+            aiWelcomeShownThisSession = true;
+            dropdown.classList.remove('open');
+            setTimeout(() => {
+                const ov = document.getElementById('ai-welcome-overlay');
+                if (ov) { ov.classList.remove('is-closing'); ov.classList.add('is-open'); }
+            }, 60);
+        });
+    }
+
+    function initWelcomeModal() {
+        const overlay = document.getElementById('ai-welcome-overlay');
+        const continueBtn = document.getElementById('ai-welcome-continue-btn');
+        const dismissCheck = document.getElementById('ai-welcome-dismiss-check');
+        const modal = document.getElementById('ai-welcome-modal');
+        if (!overlay || !continueBtn) return;
+
+        function closeWelcome() {
+            if (!overlay.classList.contains('is-open')) return; // already closing or closed
+            if (dismissCheck?.checked) {
+                localStorage.setItem('xtweaks-ai-welcome-seen', '1');
+            }
+            overlay.classList.remove('is-open');
+            overlay.classList.add('is-closing');
+
+            let done = false;
+            function finish() {
+                if (done) return;
+                done = true;
+                overlay.classList.remove('is-closing');
+            }
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                finish();
+            } else {
+                modal?.addEventListener('animationend', finish, { once: true });
+                setTimeout(finish, 400); // fallback if animationend doesn't fire
+            }
+        }
+
+        continueBtn.addEventListener('click', closeWelcome);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeWelcome();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeWelcome();
+        });
+
+        // Floating symbol mouse parallax (gyroscope tilt)
+        const floatSymbols = modal ? Array.from(modal.querySelectorAll('.ai-wf-symbol')) : [];
+        if (floatSymbols.length && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            let rafId = null, tX = 0, tY = 0, cX = 0, cY = 0;
+
+            function tickPx() {
+                cX += (tX - cX) * 0.06;
+                cY += (tY - cY) * 0.06;
+                floatSymbols.forEach(s => {
+                    const px = parseFloat(s.dataset.px || '-0.04');
+                    const py = parseFloat(s.dataset.py || '-0.04');
+                    s.style.transform = `translate(${(cX * px).toFixed(2)}px,${(cY * py).toFixed(2)}px)`;
+                });
+                rafId = requestAnimationFrame(tickPx);
+            }
+
+            function onMM(e) {
+                const r = modal.getBoundingClientRect();
+                tX = e.clientX - (r.left + r.width  / 2);
+                tY = e.clientY - (r.top  + r.height / 2);
+            }
+
+            const mo = new MutationObserver(() => {
+                if (overlay.classList.contains('is-open')) {
+                    if (!rafId) rafId = requestAnimationFrame(tickPx);
+                    modal.addEventListener('mousemove', onMM);
+                } else {
+                    cancelAnimationFrame(rafId); rafId = null;
+                    modal.removeEventListener('mousemove', onMM);
+                    tX = tY = cX = cY = 0;
+                    floatSymbols.forEach(s => s.style.transform = '');
+                }
+            });
+            mo.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // Canvas background particles
+        const wCanvas = document.getElementById('ai-welcome-canvas');
+        if (wCanvas && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            const wCtx = wCanvas.getContext('2d');
+            let wRafId = null;
+            let wParticles = [];
+
+            function resizeWCanvas() {
+                wCanvas.width  = overlay.offsetWidth  || 800;
+                wCanvas.height = overlay.offsetHeight || 600;
+            }
+
+            function makeParticle(bright) {
+                return {
+                    x: Math.random() * (wCanvas.width  || 800),
+                    y: Math.random() * (wCanvas.height || 600),
+                    r:    bright ? Math.random() * 2.2 + 1.4 : Math.random() * 1.4 + 0.5,
+                    vx:   (Math.random() - 0.5) * (bright ? 0.10 : 0.16),
+                    vy:   (Math.random() - 0.5) * (bright ? 0.10 : 0.16),
+                    alpha: bright ? Math.random() * 0.45 + 0.42 : Math.random() * 0.40 + 0.18,
+                    twinkleSpeed: Math.random() * 0.014 + 0.005,
+                    twinklePhase: Math.random() * Math.PI * 2,
+                    bright,
+                };
+            }
+
+            function initWParticles() {
+                resizeWCanvas();
+                wParticles = [
+                    ...Array.from({ length: 50 }, () => makeParticle(false)),
+                    ...Array.from({ length: 18 }, () => makeParticle(true)),
+                ];
+            }
+
+            function tickWParticles() {
+                wCtx.clearRect(0, 0, wCanvas.width, wCanvas.height);
+                for (const p of wParticles) {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.twinklePhase += p.twinkleSpeed;
+                    if (p.x < 0) p.x = wCanvas.width;
+                    if (p.x > wCanvas.width) p.x = 0;
+                    if (p.y < 0) p.y = wCanvas.height;
+                    if (p.y > wCanvas.height) p.y = 0;
+                    const alpha = p.alpha * (0.55 + 0.45 * Math.sin(p.twinklePhase));
+                    if (p.bright) {
+                        const g = wCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4.5);
+                        g.addColorStop(0, `rgba(255,255,255,${(alpha * 0.55).toFixed(3)})`);
+                        g.addColorStop(1, 'rgba(255,255,255,0)');
+                        wCtx.beginPath();
+                        wCtx.arc(p.x, p.y, p.r * 4.5, 0, Math.PI * 2);
+                        wCtx.fillStyle = g;
+                        wCtx.fill();
+                    }
+                    wCtx.beginPath();
+                    wCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    wCtx.fillStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+                    wCtx.fill();
+                }
+                wRafId = requestAnimationFrame(tickWParticles);
+            }
+
+            const wObs = new MutationObserver(() => {
+                if (overlay.classList.contains('is-open')) {
+                    if (!wRafId) { initWParticles(); wRafId = requestAnimationFrame(tickWParticles); }
+                } else {
+                    cancelAnimationFrame(wRafId); wRafId = null;
+                }
+            });
+            wObs.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+
+            window.addEventListener('resize', () => { if (wRafId) resizeWCanvas(); });
+        }
     }
 
     wireSettingsGear();
+    initWelcomeModal();
     document.getElementById('ai-ctx-refresh')?.addEventListener('click', buildPCContext);
 
-    // Start with input disabled; trigger entrance animation
     setInputEnabled(false);
-
-    const page = document.getElementById('page-ai-tweaker');
-    if (page) {
-        page.classList.remove('ai-entered');
-        void page.offsetWidth;
-        page.classList.add('ai-entered');
-    }
-
-    buildPCContext();
+    checkOllama();
 }

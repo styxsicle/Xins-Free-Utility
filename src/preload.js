@@ -45,11 +45,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
 
     aiDetect: () => ipcRenderer.invoke('ollama-detect'),
+    aiEngineSetup: () => ipcRenderer.invoke('ai-engine-setup'),
     aiChat: (messages) => ipcRenderer.invoke('ollama-chat', messages),
     aiPullModel: (model) => ipcRenderer.invoke('ollama-pull-model', model),
     onAiModelPullProgress: (cb) => {
         const handler = (_, data) => cb(data);
         ipcRenderer.on('ollama-pull-progress', handler);
         return () => ipcRenderer.removeListener('ollama-pull-progress', handler);
-    }
+    },
+    onAiEngineProgress: (cb) => {
+        const handler = (_, data) => cb(data);
+        ipcRenderer.on('ai-engine-progress', handler);
+        return () => ipcRenderer.removeListener('ai-engine-progress', handler);
+    },
+
+    getBackgroundContext: () => ipcRenderer.invoke('get-background-context'),
+    closeProcess: (pid, processName) => ipcRenderer.invoke('close-process', pid, processName),
+    disableStartupEntry: (name, location) => ipcRenderer.invoke('disable-startup-entry', name, location),
 });

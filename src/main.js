@@ -776,7 +776,7 @@ function startStatsMonitor() {
     const statsScriptPath = path.join(__dirname, 'stats_monitor.ps1');
     console.log(`[STATS] Starting monitor script: ${statsScriptPath}`);
 
-    statsMonitorProcess = spawn('powershell', ['-ExecutionPolicy', 'Bypass', '-File', statsScriptPath]);
+    statsMonitorProcess = spawn('powershell', ['-ExecutionPolicy', 'Bypass', '-File', statsScriptPath], { windowsHide: true });
 
     statsMonitorProcess.stdout.on('data', (data) => {
         const lines = data.toString().split('\n');
@@ -1290,7 +1290,7 @@ ipcMain.handle('apply-tweak', async (event, tweakId, action) => {
     console.log(`[${timestamp}] COMMAND: ${command}`);
 
     return new Promise((resolve) => {
-        exec(command, { shell: 'cmd.exe' }, (error, stdout, stderr) => {
+        exec(command, { shell: 'cmd.exe', windowsHide: true }, (error, stdout, stderr) => {
             if (error && !command.includes('2>nul') && !command.includes('echo')) {
                 console.log(`[${timestamp}] STATUS: FAILED`);
                 console.log(`[${timestamp}] ERROR: ${error.message}`);
@@ -1330,7 +1330,7 @@ ipcMain.handle('apply-recommended-tweaks', async (event, tweakIds) => {
 
         const cmdHasErrHandling = tweakDef.apply.includes('2>nul') || tweakDef.apply.includes('exit /b 0');
         const result = await new Promise((resolve) => {
-            exec(tweakDef.apply, { shell: 'cmd.exe', timeout: 15000 }, (error) => {
+            exec(tweakDef.apply, { shell: 'cmd.exe', windowsHide: true, timeout: 15000 }, (error) => {
                 if (error && !cmdHasErrHandling) {
                     resolve({ id, success: false, message: error.message });
                 } else {
@@ -1368,7 +1368,7 @@ ipcMain.handle('run-cleanup', async (event, type) => {
     console.log(`[${timestamp}] COMMAND: ${command}`);
 
     return new Promise((resolve) => {
-        exec(command, { shell: 'cmd.exe' }, (error, stdout, stderr) => {
+        exec(command, { shell: 'cmd.exe', windowsHide: true }, (error, stdout, stderr) => {
             if (error) {
                 console.log(`[${timestamp}] STATUS: COMPLETED (with warnings)`);
                 if (stderr) console.log(`[${timestamp}] STDERR: ${stderr}`);
@@ -1426,7 +1426,7 @@ function ollamaHttpRequest(path, method, body, timeoutMs) {
 ipcMain.handle('ollama-detect', async () => {
     // Step 1: Check if the ollama binary exists in PATH (Windows: where, Unix: which)
     const installed = await new Promise((resolve) => {
-        exec('where ollama', (error) => resolve(!error));
+        execFile('where', ['ollama'], { windowsHide: true, shell: false }, (error) => resolve(!error));
     });
 
     // Step 2: Check if the Ollama API is responding
@@ -1462,7 +1462,7 @@ ipcMain.handle('ollama-pull-model', async (event, model) => {
 
         let proc;
         try {
-            proc = spawn('ollama', ['pull', model]);
+            proc = spawn('ollama', ['pull', model], { windowsHide: true });
         } catch (spawnErr) {
             console.error('[AI Tweaker] spawn failed:', spawnErr.message);
             return resolve({ success: false, pathError: true, error: spawnErr.message });
@@ -1481,6 +1481,369 @@ ipcMain.handle('ollama-pull-model', async (event, model) => {
         proc.on('close', (code) => {
             if (settled) return;
             settled = true;
+            resolve({ success: code === 0 });
+        });
+    });
+});
+
+let _aiSetupPromise = null;
+
+async function setupAIEngine(event) {
+    const send = (message) => {
+        try { event.sender.send('ai-engine-progress', { message }); } catch (_) {}
+    };
+
+    // Step 1: Check binary is installed
+    send('Checking AI Engine…');
+    const installed = await new Promise((resolve) => {
+        execFile('where', ['ollama'], { windowsHide: true, shell: false }, (error) => resolve(!error));
+    });
+    if (!installed) return { success: false, error: 'not_installed' };
+
+    // Step 2: Check if API already responsive
+    let apiData = null;
+    try { apiData = await ollamaHttpRequest('/api/tags', 'GET', null, 3000); } catch (_) {}
+
+    if (apiData === null) {
+        // Need to start the engine
+        send('Starting AI Engine…');
+        try {
+            const proc = spawn('ollama', ['serve'], { detached: true, stdio: 'ignore', windowsHide: true });
+            proc.unref();
+        } catch (e) {
+            return { success: false, error: 'start_failed' };
+        }
+
+        // Poll until API responds (up to 15 seconds)
+        const deadline = Date.now() + 15000;
+        while (Date.now() < deadline) {
+            await new Promise(r => setTimeout(r, 900));
+            try { apiData = await ollamaHttpRequest('/api/tags', 'GET', null, 1500); break; } catch (_) {}
+        }
+        if (apiData === null) return { success: false, error: 'start_timeout' };
+    }
+
+    // Step 3: Check if model is present
+    const existingModels = Array.isArray(apiData?.models) ? apiData.models : [];
+    const modelReady = existingModels.some(m => m.name && m.name.startsWith('llama3.2'));
+
+    if (!modelReady) {
+        send('Downloading AI Model…');
+        const pulled = await new Promise((resolve) => {
+            let settled = false;
+            let proc;
+            try {
+                proc = spawn('ollama', ['pull', 'llama3.2'], { windowsHide: true });
+            } catch (e) {
+                return resolve(false);
+            }
+
+            proc.stdout.on('data', (d) => {
+                const text = d.toString().toLowerCase();
+                if (text.includes('verif') || text.includes('writing manifest')) {
+                    try { event.sender.send('ai-engine-progress', { message: 'Finalizing AI Model…' }); } catch (_) {}
+                }
+            });
+            proc.stderr.on('data', () => {});
+            proc.on('error', () => { if (!settled) { settled = true; resolve(false); } });
+            proc.on('close', (code) => { if (!settled) { settled = true; resolve(code === 0); } });
+        });
+
+        if (!pulled) return { success: false, error: 'model_pull_failed' };
+    }
+
+    // Step 4: Verify ready
+    send('Finalizing…');
+    try {
+        const verify = await ollamaHttpRequest('/api/tags', 'GET', null, 4000);
+        const ok = Array.isArray(verify?.models) && verify.models.some(m => m.name && m.name.startsWith('llama3.2'));
+        if (!ok) return { success: false, error: 'model_missing_after_pull' };
+    } catch (_) {
+        return { success: false, error: 'verify_failed' };
+    }
+
+    return { success: true };
+}
+
+ipcMain.handle('ai-engine-setup', (event) => {
+    if (_aiSetupPromise) return _aiSetupPromise;
+    _aiSetupPromise = setupAIEngine(event).finally(() => { _aiSetupPromise = null; });
+    return _aiSetupPromise;
+});
+
+// ── AI Background Context ─────────────────────────────────────────────────
+
+const PROCESS_CATALOG = new Map([
+    // Browsers
+    ['chrome',               { display: 'Google Chrome',        category: 'Browser',           safeToClose: true,  safeToDisableStartup: false }],
+    ['msedge',               { display: 'Microsoft Edge',       category: 'Browser',           safeToClose: true,  safeToDisableStartup: false }],
+    ['firefox',              { display: 'Firefox',              category: 'Browser',           safeToClose: true,  safeToDisableStartup: false }],
+    ['brave',                { display: 'Brave',                category: 'Browser',           safeToClose: true,  safeToDisableStartup: false }],
+    ['opera',                { display: 'Opera',                category: 'Browser',           safeToClose: true,  safeToDisableStartup: false }],
+    // Game launchers
+    ['steam',                { display: 'Steam',                category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['epicgameslauncher',    { display: 'Epic Games Launcher',  category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['battlenetlauncher',    { display: 'Battle.net',           category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['riotclientservices',   { display: 'Riot Client',          category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['galaxyclient',         { display: 'GOG Galaxy',           category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['upc',                  { display: 'Ubisoft Connect',      category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['eadesktop',            { display: 'EA App',               category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['playnite.desktopapp',  { display: 'Playnite',             category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: false }],
+    // Chat / Voice
+    ['discord',              { display: 'Discord',              category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
+    ['teams',                { display: 'Microsoft Teams',      category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
+    ['slack',                { display: 'Slack',                category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
+    ['skype',                { display: 'Skype',                category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
+    ['zoom',                 { display: 'Zoom',                 category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
+    ['teamspeak3',           { display: 'TeamSpeak 3',          category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
+    // Overlays
+    ['nvcontainer',          { display: 'NVIDIA Overlay',       category: 'Overlay',           safeToClose: false, safeToDisableStartup: true  }],
+    ['geforceexperience',    { display: 'GeForce Experience',   category: 'Overlay',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['gamebar',              { display: 'Xbox Game Bar',        category: 'Overlay',           safeToClose: false, safeToDisableStartup: false }],
+    ['xboxgamemonitor',      { display: 'Xbox Game Monitor',    category: 'Overlay',           safeToClose: false, safeToDisableStartup: false }],
+    // RGB / Peripheral
+    ['lightingservice',      { display: 'ASUS Aura Sync',       category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['icue',                 { display: 'Corsair iCUE',         category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['razercentral',         { display: 'Razer Synapse',        category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['synapse3',             { display: 'Razer Synapse 3',      category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['lghub',                { display: 'Logitech G Hub',       category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['logioptionsplus',      { display: 'Logi Options+',        category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['steelseriesggtool',    { display: 'SteelSeries GG',       category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    // Cloud Sync
+    ['onedrive',             { display: 'Microsoft OneDrive',   category: 'Cloud Sync',        safeToClose: true,  safeToDisableStartup: true  }],
+    ['dropbox',              { display: 'Dropbox',              category: 'Cloud Sync',        safeToClose: true,  safeToDisableStartup: true  }],
+    ['googledrivefs',        { display: 'Google Drive',         category: 'Cloud Sync',        safeToClose: true,  safeToDisableStartup: true  }],
+    ['icloudservices',       { display: 'iCloud',               category: 'Cloud Sync',        safeToClose: true,  safeToDisableStartup: true  }],
+    // Updaters
+    ['adobeupdateservice',   { display: 'Adobe Updater',        category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['googleupdate',         { display: 'Google Updater',       category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
+    // Recording / Capture
+    ['obs64',                { display: 'OBS Studio',           category: 'Recording/Capture', safeToClose: true,  safeToDisableStartup: false }],
+    ['obs32',                { display: 'OBS Studio (32-bit)',  category: 'Recording/Capture', safeToClose: true,  safeToDisableStartup: false }],
+    // Desktop / Other
+    ['wallpaperengine64',    { display: 'Wallpaper Engine',     category: 'Desktop App',       safeToClose: true,  safeToDisableStartup: false }],
+    ['parsec',               { display: 'Parsec',               category: 'Remote Access',     safeToClose: true,  safeToDisableStartup: true  }],
+]);
+
+const CRITICAL_SERVICES = new Set([
+    'wuauserv','bits','trustedinstaller','windefend','wscsvc','mpssvc','sense',
+    'audiosrv','audioendpointbuilder',
+    'dhcp','dnscache','lanmanserver','lanmanworkstation','netlogon','netman','nsi',
+    'rpcss','rpcepmap','winmgmt','eventlog','eventsystem','plugplay',
+    'schedule','cryptsvc','keyiso','hidserv','gpsvc','sppsvc','msiserver',
+    'wlanautosvc','dot3svc','themes',
+]);
+
+// Internal protected processes — never shown in background recommendations or sent to AI
+const INTERNAL_PROTECTED_PROCESSES = new Set([
+    'ollama',
+    'ollama_llms',
+    'ollama_runners',
+    'xtweaks',
+    'xinpremiumoptimizer',
+    'xin-premium-optimizer',
+    'xintweaks',
+]);
+
+const SERVICE_CATEGORIES = {
+    'diagtrack':             { display: 'Connected User Experiences / Telemetry',  category: 'Review'            },
+    'dmwappushservice':      { display: 'Device Management Push Service',           category: 'Review'            },
+    'sysmain':               { display: 'SysMain / Superfetch',                     category: 'Review'            },
+    'fax':                   { display: 'Fax Service',                              category: 'Review'            },
+    'spooler':               { display: 'Print Spooler',                            category: 'Review'            },
+    'wersvc':                { display: 'Windows Error Reporting',                  category: 'Review'            },
+    'remoteregistry':        { display: 'Remote Registry',                          category: 'Review'            },
+    'termservice':           { display: 'Remote Desktop Services',                  category: 'Review'            },
+    'xbgm':                  { display: 'Xbox Game Monitoring',                     category: 'Gaming-Related'    },
+    'xboxnetapiservice':     { display: 'Xbox Live Networking',                     category: 'Gaming-Related'    },
+    'xboxgipsvc':            { display: 'Xbox Accessory Management',                category: 'Gaming-Related'    },
+    'gametdvsvc':            { display: 'Xbox Game Mode',                           category: 'Gaming-Related'    },
+    'nvsvc':                 { display: 'NVIDIA Driver Helper',                     category: 'Peripheral/Driver' },
+    'nvagent':               { display: 'NVIDIA Network Service',                   category: 'Peripheral/Driver' },
+    'nvdisplay.containerls': { display: 'NVIDIA Display Container',                 category: 'Peripheral/Driver' },
+    'amdextnbridge':         { display: 'AMD External Events Bridge',               category: 'Peripheral/Driver' },
+    'gupdate':               { display: 'Google Update Service',                    category: 'Update Service'    },
+    'gupdatem':              { display: 'Google Update Service (on demand)',         category: 'Update Service'    },
+};
+
+let _bgContextCache = null;
+let _bgContextTime  = 0;
+const BG_CACHE_TTL  = 60000;
+
+async function collectBackgroundContext() {
+    function runPS(script) {
+        return new Promise((resolve) => {
+            const proc = spawn('powershell.exe', [
+                '-NonInteractive', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script
+            ], { windowsHide: true });
+
+            let out = '';
+            proc.stdout.on('data', d => { out += d.toString(); });
+            proc.stderr.on('data', () => {});
+            proc.on('error', () => resolve(null));
+
+            const timer = setTimeout(() => { try { proc.kill(); } catch {} resolve(null); }, 12000);
+            proc.on('close', () => {
+                clearTimeout(timer);
+                const trimmed = out.trim();
+                if (!trimmed) return resolve(null);
+                try { resolve(JSON.parse(trimmed)); } catch { resolve(null); }
+            });
+        });
+    }
+
+    // ── Processes ──────────────────────────────────────────────────────────
+    let rawProcs = await runPS(
+        `Get-Process | Select-Object Name, Id, ` +
+        `@{N='RAM_MB';E={[math]::Round($_.WorkingSet64/1MB,0)}} | ConvertTo-Json -Compress -Depth 1`
+    );
+    if (rawProcs && !Array.isArray(rawProcs)) rawProcs = [rawProcs];
+
+    const processes = [];
+    const seenProc  = new Set();
+    if (Array.isArray(rawProcs)) {
+        for (const p of rawProcs) {
+            const key  = (p.Name || '').toLowerCase().replace(/\s+/g, '');
+            if (seenProc.has(key)) continue;
+            if (INTERNAL_PROTECTED_PROCESSES.has(key)) continue;  // never surface internal engine
+            const info = PROCESS_CATALOG.get(key);
+            if (!info) continue;
+            seenProc.add(key);
+            processes.push({
+                name:                info.display,
+                processName:         key,
+                pid:                 typeof p.Id === 'number' ? p.Id : null,
+                category:            info.category,
+                ramMB:               typeof p.RAM_MB === 'number' ? p.RAM_MB : null,
+                safeToClose:         info.safeToClose,
+                safeToDisableStartup:info.safeToDisableStartup,
+            });
+        }
+    }
+
+    // ── Startup entries ────────────────────────────────────────────────────
+    let rawStartups = await runPS(
+        `Get-CimInstance Win32_StartupCommand | Select-Object Name, Location | ConvertTo-Json -Compress`
+    );
+    if (rawStartups && !Array.isArray(rawStartups)) rawStartups = [rawStartups];
+
+    const startups = [];
+    if (Array.isArray(rawStartups)) {
+        for (const s of rawStartups) {
+            const sName = (s.Name || '').trim();
+            if (!sName) continue;
+            if (INTERNAL_PROTECTED_PROCESSES.has(sName.toLowerCase().replace(/\s+/g, ''))) continue;
+
+            const locLower = (s.Location || '').toLowerCase();
+            let locLabel = 'Startup Folder';
+            if (locLower.includes('hkcu')) locLabel = 'Registry (Current User)';
+            else if (locLower.includes('hklm')) locLabel = 'Registry (All Users)';
+
+            const nameLower = sName.toLowerCase().replace(/\s+/g, '');
+            let safeToDisable = false;
+            let category = 'Unknown';
+            for (const [key, info] of PROCESS_CATALOG) {
+                if (nameLower.includes(key) || key.includes(nameLower)) {
+                    safeToDisable = info.safeToDisableStartup;
+                    category      = info.category;
+                    break;
+                }
+            }
+
+            startups.push({
+                name:         sName,
+                location:     s.Location || '',
+                locationLabel:locLabel,
+                category,
+                safeToDisable,
+            });
+        }
+    }
+
+    // ── Services ───────────────────────────────────────────────────────────
+    let rawSvcs = await runPS(
+        `Get-Service | Where-Object { $_.Status -eq 'Running' } | ` +
+        `Select-Object Name, DisplayName, Status, StartType | ConvertTo-Json -Compress`
+    );
+    if (rawSvcs && !Array.isArray(rawSvcs)) rawSvcs = [rawSvcs];
+
+    const services = [];
+    if (Array.isArray(rawSvcs)) {
+        for (const svc of rawSvcs) {
+            const svcKey = (svc.Name || '').toLowerCase().replace(/[\s._-]/g, '');
+            const known  = SERVICE_CATEGORIES[svcKey];
+            if (!known) continue;
+            services.push({
+                name:     svc.Name,
+                display:  known.display,
+                status:   'Running',
+                category: known.category,
+                critical: CRITICAL_SERVICES.has(svcKey),
+            });
+        }
+    }
+
+    return { processes, startups, services, timestamp: Date.now() };
+}
+
+ipcMain.handle('get-background-context', async () => {
+    const now = Date.now();
+    if (_bgContextCache && (now - _bgContextTime) < BG_CACHE_TTL) {
+        return { ..._bgContextCache, fromCache: true };
+    }
+    const data = await collectBackgroundContext();
+    _bgContextCache = data;
+    _bgContextTime  = now;
+    return data;
+});
+
+ipcMain.handle('close-process', async (event, pid, processName) => {
+    if (typeof pid !== 'number' || pid <= 0) return { success: false, error: 'invalid_pid' };
+    const key  = (processName || '').toLowerCase().replace(/\s+/g, '');
+    const info = PROCESS_CATALOG.get(key);
+    if (!info || !info.safeToClose) return { success: false, error: 'not_whitelisted' };
+
+    return new Promise((resolve) => {
+        execFile('taskkill', ['/PID', String(pid), '/F'], { windowsHide: true, timeout: 5000 },
+            (error) => { _bgContextCache = null; resolve({ success: !error }); }
+        );
+    });
+});
+
+ipcMain.handle('disable-startup-entry', async (event, entryName, location) => {
+    if (!entryName || typeof entryName !== 'string') return { success: false, error: 'invalid_name' };
+
+    const locLower = (location || '').toLowerCase();
+    let approvedPath;
+    if (locLower.includes('hkcu') || locLower.includes('current user')) {
+        approvedPath = 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run';
+    } else if (locLower.includes('hklm') || locLower.includes('all user')) {
+        approvedPath = 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run';
+    } else {
+        return { success: false, error: 'manual_required' };
+    }
+
+    const safeName = entryName.replace(/['"\\]/g, '');
+    const psScript =
+        `$p='${approvedPath}'; ` +
+        `if(-not(Test-Path $p)){New-Item -Path $p -Force|Out-Null}; ` +
+        `Set-ItemProperty -Path $p -Name '${safeName}' -Value([byte[]](3,0,0,0,0,0,0,0,0,0,0,0)) -Type Binary`;
+
+    return new Promise((resolve) => {
+        const proc = spawn('powershell.exe', [
+            '-NonInteractive', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', psScript
+        ], { windowsHide: true });
+        let settled = false;
+        const timer = setTimeout(() => {
+            if (settled) return; settled = true;
+            try { proc.kill(); } catch {}
+            resolve({ success: false, error: 'timeout' });
+        }, 8000);
+        proc.on('error', () => { if (!settled) { settled = true; clearTimeout(timer); resolve({ success: false }); } });
+        proc.on('close', (code) => {
+            if (settled) return; settled = true;
+            clearTimeout(timer);
+            _bgContextCache = null;
             resolve({ success: code === 0 });
         });
     });

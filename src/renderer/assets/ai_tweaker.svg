@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 358" width="340" height="358" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <defs>
+    <clipPath id="cardClip">
+      <rect x="0" y="0" width="340" height="358" rx="20" ry="20"/>
+    </clipPath>
+    <radialGradient id="orbGrad" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#2a2a2a"/>
+      <stop offset="100%" stop-color="#111111"/>
+    </radialGradient>
+    <filter id="sparkleGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Card -->
+  <rect x="0" y="0" width="340" height="358" rx="20" ry="20" fill="#111111"/>
+
+  <!-- Background stars -->
+  <g clip-path="url(#cardClip)">
+    <circle cx="28"  cy="42"  r="1.2" fill="white"><animate attributeName="opacity" values="0;0.4;0" dur="2.8s" begin="-1.2s" repeatCount="indefinite"/></circle>
+    <circle cx="310" cy="30"  r="0.9" fill="white"><animate attributeName="opacity" values="0;0.3;0" dur="3.4s" begin="-0.5s" repeatCount="indefinite"/></circle>
+    <circle cx="55"  cy="310" r="1.0" fill="white"><animate attributeName="opacity" values="0;0.35;0" dur="2.5s" begin="-2.1s" repeatCount="indefinite"/></circle>
+    <circle cx="295" cy="260" r="1.3" fill="white"><animate attributeName="opacity" values="0;0.45;0" dur="3.1s" begin="-0.8s" repeatCount="indefinite"/></circle>
+    <circle cx="18"  cy="200" r="0.8" fill="white"><animate attributeName="opacity" values="0;0.25;0" dur="4.0s" begin="-3.0s" repeatCount="indefinite"/></circle>
+    <circle cx="320" cy="150" r="1.1" fill="white"><animate attributeName="opacity" values="0;0.4;0" dur="2.2s" begin="-1.7s" repeatCount="indefinite"/></circle>
+    <circle cx="80"  cy="440" r="0.9" fill="white"><animate attributeName="opacity" values="0;0.3;0" dur="3.6s" begin="-0.3s" repeatCount="indefinite"/></circle>
+    <circle cx="260" cy="420" r="1.0" fill="white"><animate attributeName="opacity" values="0;0.35;0" dur="2.9s" begin="-2.4s" repeatCount="indefinite"/></circle>
+    <circle cx="170" cy="20"  r="0.8" fill="white"><animate attributeName="opacity" values="0;0.3;0" dur="3.3s" begin="-1.0s" repeatCount="indefinite"/></circle>
+    <circle cx="42"  cy="380" r="0.7" fill="white"><animate attributeName="opacity" values="0;0.2;0" dur="4.2s" begin="-0.6s" repeatCount="indefinite"/></circle>
+    <circle cx="300" cy="380" r="1.2" fill="white"><animate attributeName="opacity" values="0;0.45;0" dur="2.4s" begin="-3.5s" repeatCount="indefinite"/></circle>
+    <circle cx="220" cy="55"  r="0.9" fill="white"><animate attributeName="opacity" values="0;0.3;0" dur="3.8s" begin="-2.8s" repeatCount="indefinite"/></circle>
+    <circle cx="100" cy="80"  r="1.0" fill="white"><animate attributeName="opacity" values="0;0.35;0" dur="2.7s" begin="-1.4s" repeatCount="indefinite"/></circle>
+  </g>
+
+  <!-- Floating sparkle accents -->
+  <text x="22" y="52" fill="white" font-size="10" opacity="0">✦<animate attributeName="opacity" values="0;0.35;0.35;0" dur="3.2s" begin="-1s" repeatCount="indefinite"/></text>
+  <text x="298" y="45" fill="white" font-size="10" opacity="0">✦<animate attributeName="opacity" values="0;0.35;0.35;0" dur="2.8s" begin="-0.4s" repeatCount="indefinite"/></text>
+  <text x="316" y="148" fill="white" font-size="9" opacity="0">✦<animate attributeName="opacity" values="0;0.3;0.3;0" dur="3.6s" begin="-2s" repeatCount="indefinite"/></text>
+  <text x="10" y="145" fill="white" font-size="7" opacity="0">✦<animate attributeName="opacity" values="0;0.25;0.25;0" dur="4s" begin="-1.5s" repeatCount="indefinite"/></text>
+
+  <!-- ORB: fade + slide down on load -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;1" dur="0.8s" begin="0s" fill="freeze" calcMode="spline" keySplines="0.16 1 0.3 1"/>
+
+    <!-- Orbit ring — uses animateTransform rotate WITHOUT additive, centered on orb -->
+    <g>
+      <animateTransform attributeName="transform" type="rotate" values="0 170 108;360 170 108" dur="4s" repeatCount="indefinite"/>
+      <circle cx="170" cy="108" r="58" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      <!-- Arc top-right quarter -->
+      <path d="M 170,50 A 58,58 0 0,1 228,108" fill="none" stroke="white" stroke-opacity="0.6" stroke-width="1.5" stroke-linecap="round"/>
+      <!-- Leading dot -->
+      <circle cx="228" cy="108" r="3" fill="white" opacity="0.9"/>
+      <!-- Trailing dot -->
+      <circle cx="170" cy="50"  r="2" fill="white" opacity="0.5"/>
+    </g>
+
+    <!-- Orb sphere -->
+    <circle cx="170" cy="108" r="40" fill="url(#orbGrad)" stroke="rgba(255,255,255,0.07)" stroke-width="0.5"/>
+
+    <!-- Sparkle icon — pulses in place, no transform stacking -->
+    <g filter="url(#sparkleGlow)" transform="translate(152,90)">
+      <g>
+        <animateTransform attributeName="transform" type="scale" values="1 1;1.12 1.12;1 1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+        <!-- 4-point star, centered at 18,18 inside this local group -->
+        <path d="M18 2C18 2 19.5 12 18 18C18 18 27 16.5 33 18C33 18 24 19.5 18 18C18 18 19.5 24 18 33C18 33 16.5 24 18 18C18 18 9 19.5 3 18C3 18 12 16.5 18 18C18 18 16.5 12 18 2Z" fill="white"/>
+        <path d="M27 6C27 6 27.75 9 27 11.25C27 11.25 29.25 10.5 31.5 11.25C31.5 11.25 29.25 12 27 11.25C27 11.25 27.75 13.5 27 15.75C27 15.75 26.25 13.5 27 11.25C27 11.25 24.75 12 22.5 11.25C22.5 11.25 24.75 10.5 27 11.25C27 11.25 26.25 9 27 6Z" fill="white" opacity="0.6"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- PAGINATION DOTS -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;1" dur="0.6s" begin="0.2s" fill="freeze"/>
+    <circle cx="161" cy="192" r="3" fill="#888888"/>
+    <circle cx="170" cy="192" r="3" fill="#444444"/>
+    <circle cx="179" cy="192" r="3" fill="#444444"/>
+  </g>
+
+  <!-- TITLE -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;1" dur="0.6s" begin="0.35s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="0,14;0,0" dur="0.6s" begin="0.35s" fill="freeze" calcMode="spline" keySplines="0.16 1 0.3 1"/>
+    <text x="170" y="225" text-anchor="middle" fill="white" font-size="21" font-weight="700" letter-spacing="-0.3">Welcome to AI Tweaker</text>
+  </g>
+
+  <!-- SUBTITLE -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;1" dur="0.6s" begin="0.5s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="0,14;0,0" dur="0.6s" begin="0.5s" fill="freeze" calcMode="spline" keySplines="0.16 1 0.3 1"/>
+    <text text-anchor="middle" fill="#aaaaaa" font-size="13.5">
+      <tspan x="170" y="258">Your personal optimization assistant for</tspan>
+      <tspan x="170" dy="19">gaming performance, latency reduction,</tspan>
+      <tspan x="170" dy="19">cleanup, and deep system tuning.</tspan>
+    </text>
+  </g>
+
+  <!-- BADGE -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;1" dur="0.6s" begin="0.65s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="0,14;0,0" dur="0.6s" begin="0.65s" fill="freeze" calcMode="spline" keySplines="0.16 1 0.3 1"/>
+    <text x="170" y="332" text-anchor="middle" fill="#555555" font-size="11" letter-spacing="0.3">Private. On-device. Built into XTweaks.</text>
+  </g>
+
+</svg>
