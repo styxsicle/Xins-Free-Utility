@@ -2591,7 +2591,35 @@ function initializeAiTweaker() {
         'epicgameslauncher': 'Epic Games Launcher', 'epicwebhelper': 'Epic Games Launcher',
         'epiconlineservices': 'Epic Games Launcher',
         'googleupdater': 'Google Updater', 'googleupdatertaskuser': 'Google Updater',
+        'googleupdatetaskmachinecore': 'Google Updater', 'googleupdatetaskmachineupdater': 'Google Updater',
         'googledrivesync': 'Google Drive', 'googledrive': 'Google Drive',
+        // Minecraft clients
+        'lunarclient': 'Lunar Client', 'badlionclient': 'Badlion Client', 'badlion': 'Badlion Client',
+        'featherclient': 'Feather Client', 'minecraftlauncher': 'Minecraft Launcher',
+        'prismlauncher': 'Prism Launcher', 'atlauncher': 'ATLauncher',
+        'multimc': 'MultiMC', 'multimc5': 'MultiMC',
+        // Mod managers
+        'curseforge': 'CurseForge', 'modrinth': 'Modrinth App', 'modrinthapp': 'Modrinth App',
+        // Anti-cheat
+        'vgc': 'Riot Vanguard', 'vgtray': 'Riot Vanguard',
+        'easyanticheat': 'Easy Anti-Cheat', 'easyanticheat_launcher': 'Easy Anti-Cheat',
+        'beservice': 'BattlEye', 'faceit': 'FACEIT Anti-Cheat', 'faceitmac': 'FACEIT Anti-Cheat',
+        'eaanticheat': 'EA AntiCheat',
+        // Game launchers
+        'rglauncher': 'Rockstar Games Launcher', 'robloxplayerbeta': 'Roblox', 'roblox': 'Roblox',
+        'plariumplay': 'Plarium Play', 'itchio': 'itch.io', 'itch': 'itch.io',
+        // Startup / media apps
+        'spotify': 'Spotify', 'gamingservices': 'Xbox App', 'xboxapp': 'Xbox App',
+        'creativecloud': 'Adobe Creative Cloud', 'adobecreativecloud': 'Adobe Creative Cloud',
+        'ccapp': 'Adobe Creative Cloud', 'ccxprocess': 'Creative Cloud Helper',
+        'overwolf': 'Overwolf', 'overwolfstartup': 'Overwolf',
+        'medal': 'Medal.tv', 'outplayed': 'Outplayed', 'streamlabs': 'Streamlabs',
+        // Hardware tools
+        'msiafterburner': 'MSI Afterburner', 'rtss': 'RivaTuner Statistics Server',
+        'nzxtcam': 'NZXT CAM', 'camservice': 'NZXT CAM',
+        'armourycrate': 'Armoury Crate', 'armourycratese': 'Armoury Crate',
+        'nvidiaapp': 'NVIDIA App', 'radeonsoft': 'AMD Adrenalin', 'cncmdservice': 'AMD Adrenalin',
+        'dsaservice': 'Intel Driver & Support Assistant',
         'chrome': 'Google Chrome', 'googlechrome': 'Google Chrome',
         'steam': 'Steam', 'steamwebhelper': 'Steam', 'steamservice': 'Steam',
         'nvcontainer': 'NVIDIA Services', 'nvtelemetrycontainer': 'NVIDIA Services',
@@ -3408,11 +3436,13 @@ function initializeAiTweaker() {
             'Overlay': 'HIGH', 'Recording/Capture': 'HIGH', 'Cloud Sync': 'HIGH',
             'Game Launcher': 'MEDIUM', 'Browser': 'MEDIUM', 'Desktop App': 'MEDIUM',
             'Updater': 'MEDIUM', 'RGB/Peripheral': 'LOW', 'Chat/Voice': 'LOW',
+            'Anti-Cheat': 'LOW', 'Minecraft Client': 'LOW', 'Mod Manager': 'LOW',
         };
         const CATEGORY_RANK = {
             'Overlay': 1, 'Recording/Capture': 1, 'Cloud Sync': 2,
             'Game Launcher': 2, 'Browser': 3, 'Desktop App': 3,
             'Updater': 3, 'RGB/Peripheral': 4, 'Chat/Voice': 5,
+            'Anti-Cheat': 6, 'Minecraft Client': 6, 'Mod Manager': 6,
         };
 
         // Merge processes + startups by normalized name to deduplicate
@@ -3475,7 +3505,10 @@ function initializeAiTweaker() {
         'Recording/Capture': { why: 'Capture software reserves GPU encoder bandwidth even when not recording, reducing available GPU headroom for games.',   action: 'Close capture software when not streaming or recording.'                      },
         'Desktop App':       { why: 'Desktop apps like Wallpaper Engine use GPU continuously to animate backgrounds, competing with game rendering.',        action: 'Pause or close the app before gaming. Resume it afterwards.'                  },
         'Remote Access':     { why: 'Remote access apps keep network ports open and run background services that add CPU and network overhead.',             action: 'Close when not in use for remote sessions.'                                   },
-        'Unknown':           { why: 'App running in the background — exact impact unknown.',                                                                action: 'Review manually if unsure. Close if you are not using it.'                    },
+        'Anti-Cheat':        { why: 'Anti-cheat software is required by specific games to launch. Disabling it will prevent those games from starting.',      action: 'Do not disable unless you no longer play the associated game. Use official game settings to remove it.'  },
+        'Minecraft Client':  { why: 'Minecraft client/launcher. Only needed when you want to play Minecraft. Does not affect other games.',                    action: 'Safe to disable from startup if you do not want it launching at boot. Do not uninstall if you play Minecraft.' },
+        'Mod Manager':       { why: 'Minecraft/game mod manager. Only needed to launch modded game instances.',                                                action: 'Safe to disable from startup. Re-open manually when you want to launch modded Minecraft.'                        },
+        'Unknown':           { why: 'Unrecognized app — may be third-party software, a game helper, or optional utility. Exact impact is unknown.',           action: 'Review manually before disabling. Do not assume it is bloatware.'            },
     };
 
     function buildBackgroundOptCard() {
@@ -3486,6 +3519,7 @@ function initializeAiTweaker() {
             'Overlay': 1, 'Recording/Capture': 1, 'Cloud Sync': 2,
             'Game Launcher': 2, 'Browser': 3, 'Desktop App': 3,
             'Updater': 3, 'RGB/Peripheral': 4, 'Chat/Voice': 5,
+            'Anti-Cheat': 6, 'Minecraft Client': 6, 'Mod Manager': 6,
         };
 
         // Build process entries, normalized name

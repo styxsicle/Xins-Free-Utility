@@ -1623,15 +1623,71 @@ const PROCESS_CATALOG = new Map([
     // Desktop / Other
     ['wallpaperengine64',    { display: 'Wallpaper Engine',     category: 'Desktop App',       safeToClose: true,  safeToDisableStartup: false }],
     ['parsec',               { display: 'Parsec',               category: 'Remote Access',     safeToClose: true,  safeToDisableStartup: true  }],
+    // Minecraft clients / launchers
+    ['lunarclient',          { display: 'Lunar Client',         category: 'Minecraft Client',  safeToClose: true,  safeToDisableStartup: true  }],
+    ['badlionclient',        { display: 'Badlion Client',       category: 'Minecraft Client',  safeToClose: true,  safeToDisableStartup: true  }],
+    ['badlion',              { display: 'Badlion Client',       category: 'Minecraft Client',  safeToClose: true,  safeToDisableStartup: true  }],
+    ['featherclient',        { display: 'Feather Client',       category: 'Minecraft Client',  safeToClose: true,  safeToDisableStartup: true  }],
+    ['minecraftlauncher',    { display: 'Minecraft Launcher',   category: 'Minecraft Client',  safeToClose: true,  safeToDisableStartup: true  }],
+    ['prismlauncher',        { display: 'Prism Launcher',       category: 'Minecraft Client',  safeToClose: true,  safeToDisableStartup: true  }],
+    ['atlauncher',           { display: 'ATLauncher',           category: 'Minecraft Client',  safeToClose: true,  safeToDisableStartup: true  }],
+    ['multimc',              { display: 'MultiMC',              category: 'Minecraft Client',  safeToClose: true,  safeToDisableStartup: true  }],
+    ['multimc5',             { display: 'MultiMC',              category: 'Minecraft Client',  safeToClose: true,  safeToDisableStartup: true  }],
+    // Mod managers
+    ['curseforge',           { display: 'CurseForge',           category: 'Mod Manager',       safeToClose: true,  safeToDisableStartup: true  }],
+    ['modrinth',             { display: 'Modrinth App',         category: 'Mod Manager',       safeToClose: true,  safeToDisableStartup: true  }],
+    ['modrinthapp',          { display: 'Modrinth App',         category: 'Mod Manager',       safeToClose: true,  safeToDisableStartup: true  }],
+    // Additional game launchers
+    ['rglauncher',           { display: 'Rockstar Games Launcher', category: 'Game Launcher',  safeToClose: true,  safeToDisableStartup: true  }],
+    ['robloxplayerbeta',     { display: 'Roblox',               category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['roblox',               { display: 'Roblox',               category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['plariumplay',          { display: 'Plarium Play',         category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['itchio',               { display: 'itch.io',              category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['itch',                 { display: 'itch.io',              category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    // Anti-cheat (game-dependent — do NOT auto-close or disable)
+    ['vgc',                  { display: 'Riot Vanguard',        category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['vgtray',               { display: 'Riot Vanguard Tray',   category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['easyanticheat',        { display: 'Easy Anti-Cheat',      category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['easyanticheat_launcher',{ display: 'Easy Anti-Cheat',     category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['beservice',            { display: 'BattlEye Service',     category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['faceit',               { display: 'FACEIT Anti-Cheat',    category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['faceitmac',            { display: 'FACEIT Anti-Cheat',    category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['eaanticheat',          { display: 'EA AntiCheat',         category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    // Additional startup apps
+    ['spotify',              { display: 'Spotify',              category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
+    ['gamingservices',       { display: 'Xbox App',             category: 'Desktop App',       safeToClose: false, safeToDisableStartup: false }],
+    ['xboxapp',              { display: 'Xbox App',             category: 'Desktop App',       safeToClose: false, safeToDisableStartup: false }],
+    ['creativecloud',        { display: 'Adobe Creative Cloud', category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['adobecreativecloud',   { display: 'Adobe Creative Cloud', category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['ccapp',                { display: 'Adobe Creative Cloud', category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['ccxprocess',           { display: 'Creative Cloud Helper',category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['overwolf',             { display: 'Overwolf',             category: 'Overlay',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['overwolfstartup',      { display: 'Overwolf',             category: 'Overlay',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['medal',                { display: 'Medal.tv',             category: 'Recording/Capture', safeToClose: true,  safeToDisableStartup: true  }],
+    ['outplayed',            { display: 'Outplayed',            category: 'Recording/Capture', safeToClose: true,  safeToDisableStartup: true  }],
+    ['streamlabs',           { display: 'Streamlabs',           category: 'Recording/Capture', safeToClose: true,  safeToDisableStartup: false }],
+    // Hardware / monitoring tools
+    ['msiafterburner',       { display: 'MSI Afterburner',      category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['rtss',                 { display: 'RivaTuner Statistics Server', category: 'Overlay',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['nzxtcam',              { display: 'NZXT CAM',             category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['camservice',           { display: 'NZXT CAM',             category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['armourycrate',         { display: 'Armoury Crate',        category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['armourycratese',       { display: 'Armoury Crate',        category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['nvidiaapp',            { display: 'NVIDIA App',           category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['radeonsoft',           { display: 'AMD Adrenalin',        category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['cncmdservice',         { display: 'AMD Adrenalin',        category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
+    ['dsaservice',           { display: 'Intel Driver & Support Assistant', category: 'Updater', safeToClose: true, safeToDisableStartup: true }],
 ]);
 
 const CRITICAL_SERVICES = new Set([
     'wuauserv','bits','trustedinstaller','windefend','wscsvc','mpssvc','sense',
     'audiosrv','audioendpointbuilder',
     'dhcp','dnscache','lanmanserver','lanmanworkstation','netlogon','netman','nsi',
+    'nlasvc','dcomlaunch','lmhosts',
     'rpcss','rpcepmap','winmgmt','eventlog','eventsystem','plugplay',
     'schedule','cryptsvc','keyiso','hidserv','gpsvc','sppsvc','msiserver',
     'wlanautosvc','dot3svc','themes',
+    'profsvc','samss','lsm','wsc','bfe','iphlpsvc','ncsi',
 ]);
 
 // Internal protected processes — never shown in background recommendations or sent to AI
@@ -1664,6 +1720,28 @@ const SERVICE_CATEGORIES = {
     'amdextnbridge':         { display: 'AMD External Events Bridge',               category: 'Peripheral/Driver' },
     'gupdate':               { display: 'Google Update Service',                    category: 'Update Service'    },
     'gupdatem':              { display: 'Google Update Service (on demand)',         category: 'Update Service'    },
+    // Anti-cheat services (game-dependent — review only)
+    'vgc':                   { display: 'Riot Vanguard Anti-Cheat',                 category: 'Anti-Cheat'        },
+    'easyanticheat':         { display: 'Easy Anti-Cheat',                          category: 'Anti-Cheat'        },
+    'beservice':             { display: 'BattlEye Service',                         category: 'Anti-Cheat'        },
+    'faceitservice':         { display: 'FACEIT Anti-Cheat',                        category: 'Anti-Cheat'        },
+    'eaanticheatservice':    { display: 'EA AntiCheat Service',                     category: 'Anti-Cheat'        },
+    // Optional Windows services
+    'dosvc':                 { display: 'Delivery Optimization',                    category: 'Review'            },
+    'wsearch':               { display: 'Windows Search',                           category: 'Review'            },
+    'bthserv':               { display: 'Bluetooth Support Service',                category: 'Review'            },
+    'bthhfsrv':              { display: 'Bluetooth Hands-Free Service',             category: 'Review'            },
+    'wmpnetworksvc':         { display: 'Windows Media Player Network Sharing',     category: 'Review'            },
+    'lfsvc':                 { display: 'Geolocation Service',                      category: 'Review'            },
+    'ssdpsrv':               { display: 'SSDP Discovery',                           category: 'Review'            },
+    'tapisrv':               { display: 'Telephony',                                category: 'Review'            },
+    'nvtelemetrycontainer':  { display: 'NVIDIA Telemetry Container',               category: 'Peripheral/Driver' },
+    'nvdrsvc':               { display: 'NVIDIA Driver Service',                    category: 'Peripheral/Driver' },
+    'amdwireservice':        { display: 'AMD Wire Service',                         category: 'Peripheral/Driver' },
+    'edgeupdate':            { display: 'Microsoft Edge Update',                    category: 'Update Service'    },
+    'edgeupdatem':           { display: 'Microsoft Edge Update (on demand)',        category: 'Update Service'    },
+    'adobeacrbatupdatesvc':  { display: 'Adobe Acrobat Update Service',             category: 'Update Service'    },
+    'adobeupdateservice':    { display: 'Adobe Updater',                            category: 'Update Service'    },
 };
 
 let _bgContextCache = null;
