@@ -1597,8 +1597,16 @@ const PROCESS_CATALOG = new Map([
     ['zoom',                 { display: 'Zoom',                 category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
     ['teamspeak3',           { display: 'TeamSpeak 3',          category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
     // Overlays
-    ['nvcontainer',          { display: 'NVIDIA Overlay',       category: 'Overlay',           safeToClose: false, safeToDisableStartup: true  }],
+    ['nvcontainer',          { display: 'NVIDIA Share / ShadowPlay', category: 'Overlay',      safeToClose: false, safeToDisableStartup: true  }],
     ['geforceexperience',    { display: 'GeForce Experience',   category: 'Overlay',           safeToClose: true,  safeToDisableStartup: true  }],
+    // NVIDIA overlay / capture sub-processes (ShadowPlay / Instant Replay / Highlights)
+    ['nvspcaps64',           { display: 'NVIDIA ShadowPlay Capture', category: 'Overlay',      safeToClose: true,  safeToDisableStartup: true  }],
+    ['nvspcaps',             { display: 'NVIDIA ShadowPlay Capture', category: 'Overlay',      safeToClose: true,  safeToDisableStartup: true  }],
+    ['nvsphelper64',         { display: 'NVIDIA Share Helper',  category: 'Overlay',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['nvsphelper',           { display: 'NVIDIA Share Helper',  category: 'Overlay',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['nvsharetray',          { display: 'NVIDIA Share',         category: 'Overlay',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['nvgfebar',             { display: 'NVIDIA Overlay Bar',   category: 'Overlay',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['nvbroadcast',          { display: 'NVIDIA Broadcast',     category: 'Overlay',           safeToClose: true,  safeToDisableStartup: true  }],
     ['gamebar',              { display: 'Xbox Game Bar',        category: 'Overlay',           safeToClose: false, safeToDisableStartup: false }],
     ['xboxgamemonitor',      { display: 'Xbox Game Monitor',    category: 'Overlay',           safeToClose: false, safeToDisableStartup: false }],
     // RGB / Peripheral

@@ -2622,7 +2622,15 @@ function initializeAiTweaker() {
         'dsaservice': 'Intel Driver & Support Assistant',
         'chrome': 'Google Chrome', 'googlechrome': 'Google Chrome',
         'steam': 'Steam', 'steamwebhelper': 'Steam', 'steamservice': 'Steam',
-        'nvcontainer': 'NVIDIA Services', 'nvtelemetrycontainer': 'NVIDIA Services',
+        // NVIDIA overlay/share — use consistent display name matching PROCESS_CATALOG
+        'nvcontainer': 'NVIDIA Share / ShadowPlay', 'nvidiaoverlay': 'NVIDIA Share / ShadowPlay',
+        'nvidiashare': 'NVIDIA Share / ShadowPlay', 'shadowplay': 'NVIDIA Share / ShadowPlay',
+        'instantreplay': 'NVIDIA Share / ShadowPlay', 'nvidiahighlights': 'NVIDIA Highlights',
+        'nvspcaps64': 'NVIDIA ShadowPlay Capture', 'nvspcaps': 'NVIDIA ShadowPlay Capture',
+        'nvsphelper64': 'NVIDIA Share Helper', 'nvsphelper': 'NVIDIA Share Helper',
+        'nvsharetray': 'NVIDIA Share', 'nvgfebar': 'NVIDIA Overlay Bar',
+        'nvbroadcast': 'NVIDIA Broadcast',
+        'nvtelemetrycontainer': 'NVIDIA Telemetry',
         'riotclientservices': 'Riot Client', 'riotclientux': 'Riot Client',
         'eadesktop': 'EA App', 'eabackgroundservice': 'EA App', 'easteam': 'EA App',
         'battlenet': 'Battle.net',
@@ -3485,7 +3493,9 @@ function initializeAiTweaker() {
             ctx.services.forEach(sv => {
                 const note = sv.critical
                     ? '— DO NOT DISABLE (critical Windows service)'
-                    : `— ${sv.category} — review before disabling`;
+                    : sv.category === 'Anti-Cheat'
+                        ? '— Anti-Cheat / game-dependent — disabling will stop associated game from launching'
+                        : `— ${sv.category} — review before disabling`;
                 lines.push(`- ${sv.display} ${note}`);
             });
         }
