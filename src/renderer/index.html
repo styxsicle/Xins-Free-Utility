@@ -2094,6 +2094,10 @@
                                     <button class="ai-card-recheck" id="ai-recheck-btn" title="Recheck AI engine">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
                                     </button>
+                                    <button class="ai-focus-btn" id="ai-focus-btn" title="Focus Mode">
+                                        <svg class="ai-focus-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                                        <svg class="ai-focus-icon-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 3 3 3 3 8"/><polyline points="21 16 21 21 16 21"/><line x1="3" y1="3" x2="10" y2="10"/><line x1="21" y1="21" x2="14" y2="14"/></svg>
+                                    </button>
                                 </div>
 
                                 <!-- Chat / welcome area -->
@@ -2106,16 +2110,8 @@
                                     </div>
                                 </div>
 
-                                <!-- Quick action chips (2 rows × 3) -->
+                                <!-- Quick action chips -->
                                 <div class="ai-chip-grid" id="ai-quick-prompts">
-                                    <button class="ai-chip" data-prompt="How do I optimize for higher FPS?">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-                                        Optimize for higher FPS
-                                    </button>
-                                    <button class="ai-chip" data-prompt="How do I reduce input latency?">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                        Reduce input latency
-                                    </button>
                                     <button class="ai-chip" data-prompt="How do I clean up my system?">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
                                         Clean up my system
@@ -2128,10 +2124,6 @@
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                                         Network optimization
                                     </button>
-                                    <button class="ai-chip" data-prompt="What are the best settings for gaming?">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 8H8v4H6"/><path d="M10 10h2"/><circle cx="17" cy="12" r="1"/><circle cx="14" cy="9" r="1"/></svg>
-                                        Best settings for my game
-                                    </button>
                                 </div>
 
                                 <!-- PC context indicator -->
@@ -2143,7 +2135,7 @@
 
                                 <!-- Input bar -->
                                 <div class="ai-input-bar">
-                                    <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI Tweaker anything..." rows="1"></textarea>
+                                    <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask AI Tweaker anything..." rows="2"></textarea>
                                     <button class="ai-send-btn" id="ai-send-btn" title="Send">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                                     </button>
@@ -2157,10 +2149,12 @@
                                             <span class="ai-nrn-title" id="ai-not-running-title">Set up AI Tweaker</span>
                                             <span class="ai-nrn-sub" id="ai-not-running-sub">Install the Premium AI Engine to start chatting and get personalized optimization help.</span>
                                         </div>
-                                        <div class="ai-nrn-actions">
-                                            <button class="ai-nrn-primary" id="ai-nrn-primary-btn">Set Up AI Engine</button>
-                                            <button class="ai-nrn-recheck" id="ai-not-running-recheck-btn">Recheck</button>
-                                        </div>
+                                    </div>
+                                    <div class="ai-nrn-cta-row">
+                                        <button class="ai-nrn-primary" id="ai-nrn-primary-btn">
+                                            <svg class="ai-nrn-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                                            <span class="ai-nrn-btn-label">Start AI Engine</span>
+                                        </button>
                                     </div>
                                     <div class="ai-nrn-progress" id="ai-nrn-progress" style="display:none">
                                         <div class="ai-nrn-progress-bar"></div>
@@ -2281,8 +2275,101 @@
             <div class="ai-welcome-ambient" aria-hidden="true"></div>
             <div class="ai-welcome-modal" id="ai-welcome-modal">
 
-                <!-- SVG main visual -->
-                <img class="ai-welcome-svg-asset" src="assets/ai_tweaker.svg" alt="Welcome to AI Tweaker" draggable="false">
+                <!-- SVG main visual (inlined so CSS can target internal groups) -->
+                <svg class="ai-welcome-svg-asset" xmlns="http://www.w3.org/2000/svg"
+                     viewBox="0 0 340 358" overflow="hidden"
+                     font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                     aria-hidden="true">
+                  <defs>
+                    <clipPath id="aiw-cardClip">
+                      <rect x="0" y="0" width="340" height="358" rx="20" ry="20"/>
+                    </clipPath>
+                    <radialGradient id="aiw-orbGrad" cx="35%" cy="30%" r="70%">
+                      <stop offset="0%" stop-color="#2a2a2a"/>
+                      <stop offset="100%" stop-color="#111111"/>
+                    </radialGradient>
+                    <filter id="aiw-sparkleGlow" x="-60%" y="-60%" width="220%" height="220%">
+                      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+                      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                  </defs>
+
+                  <!-- Card background -->
+                  <rect x="0" y="0" width="340" height="358" rx="20" ry="20" fill="#111111"/>
+
+                  <!-- Background stars (SMIL, indefinite loop) -->
+                  <g clip-path="url(#aiw-cardClip)">
+                    <circle cx="28"  cy="42"  r="1.2" fill="white"><animate attributeName="opacity" values="0;0.4;0"  dur="2.8s" begin="-1.2s" repeatCount="indefinite"/></circle>
+                    <circle cx="310" cy="30"  r="0.9" fill="white"><animate attributeName="opacity" values="0;0.3;0"  dur="3.4s" begin="-0.5s" repeatCount="indefinite"/></circle>
+                    <circle cx="55"  cy="310" r="1.0" fill="white"><animate attributeName="opacity" values="0;0.35;0" dur="2.5s" begin="-2.1s" repeatCount="indefinite"/></circle>
+                    <circle cx="295" cy="260" r="1.3" fill="white"><animate attributeName="opacity" values="0;0.45;0" dur="3.1s" begin="-0.8s" repeatCount="indefinite"/></circle>
+                    <circle cx="18"  cy="200" r="0.8" fill="white"><animate attributeName="opacity" values="0;0.25;0" dur="4.0s" begin="-3.0s" repeatCount="indefinite"/></circle>
+                    <circle cx="320" cy="150" r="1.1" fill="white"><animate attributeName="opacity" values="0;0.4;0"  dur="2.2s" begin="-1.7s" repeatCount="indefinite"/></circle>
+                    <circle cx="170" cy="20"  r="0.8" fill="white"><animate attributeName="opacity" values="0;0.3;0"  dur="3.3s" begin="-1.0s" repeatCount="indefinite"/></circle>
+                    <circle cx="42"  cy="380" r="0.7" fill="white"><animate attributeName="opacity" values="0;0.2;0"  dur="4.2s" begin="-0.6s" repeatCount="indefinite"/></circle>
+                    <circle cx="300" cy="380" r="1.2" fill="white"><animate attributeName="opacity" values="0;0.45;0" dur="2.4s" begin="-3.5s" repeatCount="indefinite"/></circle>
+                    <circle cx="220" cy="55"  r="0.9" fill="white"><animate attributeName="opacity" values="0;0.3;0"  dur="3.8s" begin="-2.8s" repeatCount="indefinite"/></circle>
+                    <circle cx="100" cy="80"  r="1.0" fill="white"><animate attributeName="opacity" values="0;0.35;0" dur="2.7s" begin="-1.4s" repeatCount="indefinite"/></circle>
+                  </g>
+
+                  <!-- Floating sparkle accents (SMIL, indefinite loop) -->
+                  <text x="22"  y="52"  fill="white" font-size="10" opacity="0">✦<animate attributeName="opacity" values="0;0.35;0.35;0" dur="3.2s" begin="-1s"   repeatCount="indefinite"/></text>
+                  <text x="298" y="45"  fill="white" font-size="10" opacity="0">✦<animate attributeName="opacity" values="0;0.35;0.35;0" dur="2.8s" begin="-0.4s" repeatCount="indefinite"/></text>
+                  <text x="316" y="148" fill="white" font-size="9"  opacity="0">✦<animate attributeName="opacity" values="0;0.3;0.3;0"   dur="3.6s" begin="-2s"   repeatCount="indefinite"/></text>
+                  <text x="10"  y="145" fill="white" font-size="7"  opacity="0">✦<animate attributeName="opacity" values="0;0.25;0.25;0" dur="4s"   begin="-1.5s" repeatCount="indefinite"/></text>
+
+                  <!-- ORB GROUP — entrance + glow via CSS; ring/star loop via SMIL -->
+                  <g class="ai-svg-orb">
+                    <!-- Orbit ring (SMIL rotate, indefinite) -->
+                    <g class="ai-svg-ring">
+                      <animateTransform attributeName="transform" type="rotate" values="0 170 108;360 170 108" dur="4s" repeatCount="indefinite"/>
+                      <circle cx="170" cy="108" r="58" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                      <path d="M 170,50 A 58,58 0 0,1 228,108" fill="none" stroke="white" stroke-opacity="0.6" stroke-width="1.5" stroke-linecap="round"/>
+                      <circle cx="228" cy="108" r="3" fill="white" opacity="0.9"/>
+                      <circle cx="170" cy="50"  r="2" fill="white" opacity="0.5"/>
+                    </g>
+                    <!-- Orb sphere -->
+                    <circle class="ai-svg-orb-sphere" cx="170" cy="108" r="40"
+                            fill="url(#aiw-orbGrad)" stroke="rgba(255,255,255,0.07)" stroke-width="0.5"/>
+                    <!-- Sparkle icon (SMIL scale, indefinite) -->
+                    <g class="ai-svg-star-icon" filter="url(#aiw-sparkleGlow)" transform="translate(152,90)">
+                      <g>
+                        <animateTransform attributeName="transform" type="scale"
+                          values="1 1;1.12 1.12;1 1" dur="3s" repeatCount="indefinite"
+                          calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+                        <path d="M18 2C18 2 19.5 12 18 18C18 18 27 16.5 33 18C33 18 24 19.5 18 18C18 18 19.5 24 18 33C18 33 16.5 24 18 18C18 18 9 19.5 3 18C3 18 12 16.5 18 18C18 18 16.5 12 18 2Z" fill="white"/>
+                        <path d="M27 6C27 6 27.75 9 27 11.25C27 11.25 29.25 10.5 31.5 11.25C31.5 11.25 29.25 12 27 11.25C27 11.25 27.75 13.5 27 15.75C27 15.75 26.25 13.5 27 11.25C27 11.25 24.75 12 22.5 11.25C22.5 11.25 24.75 10.5 27 11.25C27 11.25 26.25 9 27 6Z" fill="white" opacity="0.6"/>
+                      </g>
+                    </g>
+                  </g>
+
+                  <!-- PAGINATION DOTS — entrance + pulse via CSS -->
+                  <g class="ai-svg-dots">
+                    <circle class="ai-svg-dot" cx="161" cy="192" r="3" fill="#888888"/>
+                    <circle class="ai-svg-dot" cx="170" cy="192" r="3" fill="#555555"/>
+                    <circle class="ai-svg-dot" cx="179" cy="192" r="3" fill="#333333"/>
+                  </g>
+
+                  <!-- TITLE — entrance via CSS -->
+                  <g class="ai-svg-title">
+                    <text x="170" y="225" text-anchor="middle" fill="white" font-size="21" font-weight="700" letter-spacing="-0.3">Welcome to AI Tweaker</text>
+                  </g>
+
+                  <!-- SUBTITLE — entrance via CSS -->
+                  <g class="ai-svg-subtitle">
+                    <text text-anchor="middle" fill="#aaaaaa" font-size="13.5">
+                      <tspan x="170" y="258">Your personal optimization assistant for</tspan>
+                      <tspan x="170" dy="19">gaming performance, latency reduction,</tspan>
+                      <tspan x="170" dy="19">cleanup, and deep system tuning.</tspan>
+                    </text>
+                  </g>
+
+                  <!-- BADGE — entrance via CSS -->
+                  <g class="ai-svg-badge">
+                    <text x="170" y="332" text-anchor="middle" fill="#555555" font-size="11" letter-spacing="0.3">Private. On-device. Built into XTweaks.</text>
+                  </g>
+
+                </svg>
 
                 <!-- Footer controls -->
                 <div class="ai-welcome-footer">

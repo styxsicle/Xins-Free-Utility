@@ -2531,13 +2531,21 @@ function initializeAiTweaker() {
         'free up ram', 'free up memory', 'why is my pc slow', 'why is my computer slow',
         'what is slowing', 'optimize gaming', 'optimize my pc', 'kill background', 'check my background',
         'overlays', 'overlay apps', 'rgb software',
+        // Optimization status queries — also trigger bg context for full picture
+        'how optimized', 'optimization score', 'optimization readiness', 'how good is my pc',
+        'what have i tweaked', 'what tweaks did i', 'what have i applied', 'is my pc optimized',
+        'what settings are on', 'what is applied', 'what are my tweaks', 'my optimization',
+        'what should i still do', 'what is left to optim', 'how much have i done',
     ];
 
     const PC_CONTEXT_KEYWORDS = [
         'spec', 'slow', 'optim', 'fortnite', 'background app', 'startup',
         'temp', 'gpu', 'ram', 'cpu', 'latency', 'input delay', 'fps',
         'performance', 'lag', 'ping', 'usage', 'memory', 'apps', 'services',
-        'processor', 'graphics', 'hardware', 'running'
+        'processor', 'graphics', 'hardware', 'running',
+        'tweak', 'applied', 'settings', 'build', 'driver', 'score', 'ready',
+        'how good', 'how optimized', 'already', 'profile', 'windows', 'my pc',
+        'bandwidth', 'what do i have', 'my setup', 'what is left', 'what should',
     ];
 
     function detectIntent(text) {
@@ -2565,6 +2573,127 @@ function initializeAiTweaker() {
     let pcContextFetchedAt = 0;
     const PC_CONTEXT_TTL   = 90000;
 
+    /* ── AI Preferences — local learning ── */
+    const AI_PREFS_KEY = 'xtweaks-ai-prefs';
+    function loadAIPrefs() {
+        try { return JSON.parse(localStorage.getItem(AI_PREFS_KEY) || '{}'); } catch { return {}; }
+    }
+    function saveAIPrefs(prefs) {
+        try { localStorage.setItem(AI_PREFS_KEY, JSON.stringify(prefs)); } catch {}
+    }
+    function updateAIPref(key, value) {
+        const p = loadAIPrefs(); p[key] = value; saveAIPrefs(p);
+    }
+
+    /* ── App name normalizer (dedup + display) ── */
+    const APP_NAME_MAP = {
+        'onedrive': 'OneDrive', 'onedrivesetup': 'OneDrive', 'onedriveupdater': 'OneDrive',
+        'epicgameslauncher': 'Epic Games Launcher', 'epicwebhelper': 'Epic Games Launcher',
+        'epiconlineservices': 'Epic Games Launcher',
+        'googleupdater': 'Google Updater', 'googleupdatertaskuser': 'Google Updater',
+        'googledrivesync': 'Google Drive', 'googledrive': 'Google Drive',
+        'chrome': 'Google Chrome', 'googlechrome': 'Google Chrome',
+        'steam': 'Steam', 'steamwebhelper': 'Steam', 'steamservice': 'Steam',
+        'nvcontainer': 'NVIDIA Services', 'nvtelemetrycontainer': 'NVIDIA Services',
+        'riotclientservices': 'Riot Client', 'riotclientux': 'Riot Client',
+        'eadesktop': 'EA App', 'eabackgroundservice': 'EA App', 'easteam': 'EA App',
+        'battlenet': 'Battle.net',
+        'discord': 'Discord', 'discordptb': 'Discord', 'discordcanary': 'Discord',
+        'teams': 'Microsoft Teams',
+    };
+    function normalizeAppName(raw) {
+        if (!raw) return raw || '';
+        const key = raw.toLowerCase().replace(/[\s._\-]+/g, '');
+        return APP_NAME_MAP[key] || raw;
+    }
+
+    /* ── Optimization score — 5-category, confidence-aware ── */
+    function computeOptimizationScore(states, bgCtx) {
+        // Unknown ≠ bad. true=full, false=0, undefined/null=55% neutral (benefit of the doubt).
+        function pts(id, full) {
+            const s = states[id];
+            if (s === true)  return full;
+            if (s === false) return 0;
+            return Math.round(full * 0.55);
+        }
+        function isKnown(id) { return states[id] === true || states[id] === false; }
+
+        // ── Category 1: Core Gaming Tweaks (35 pts) ──────────────────────
+        const CORE_W = {
+            'optimize-power-plan': 14, 'disable-game-bar': 12,
+            'disable-xbox-services': 5, 'optimize-visual-effects': 4,
+        };
+        let coreScore = 0;
+        for (const [id, w] of Object.entries(CORE_W)) coreScore += pts(id, w);
+        coreScore = Math.round(coreScore);
+
+        // ── Category 2: Latency / Input (20 pts) ────────────────────────
+        const LATENCY_W = {
+            'disable-mouse-accel': 5, 'disable-power-throttling': 4,
+            'optimize-network-throttling': 4, 'disable-nagle': 3,
+            'game-priority': 2, 'timer-resolution': 2,
+        };
+        let latencyScore = 0;
+        for (const [id, w] of Object.entries(LATENCY_W)) latencyScore += pts(id, w);
+        latencyScore = Math.round(latencyScore);
+        const latencyAllUnknown = Object.keys(LATENCY_W).every(id => !isKnown(id));
+
+        // ── Category 3: Background / Startup Cleanliness (20 pts) ───────
+        const BG_PENALTY = {
+            'Overlay': 3, 'Recording/Capture': 3, 'Cloud Sync': 3,
+            'Game Launcher': 2, 'Browser': 2, 'Desktop App': 2,
+            'Updater': 1, 'RGB/Peripheral': 1, 'Chat/Voice': 1,
+        };
+        let cleanScore = 20;
+        if (bgCtx) {
+            let bgPenalty = 0;
+            (bgCtx.processes || []).forEach(p => {
+                if (p.safeToClose) bgPenalty += BG_PENALTY[p.category] ?? 1;
+            });
+            const extraStartups = Math.max(0, (bgCtx.startups || []).length - 3);
+            cleanScore = Math.max(12, 20 - Math.min(bgPenalty, 8) - Math.min(extraStartups * 1.5, 5));
+        }
+
+        // ── Category 4: GPU / Driver Readiness (15 pts) ─────────────────
+        let gpuScore = 0;
+        if (states._gpuDetected)    gpuScore += 8;
+        if (states._driverDetected) gpuScore += 4;
+        // HAGS: true=+3, false=0, unknown=neutral +2
+        gpuScore += states['gpu-scheduling'] === true ? 3 : states['gpu-scheduling'] === false ? 0 : 2;
+
+        // ── Category 5: Detection Confidence (10 pts) ───────────────────
+        const TRACKED = [...Object.keys(CORE_W), ...Object.keys(LATENCY_W), 'gpu-scheduling'];
+        const knownCount = TRACKED.filter(id => isKnown(id)).length;
+        const unknownCount = TRACKED.length - knownCount;
+        // HW detection boosts base confidence
+        const hwBonus = (states._gpuDetected ? 1 : 0) + (states._driverDetected ? 1 : 0);
+        const confidenceScore = Math.max(5, Math.round((knownCount / TRACKED.length) * 10) + hwBonus);
+
+        // ── Total ─────────────────────────────────────────────────────────
+        const raw = coreScore + latencyScore + cleanScore + gpuScore + confidenceScore;
+        const coreApplied = states['optimize-power-plan'] === true || states['disable-game-bar'] === true;
+        const score = Math.max(coreApplied ? 40 : 20, Math.min(100, raw));
+
+        // ── Strengths / Gaps / Unknowns (for context) ─────────────────────
+        const TOP = ['optimize-power-plan', 'disable-game-bar', 'gpu-scheduling', 'disable-mouse-accel', 'disable-xbox-services'];
+        const strengths = [], gaps = [], unknowns = [];
+        for (const id of TOP) {
+            const t = AI_ALLOWED_TWEAKS[id];
+            if (!t) continue;
+            if (states[id] === true)       strengths.push(t.title);
+            else if (states[id] === false) gaps.push(t.title);
+            else                           unknowns.push(t.title);
+        }
+        if (bgCtx) {
+            const opt = (bgCtx.processes || []).filter(p => p.safeToClose).length;
+            const st  = (bgCtx.startups  || []).length;
+            if (opt > 0) gaps.push(`${opt} background app${opt > 1 ? 's' : ''} running`);
+            if (st  > 3) gaps.push(`${st} startup apps configured`);
+        }
+        return { score, coreScore, latencyScore, cleanScore, gpuScore,
+                 strengths, gaps, unknowns, latencyAllUnknown, unknownCount };
+    }
+
     const statusDot           = document.getElementById('ai-status-dot');
     const statusText          = document.getElementById('ai-status-text');
     const recheckBtn          = document.getElementById('ai-recheck-btn');
@@ -2573,6 +2702,7 @@ function initializeAiTweaker() {
     const welcomeEl           = document.getElementById('ai-chat-welcome');
     const chatInput           = document.getElementById('ai-chat-input');
     const sendBtn             = document.getElementById('ai-send-btn');
+    const inputBar            = chatInput && chatInput.closest('.ai-input-bar');
     const pullBtn             = document.getElementById('ai-pull-model-btn');
     const pullProgress        = document.getElementById('ai-pull-progress');
     const quickPrompts        = document.getElementById('ai-quick-prompts');
@@ -2583,7 +2713,7 @@ function initializeAiTweaker() {
     const notRunningTitle     = document.getElementById('ai-not-running-title');
     const notRunningSub       = document.getElementById('ai-not-running-sub');
     const notRunningPrimaryBtn = document.getElementById('ai-nrn-primary-btn');
-    const notRunningBtn       = document.getElementById('ai-not-running-recheck-btn');
+    const nrnBtnLabel         = notRunningPrimaryBtn && notRunningPrimaryBtn.querySelector('.ai-nrn-btn-label');
     const noticeProgress      = document.getElementById('ai-nrn-progress');
 
     if (!statusDot) return;
@@ -2611,12 +2741,11 @@ function initializeAiTweaker() {
         if (notRunningSub)   notRunningSub.textContent   = sub;
         if (notRunningPrimaryBtn) {
             const labels = { install: 'Set Up AI Engine', start: 'Start AI Engine', retry: 'Retry' };
-            notRunningPrimaryBtn.textContent       = labels[mode] || 'Set Up AI Engine';
+            if (nrnBtnLabel) nrnBtnLabel.textContent = labels[mode] || 'Set Up AI Engine';
             notRunningPrimaryBtn.disabled          = false;
             notRunningPrimaryBtn.style.display     = '';
             notRunningPrimaryBtn.dataset.setupMode = (mode === 'retry') ? 'install' : (mode || 'install');
         }
-        if (notRunningBtn) notRunningBtn.style.display = '';
         notRunningNotice.className     = 'ai-not-running-notice' + (state === 'error' ? ' error' : '');
         notRunningNotice.style.display = 'flex';
         setNoticeProgress(false);
@@ -2627,7 +2756,6 @@ function initializeAiTweaker() {
         if (notRunningTitle) notRunningTitle.textContent = title;
         if (notRunningSub)   notRunningSub.textContent   = sub;
         if (notRunningPrimaryBtn) { notRunningPrimaryBtn.disabled = true; notRunningPrimaryBtn.style.display = 'none'; }
-        if (notRunningBtn)        notRunningBtn.style.display = 'none';
         notRunningNotice.className     = 'ai-not-running-notice';
         notRunningNotice.style.display = 'flex';
         setNoticeProgress(true);
@@ -2654,10 +2782,9 @@ function initializeAiTweaker() {
         aiSetupInProgress = true;
 
         if (notRunningPrimaryBtn) {
-            notRunningPrimaryBtn.disabled    = true;
-            notRunningPrimaryBtn.textContent = 'Setting up…';
+            notRunningPrimaryBtn.disabled = true;
+            if (nrnBtnLabel) nrnBtnLabel.textContent = 'Setting up…';
         }
-        if (notRunningBtn) notRunningBtn.style.display = 'none';
         if (notRunningTitle) notRunningTitle.textContent = 'Setting up AI Tweaker';
         if (notRunningSub)   notRunningSub.textContent   = 'Preparing AI Engine…';
         if (notRunningNotice) notRunningNotice.className = 'ai-not-running-notice';
@@ -2685,7 +2812,6 @@ function initializeAiTweaker() {
                 notRunningPrimaryBtn.style.display = '';
                 notRunningPrimaryBtn.disabled = false;
             }
-            if (notRunningBtn) notRunningBtn.style.display = '';
             showNotice('AI Engine setup failed', 'Restart XTweaks and try again.', 'retry', 'error');
             setStatus('preparing', 'Setup Needed');
             setInfoStatus('', 'Setup Needed');
@@ -2693,7 +2819,6 @@ function initializeAiTweaker() {
         }
 
         if (notRunningSub) notRunningSub.textContent = 'AI Tweaker is ready.';
-        if (notRunningBtn) notRunningBtn.style.display = '';
         setTimeout(checkOllama, 600);
     }
 
@@ -2756,7 +2881,6 @@ function initializeAiTweaker() {
     }
 
     recheckBtn.addEventListener('click', () => { if (!aiSetupInProgress) checkOllama(); });
-    if (notRunningBtn) notRunningBtn.addEventListener('click', () => { if (!aiSetupInProgress) checkOllama(); });
 
     /* ── Recommendation card helpers ── */
     function setTweakRowStatus(card, tweakId, status) {
@@ -2821,18 +2945,29 @@ function initializeAiTweaker() {
     }
 
     function buildRecommendationCard(intent) {
-        const tweakIds = (intent.tweakIds || []).filter(id => AI_ALLOWED_TWEAKS[id]);
-        if (tweakIds.length === 0) return null;
+        const prefs      = loadAIPrefs();
+        const rejected   = prefs.rejectedTweaks || [];
+        const allIds     = (intent.tweakIds || []).filter(id => AI_ALLOWED_TWEAKS[id]);
+        if (allIds.length === 0) return null;
 
-        const safeCount    = tweakIds.filter(id => AI_ALLOWED_TWEAKS[id].risk === 'safe').length;
-        const reviewCount  = tweakIds.filter(id => AI_ALLOWED_TWEAKS[id].risk === 'review').length;
-        const appliedCount = tweakIds.filter(id => tweakStates[id] === true).length;
+        // Separate into: pending (not applied, not rejected), applied
+        const appliedIds = allIds.filter(id => tweakStates[id] === true);
+        const pendingIds = allIds.filter(id => tweakStates[id] !== true && !rejected.includes(id));
+        if (pendingIds.length === 0 && appliedIds.length === 0) return null;
 
+        // Persist preferred game when Fortnite intent fires
+        if (intent.label === 'Fortnite Optimization' && !prefs.preferredGame) {
+            updateAIPref('preferredGame', 'Fortnite');
+        }
+
+        // Build subtitle
+        const safeCount   = pendingIds.filter(id => AI_ALLOWED_TWEAKS[id].risk === 'safe').length;
+        const reviewCount = pendingIds.filter(id => AI_ALLOWED_TWEAKS[id].risk === 'review').length;
         const subtitleParts = [];
-        if (safeCount > 0)   subtitleParts.push(`${safeCount} safe`);
-        if (reviewCount > 0) subtitleParts.push(`${reviewCount} review`);
-        if (appliedCount > 0) subtitleParts.push(`${appliedCount} already on`);
-        subtitleParts.push('confirm before applying');
+        if (safeCount   > 0)             subtitleParts.push(`${safeCount} safe`);
+        if (reviewCount > 0)             subtitleParts.push(`${reviewCount} review`);
+        if (appliedIds.length > 0)       subtitleParts.push(`${appliedIds.length} already optimized`);
+        if (pendingIds.length > 0)       subtitleParts.push('confirm before applying');
 
         const card = document.createElement('div');
         card.className = 'ai-recommendation-card';
@@ -2848,64 +2983,120 @@ function initializeAiTweaker() {
             '</div>';
         card.appendChild(hdr);
 
-        const list = document.createElement('div');
-        list.className = 'ai-rec-tweak-list';
-        tweakIds.forEach((id, i) => {
-            const t         = AI_ALLOWED_TWEAKS[id];
-            const isApplied = tweakStates[id] === true;
-            const row = document.createElement('div');
-            row.className       = isApplied ? 'ai-tweak-row already-applied' : 'ai-tweak-row';
-            row.dataset.tweakId = id;
-            row.style.animationDelay = `${0.06 + i * 0.055}s`;
-            const riskLabel   = t.risk === 'safe' ? 'Safe' : 'Review';
-            const statusClass = isApplied ? 'already-applied' : 'idle';
-            const statusLabel = isApplied ? 'Already On' : 'Ready';
-            row.innerHTML =
-                '<div class="ai-tweak-row-info">' +
-                `<span class="ai-tweak-row-name">${escapeAiHtml(t.title)}</span>` +
-                `<span class="ai-tweak-row-reason">${escapeAiHtml(t.reason)}</span>` +
-                '</div>' +
-                `<span class="ai-risk-badge ${t.risk}">${riskLabel}</span>` +
-                `<div class="ai-tweak-status ${statusClass}"><span class="ai-tweak-status-dot"></span><span class="ai-tweak-status-text">${statusLabel}</span></div>`;
-            list.appendChild(row);
-        });
-        card.appendChild(list);
+        // ── Pending tweaks (not yet applied) ──
+        if (pendingIds.length > 0) {
+            const list = document.createElement('div');
+            list.className = 'ai-rec-tweak-list';
+            pendingIds.forEach((id, i) => {
+                const t = AI_ALLOWED_TWEAKS[id];
+                const row = document.createElement('div');
+                row.className = 'ai-tweak-row';
+                row.dataset.tweakId = id;
+                row.style.animationDelay = `${0.06 + i * 0.055}s`;
+                row.innerHTML =
+                    '<div class="ai-tweak-row-info">' +
+                    `<span class="ai-tweak-row-name">${escapeAiHtml(t.title)}</span>` +
+                    `<span class="ai-tweak-row-reason">${escapeAiHtml(t.reason)}</span>` +
+                    '</div>' +
+                    `<span class="ai-risk-badge ${t.risk}">${t.risk === 'safe' ? 'Safe' : 'Review'}</span>` +
+                    '<div class="ai-tweak-status idle"><span class="ai-tweak-status-dot"></span><span class="ai-tweak-status-text">Ready</span></div>' +
+                    `<button class="ai-tweak-dismiss-btn" title="Don’t suggest again">×</button>`;
+                row.querySelector('.ai-tweak-dismiss-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const p = loadAIPrefs();
+                    p.rejectedTweaks = [...new Set([...(p.rejectedTweaks || []), id])];
+                    saveAIPrefs(p);
+                    row.style.transition = 'opacity 200ms';
+                    row.style.opacity = '0';
+                    setTimeout(() => row.remove(), 220);
+                });
+                list.appendChild(row);
+            });
+            card.appendChild(list);
+        } else {
+            const allDone = document.createElement('div');
+            allDone.className = 'ai-rec-all-done';
+            allDone.textContent = appliedIds.length > 0
+                ? 'All recommended tweaks are already applied.'
+                : 'No new tweaks to suggest for this category.';
+            card.appendChild(allDone);
+        }
 
-        const actions = document.createElement('div');
-        actions.className = 'ai-apply-actions';
-        actions.innerHTML =
-            '<button class="ai-rec-apply-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Apply Recommended</button>' +
-            '<button class="ai-rec-review-btn">Review First</button>' +
-            '<button class="ai-rec-cancel-btn">Skip</button>';
-        card.appendChild(actions);
+        // ── Already Optimized collapsible section ──
+        if (appliedIds.length > 0) {
+            const sec = document.createElement('div');
+            sec.className = 'ai-rec-already-section';
+            const toggle = document.createElement('button');
+            toggle.className = 'ai-rec-already-toggle';
+            toggle.innerHTML =
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"/></svg>' +
+                ` Already Optimized (${appliedIds.length})`;
+            const alreadyList = document.createElement('div');
+            alreadyList.className = 'ai-rec-already-list';
+            alreadyList.hidden = true;
+            appliedIds.forEach(id => {
+                const t = AI_ALLOWED_TWEAKS[id];
+                const row = document.createElement('div');
+                row.className = 'ai-tweak-row already-applied';
+                row.dataset.tweakId = id;
+                row.innerHTML =
+                    '<div class="ai-tweak-row-info">' +
+                    `<span class="ai-tweak-row-name">${escapeAiHtml(t.title)}</span>` +
+                    `<span class="ai-tweak-row-reason">${escapeAiHtml(t.reason)}</span>` +
+                    '</div>' +
+                    '<div class="ai-tweak-status already-applied"><span class="ai-tweak-status-dot"></span><span class="ai-tweak-status-text">Already On</span></div>';
+                alreadyList.appendChild(row);
+            });
+            toggle.addEventListener('click', () => {
+                alreadyList.hidden = !alreadyList.hidden;
+                toggle.classList.toggle('open', !alreadyList.hidden);
+            });
+            sec.appendChild(toggle);
+            sec.appendChild(alreadyList);
+            card.appendChild(sec);
+        }
 
-        const confirm = document.createElement('div');
-        confirm.className = 'ai-confirm-inline';
-        confirm.style.display = 'none';
-        confirm.innerHTML =
-            `<p class="ai-confirm-text">Apply ${tweakIds.length} tweak${tweakIds.length !== 1 ? 's' : ''} now?` +
-            (reviewCount > 0 ? ' Some may need a restart.' : '') + '</p>' +
-            '<div class="ai-confirm-buttons"><button class="ai-confirm-apply-btn">Apply Now</button><button class="ai-confirm-cancel-btn">Cancel</button></div>';
-        card.appendChild(confirm);
+        // ── Actions ──
+        if (pendingIds.length > 0) {
+            const actions = document.createElement('div');
+            actions.className = 'ai-apply-actions';
+            actions.innerHTML =
+                '<button class="ai-rec-apply-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Apply Recommended</button>' +
+                '<button class="ai-rec-review-btn">Review First</button>' +
+                '<button class="ai-rec-cancel-btn">Skip</button>';
+            card.appendChild(actions);
 
-        actions.querySelector('.ai-rec-apply-btn').addEventListener('click', () => {
-            actions.style.display = 'none';
-            confirm.style.display = 'flex';
-        });
-        actions.querySelector('.ai-rec-review-btn').addEventListener('click', () => {
-            openReviewModal(tweakIds);
-        });
-        actions.querySelector('.ai-rec-cancel-btn').addEventListener('click', () => {
-            card.classList.add('ai-rec-dismissed');
-            setTimeout(() => { if (card.parentNode) card.parentNode.removeChild(card); }, 320);
-        });
-        confirm.querySelector('.ai-confirm-apply-btn').addEventListener('click', () => {
-            applyTweaksFromCard(card, tweakIds);
-        });
-        confirm.querySelector('.ai-confirm-cancel-btn').addEventListener('click', () => {
+            const confirm = document.createElement('div');
+            confirm.className = 'ai-confirm-inline';
             confirm.style.display = 'none';
-            actions.style.display = 'flex';
-        });
+            confirm.innerHTML =
+                `<p class="ai-confirm-text">Apply ${pendingIds.length} tweak${pendingIds.length !== 1 ? 's' : ''} now?` +
+                (reviewCount > 0 ? ' Some may need a restart.' : '') + '</p>' +
+                '<div class="ai-confirm-buttons"><button class="ai-confirm-apply-btn">Apply Now</button><button class="ai-confirm-cancel-btn">Cancel</button></div>';
+            card.appendChild(confirm);
+
+            actions.querySelector('.ai-rec-apply-btn').addEventListener('click', () => {
+                actions.style.display = 'none'; confirm.style.display = 'flex';
+            });
+            actions.querySelector('.ai-rec-review-btn').addEventListener('click', () => openReviewModal(pendingIds));
+            actions.querySelector('.ai-rec-cancel-btn').addEventListener('click', () => {
+                card.classList.add('ai-rec-dismissed');
+                setTimeout(() => { if (card.parentNode) card.parentNode.removeChild(card); }, 320);
+            });
+            confirm.querySelector('.ai-confirm-apply-btn').addEventListener('click', () => applyTweaksFromCard(card, pendingIds));
+            confirm.querySelector('.ai-confirm-cancel-btn').addEventListener('click', () => {
+                confirm.style.display = 'none'; actions.style.display = 'flex';
+            });
+        } else {
+            const skip = document.createElement('div');
+            skip.className = 'ai-apply-actions';
+            skip.innerHTML = '<button class="ai-rec-cancel-btn">Dismiss</button>';
+            card.appendChild(skip);
+            skip.querySelector('.ai-rec-cancel-btn').addEventListener('click', () => {
+                card.classList.add('ai-rec-dismissed');
+                setTimeout(() => { if (card.parentNode) card.parentNode.removeChild(card); }, 320);
+            });
+        }
 
         return card;
     }
@@ -3212,20 +3403,50 @@ function initializeAiTweaker() {
         if (!ctx) return '';
         const lines = [];
 
-        if (ctx.processes && ctx.processes.length > 0) {
-            lines.push('Background Apps & Processes (currently running):');
-            ctx.processes.forEach(p => {
-                const ram  = p.ramMB ? `, ${p.ramMB} MB RAM` : '';
-                const note = p.safeToClose ? '— can close to free resources' : '— review only';
-                lines.push(`- ${p.name} (${p.category}) — Running${ram} ${note}`);
-            });
-        }
+        // Impact labels by category
+        const IMPACT = {
+            'Overlay': 'HIGH', 'Recording/Capture': 'HIGH', 'Cloud Sync': 'HIGH',
+            'Game Launcher': 'MEDIUM', 'Browser': 'MEDIUM', 'Desktop App': 'MEDIUM',
+            'Updater': 'MEDIUM', 'RGB/Peripheral': 'LOW', 'Chat/Voice': 'LOW',
+        };
+        const CATEGORY_RANK = {
+            'Overlay': 1, 'Recording/Capture': 1, 'Cloud Sync': 2,
+            'Game Launcher': 2, 'Browser': 3, 'Desktop App': 3,
+            'Updater': 3, 'RGB/Peripheral': 4, 'Chat/Voice': 5,
+        };
 
-        if (ctx.startups && ctx.startups.length > 0) {
-            lines.push('\nStartup Apps (launch automatically at boot):');
-            ctx.startups.forEach(s => {
-                const safe = s.safeToDisable ? '— safe to disable from startup' : '— review first';
-                lines.push(`- ${s.name} (${s.category || 'Unknown'}) — Startup Enabled ${safe}`);
+        // Merge processes + startups by normalized name to deduplicate
+        const seen = new Map();
+        (ctx.processes || []).forEach(p => {
+            const name = normalizeAppName(p.name);
+            const key  = name.toLowerCase();
+            const entry = seen.get(key) || { name, category: p.category };
+            entry.process = p;
+            seen.set(key, entry);
+        });
+        (ctx.startups || []).forEach(s => {
+            const name = normalizeAppName(s.name);
+            const key  = name.toLowerCase();
+            const entry = seen.get(key) || { name, category: s.category || 'Unknown' };
+            entry.startup = s;
+            seen.set(key, entry);
+        });
+
+        if (seen.size > 0) {
+            const sorted = [...seen.values()].sort((a, b) =>
+                (CATEGORY_RANK[a.category] || 6) - (CATEGORY_RANK[b.category] || 6)
+            );
+            lines.push('Background Apps (sorted by gaming impact):');
+            sorted.forEach(({ name, category, process: p, startup: s }) => {
+                const impact   = IMPACT[category] || 'LOW';
+                const ram      = p?.ramMB ? `, ${p.ramMB} MB RAM` : '';
+                const states   = [p && 'Running', s && 'Startup Enabled'].filter(Boolean).join(' + ');
+                const canClose = p?.safeToClose, canDisable = s?.safeToDisable;
+                const action   = canClose && canDisable ? 'safe to close and disable from startup'
+                               : canClose               ? 'safe to close'
+                               : canDisable             ? 'safe to disable from startup'
+                               : 'review only';
+                lines.push(`- [${impact}] ${name} (${category}) — ${states}${ram} — ${action}`);
             });
         }
 
@@ -3260,15 +3481,23 @@ function initializeAiTweaker() {
     function buildBackgroundOptCard() {
         if (!bgContext) return null;
 
-        const items = [];
+        // Impact rank for sorting (lower = higher priority in list)
+        const ITEM_RANK = {
+            'Overlay': 1, 'Recording/Capture': 1, 'Cloud Sync': 2,
+            'Game Launcher': 2, 'Browser': 3, 'Desktop App': 3,
+            'Updater': 3, 'RGB/Peripheral': 4, 'Chat/Voice': 5,
+        };
 
+        // Build process entries, normalized name
+        const byName = new Map(); // normalizedKey → item
         (bgContext.processes || []).forEach((p, i) => {
             if (!p.safeToClose && !p.safeToDisableStartup) return;
-            // Chat/Voice apps are optional — user may be in a call
             const isChatVoice = p.category === 'Chat/Voice';
-            items.push({
+            const dispName = normalizeAppName(p.name);
+            const key      = dispName.toLowerCase();
+            byName.set(key, {
                 id:             `proc-${i}`,
-                name:           p.name,
+                name:           dispName,
                 category:       p.category,
                 type:           'process',
                 state:          'Running',
@@ -3280,20 +3509,34 @@ function initializeAiTweaker() {
             });
         });
 
+        // Merge startup entries: same normalized name → upgrade existing process item
         (bgContext.startups || []).forEach((s, i) => {
-            items.push({
-                id:              `startup-${i}`,
-                name:            s.name,
-                category:        s.category || 'Unknown',
-                type:            'startup',
-                state:           'Startup Enabled',
-                ramMB:           null,
-                recommendation:  s.safeToDisable ? 'disable-startup' : 'review',
-                risk:            s.safeToDisable ? 'safe' : 'review',
-                startupName:     s.name,
-                startupLocation: s.location,
-            });
+            const dispName = normalizeAppName(s.name);
+            const key      = dispName.toLowerCase();
+            if (byName.has(key)) {
+                const existing = byName.get(key);
+                existing.state           = 'Running + Startup Enabled';
+                existing.type            = 'both';
+                existing.startupName     = s.name;
+                existing.startupLocation = s.location;
+                if (s.safeToDisable && existing.risk === 'safe') existing.hasStartup = true;
+            } else {
+                byName.set(key, {
+                    id:              `startup-${i}`,
+                    name:            dispName,
+                    category:        s.category || 'Unknown',
+                    type:            'startup',
+                    state:           'Startup Enabled',
+                    ramMB:           null,
+                    recommendation:  s.safeToDisable ? 'disable-startup' : 'review',
+                    risk:            s.safeToDisable ? 'safe' : 'review',
+                    startupName:     s.name,
+                    startupLocation: s.location,
+                });
+            }
         });
+
+        const items = [...byName.values()];
 
         (bgContext.services || []).forEach((sv, i) => {
             if (sv.critical) return;
@@ -3311,7 +3554,8 @@ function initializeAiTweaker() {
 
         if (items.length === 0) return null;
 
-        // Cap at 8 items (processes first, then startups, then services)
+        // Sort by gaming impact, cap at 8
+        items.sort((a, b) => (ITEM_RANK[a.category] || 6) - (ITEM_RANK[b.category] || 6));
         const shown = items.slice(0, 8);
 
         const safeCount   = shown.filter(it => it.risk === 'safe').length;
@@ -3356,6 +3600,26 @@ function initializeAiTweaker() {
                 `<span class="ai-bg-action ${item.recommendation}">${escapeAiHtml(actionLabels[item.recommendation] || 'Review')}</span>` +
                 `<span class="ai-review-risk-badge ${item.risk}">${riskLabel}</span>` +
                 `</div>`;
+
+            // "Keep open" for optional Chat/Voice items
+            if (item.recommendation === 'optional' || item.recommendation === 'close') {
+                const keptApps = (loadAIPrefs().keptApps || []);
+                const alreadyKept = keptApps.includes(item.name);
+                const keepBtn = document.createElement('button');
+                keepBtn.className = 'ai-bg-keep-btn' + (alreadyKept ? ' ai-bg-keep-active' : '');
+                keepBtn.textContent = alreadyKept ? 'Kept ✓' : 'Keep open';
+                keepBtn.disabled = alreadyKept;
+                keepBtn.title = 'Tell AI Tweaker never to suggest closing this app';
+                keepBtn.addEventListener('click', () => {
+                    const p = loadAIPrefs();
+                    p.keptApps = [...new Set([...(p.keptApps || []), item.name])];
+                    saveAIPrefs(p);
+                    keepBtn.textContent = 'Kept ✓';
+                    keepBtn.disabled = true;
+                    keepBtn.classList.add('ai-bg-keep-active');
+                });
+                row.querySelector('.ai-bg-row-meta').appendChild(keepBtn);
+            }
 
             list.appendChild(row);
         });
@@ -3592,7 +3856,13 @@ function initializeAiTweaker() {
             for (const item of toApply) {
                 try {
                     let ok = false;
-                    if (item.type === 'process' && typeof item.pid === 'number') {
+                    if (item.type === 'both') {
+                        // Merged running process + startup — do both operations
+                        let r1 = { success: false }, r2 = { success: false };
+                        if (typeof item.pid === 'number') r1 = await window.electronAPI.closeProcess(item.pid, item.processName).catch(() => ({ success: false }));
+                        if (item.startupName)             r2 = await window.electronAPI.disableStartupEntry(item.startupName, item.startupLocation).catch(() => ({ success: false }));
+                        ok = r1.success || r2.success;
+                    } else if (item.type === 'process' && typeof item.pid === 'number') {
                         const r = await window.electronAPI.closeProcess(item.pid, item.processName);
                         ok = r.success;
                     } else if (item.type === 'startup') {
@@ -3730,6 +4000,7 @@ function initializeAiTweaker() {
         chatHistEl.scrollTop = chatHistEl.scrollHeight;
 
         sendBtn.disabled = true;
+        if (inputBar) inputBar.classList.add('is-thinking');
 
         await getPCContextForMessage(trimmed);
 
@@ -3749,10 +4020,11 @@ function initializeAiTweaker() {
             }
         } catch (e) {
             typingEl.remove();
-            renderMessage('assistant', 'Connection error. Make sure the AI engine is running and click Recheck.');
+            renderMessage('assistant', 'Connection error. Make sure the AI engine is running, then start it again from the setup panel.');
         }
 
         sendBtn.disabled = false;
+        if (inputBar) inputBar.classList.remove('is-thinking');
         chatHistEl.scrollTop = chatHistEl.scrollHeight;
 
         if (aiResponseText) {
@@ -3939,6 +4211,9 @@ function initializeAiTweaker() {
                 // Tweak states — from app toggle state; cross-ref power plan for accuracy
                 tweakStates = Object.assign({}, raw.toggles || {});
                 if (powerPlan && /high.?perf/i.test(powerPlan)) tweakStates['optimize-power-plan'] = true;
+                // Hardware detection flags for score categories 4 & 5
+                tweakStates._gpuDetected    = !!(gpu0?.name);
+                tweakStates._driverDetected = !!(gpu0?.driverVersion);
 
                 const tweakLines = Object.keys(AI_ALLOWED_TWEAKS).map(id => {
                     const s = tweakStates[id];
@@ -3949,14 +4224,48 @@ function initializeAiTweaker() {
                 const time    = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 pcContextTime      = time;
                 pcContextFetchedAt = Date.now();
-                pcContext     =
-                    `Current PC details:\n${lines.join('\n')}` +
-                    `\n\nXTweaks tweak states:\n${tweakLines.join('\n')}`;
+
+                // Compute score now that tweakStates and bgContext are ready
+                const { score, coreScore, latencyScore, cleanScore, gpuScore,
+                        strengths, gaps, unknowns, latencyAllUnknown, unknownCount }
+                    = computeOptimizationScore(tweakStates, bgContext);
+
+                // Build Notes: encode hardware-specific reasoning so AI doesn't guess wrong
+                const buildNotes = [];
+                const ramGB = memTotal ? Math.round(memTotal / 1073741824) : 0;
+                if (/X3D/i.test(cpuModel)) buildNotes.push('X3D CPU: focus on background/overlay reduction, not CPU priority tweaks');
+                if (gpu0?.name && /RTX/i.test(gpu0.name)) buildNotes.push('RTX GPU: HAGS and overlay health are high priority; do NOT associate HAGS with CPU brand');
+                if (gpu0?.name && /\bRX\s*[67]/i.test(gpu0.name)) buildNotes.push('RX GPU: overlay conflicts and driver updates are key');
+                if (ramGB >= 32) buildNotes.push(`${ramGB}GB RAM: Chrome/Discord are LOW PRIORITY unless RAM usage exceeds 85%`);
+                else if (ramGB >= 16) buildNotes.push(`${ramGB}GB RAM: monitor background RAM usage during gaming`);
+                if (powerPlan && /high.?perf/i.test(powerPlan)) buildNotes.push('Power plan: CONFIRMED High Performance — do NOT recommend applying power plan; it is already optimized');
+
+                // Score breakdown label: flag latency as estimated when all unknown
+                const latencyLabel = latencyAllUnknown ? `${latencyScore}/20 (unverified)` : `${latencyScore}/20`;
+
+                pcContext = `Current Tuning Profile:\n${lines.join('\n')}`;
+                if (buildNotes.length) pcContext += `\n\nBuild Notes:\n${buildNotes.map(n => `- ${n}`).join('\n')}`;
+                pcContext += `\n\nEstimated Optimization Readiness: ${score}/100`;
+                pcContext += `\nScore breakdown — Core: ${coreScore}/35 · Latency: ${latencyLabel} · Background: ${cleanScore}/20 · GPU: ${gpuScore}/15`;
+                if (unknownCount > 0) pcContext += `\nDetection note: ${unknownCount} tweak states unverified — neutral estimates used. Settings applied outside XTweaks may not be detected.`;
+                if (strengths.length) pcContext += `\nConfirmed optimized: ${strengths.slice(0, 4).join(' · ')}`;
+                if (gaps.length)      pcContext += `\nConfirmed missing: ${gaps.slice(0, 3).join(' · ')}`;
+                if (unknowns.length)  pcContext += `\nUnverified (unknown state): ${unknowns.slice(0, 4).join(' · ')}`;
+                pcContext += `\n\nApplied XTweaks:\n${tweakLines.join('\n')}`;
 
                 const bgStr = formatBgContextForAI(bgContext);
                 if (bgStr) pcContext += '\n\n' + bgStr;
 
-                if (ctxIndicator) ctxIndicator.textContent = `PC Context Attached  (${time})`;
+                // Attach saved preferences for AI context
+                const prefs = loadAIPrefs();
+                const prefLines = [];
+                if (prefs.preferredGame)                     prefLines.push(`Preferred game: ${prefs.preferredGame}`);
+                if (prefs.safeOnly)                          prefLines.push('Preference: Safe tweaks only');
+                if (prefs.focusGoal)                         prefLines.push(`Focus goal: ${prefs.focusGoal}`);
+                if (prefs.keptApps && prefs.keptApps.length) prefLines.push(`Always keep open: ${prefs.keptApps.join(', ')}`);
+                if (prefLines.length) pcContext += `\n\nAI Preferences:\n${prefLines.join('\n')}`;
+
+                if (ctxIndicator) ctxIndicator.textContent = `Optimization: ${score}/100 \xb7 Context updated (${time})`;
                 if (ctxDot)       ctxDot.className = 'ai-ctx-dot loaded';
             } catch {
                 pcContext   = null;
@@ -4011,6 +4320,20 @@ function initializeAiTweaker() {
                 if (ov) { ov.classList.remove('is-closing'); ov.classList.add('is-open'); }
             }, 60);
         });
+
+        // Dynamically add "Reset AI Learning" option
+        if (!document.getElementById('ai-settings-reset-learning')) {
+            const resetBtn = document.createElement('button');
+            resetBtn.className = 'ai-settings-item';
+            resetBtn.id = 'ai-settings-reset-learning';
+            resetBtn.textContent = 'Reset AI Learning';
+            dropdown.appendChild(resetBtn);
+            resetBtn.addEventListener('click', () => {
+                saveAIPrefs({});
+                dropdown.classList.remove('open');
+                renderMessage('assistant', 'AI learning reset. Rejected tweaks, kept apps, preferred game, and all saved preferences have been cleared.');
+            });
+        }
     }
 
     function initWelcomeModal() {
@@ -4160,6 +4483,36 @@ function initializeAiTweaker() {
             window.addEventListener('resize', () => { if (wRafId) resizeWCanvas(); });
         }
     }
+
+    // Focus mode
+    (function wireFocusMode() {
+        const focusBtn = document.getElementById('ai-focus-btn');
+        const aiPage   = document.getElementById('page-ai-tweaker');
+        const chatHist = document.getElementById('ai-chat-history');
+        if (!focusBtn || !aiPage) return;
+
+        function enterFocus() {
+            const top = chatHist ? chatHist.scrollTop : 0;
+            aiPage.classList.add('ai-focus-mode');
+            focusBtn.title = 'Exit Focus Mode';
+            if (chatHist) chatHist.scrollTop = top;
+        }
+
+        function exitFocus() {
+            const top = chatHist ? chatHist.scrollTop : 0;
+            aiPage.classList.remove('ai-focus-mode');
+            focusBtn.title = 'Focus Mode';
+            if (chatHist) chatHist.scrollTop = top;
+        }
+
+        focusBtn.addEventListener('click', () => {
+            aiPage.classList.contains('ai-focus-mode') ? exitFocus() : enterFocus();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && aiPage.classList.contains('ai-focus-mode')) exitFocus();
+        });
+    })();
 
     wireSettingsGear();
     initWelcomeModal();

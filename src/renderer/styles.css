@@ -4299,6 +4299,9 @@ body.ai-tweaker-active .top-bar {
   margin-bottom: 8px;
   text-align: center;
   overflow: hidden;
+  flex-shrink: 0;
+  max-height: 400px;
+  transition: max-height 0.28s ease, opacity 0.20s ease, padding 0.28s ease, margin 0.28s ease;
 }
 
 .ai-hero-arc {
@@ -4363,10 +4366,13 @@ body.ai-tweaker-active .top-bar {
   align-items: stretch;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+  transition: grid-template-columns 0.28s cubic-bezier(0.22,1,0.36,1), column-gap 0.28s ease;
 }
 
 .ai-center-col {
   display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0;
+  overflow: hidden;
 }
 
 /* ── Main AI card (always visible) ── */
@@ -4378,6 +4384,7 @@ body.ai-tweaker-active .top-bar {
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), 0 6px 32px rgba(0,0,0,0.42);
   flex: 1;
   min-height: 0;
+  transition: border-color 0.26s ease, box-shadow 0.30s ease;
 }
 
 /* Card header strip */
@@ -4514,6 +4521,7 @@ body.ai-tweaker-active .top-bar {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
   padding: 8px 12px;
   border-top: 1px solid rgba(255,255,255,0.055);
+  flex-shrink: 0;
 }
 
 .ai-chip {
@@ -4535,22 +4543,60 @@ body.ai-tweaker-active .top-bar {
 .ai-chip svg { flex-shrink: 0; opacity: 0.75; }
 
 /* ── Input bar ── */
+@keyframes ai-thinking-sweep {
+  0%   { transform: translateX(-120%); opacity: 0; }
+  7%   { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: translateX(320%); opacity: 0; }
+}
+
 .ai-input-bar {
   display: flex; align-items: flex-end; gap: 8px;
-  padding: 10px 14px; border-top: 1px solid rgba(255,255,255,0.07);
+  padding: 10px 14px;
   background: rgba(0,0,0,0.22);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Thinking indicator — silver beam sweeps left→right along the top of the input row */
+.ai-input-bar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 40%;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255,255,255,0.70) 35%,
+    rgba(255,255,255,0.88) 50%,
+    rgba(255,255,255,0.70) 65%,
+    transparent 100%
+  );
+  pointer-events: none;
+  opacity: 0;
+}
+
+.ai-input-bar.is-thinking::before {
+  animation: ai-thinking-sweep 1.6s ease-in-out infinite;
 }
 
 .ai-chat-input {
   flex: 1; background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.11);
   border-radius: 10px; padding: 10px 14px; color: var(--text);
   font-family: 'Outfit', sans-serif; font-size: 14.5px;
-  resize: none; min-height: 44px; max-height: 120px; overflow-y: auto; line-height: 1.5;
-  transition: border-color 0.22s, box-shadow 0.22s;
+  resize: none; min-height: 76px; max-height: 160px; overflow-y: auto; line-height: 1.45;
+  transition: border-color 0.22s, box-shadow 0.22s, background 0.20s;
+}
+.ai-chat-input:hover:not(:focus) {
+  border-color: rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.07);
 }
 .ai-chat-input:focus {
-  outline: none; border-color: rgba(255,255,255,0.25);
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.06);
+  outline: none;
+  border-color: rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.07);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.05), 0 0 18px rgba(255,255,255,0.06);
 }
 .ai-chat-input::placeholder { color: rgba(100,100,110,0.72); }
 
@@ -4561,14 +4607,15 @@ body.ai-tweaker-active .top-bar {
   color: rgba(255,255,255,0.94);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; box-shadow: 0 2px 10px rgba(255,255,255,0.08);
-  transition: all 0.18s cubic-bezier(0.22,1,0.36,1);
+  transition: background 0.18s, border-color 0.18s, box-shadow 0.18s, transform 0.14s cubic-bezier(0.22,1,0.36,1);
 }
 .ai-send-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, rgba(255,255,255,0.20), rgba(255,255,255,0.12));
-  box-shadow: 0 5px 20px rgba(255,255,255,0.16);
-  transform: translateY(-1px) scale(1.04);
+  background: linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.12));
+  border-color: rgba(255,255,255,0.35);
+  box-shadow: 0 4px 20px rgba(255,255,255,0.18), 0 0 0 1px rgba(255,255,255,0.08);
+  transform: translateY(-1px);
 }
-.ai-send-btn:active:not(:disabled) { transform: translateY(0) scale(0.97); box-shadow: 0 1px 6px rgba(255,255,255,0.08); }
+.ai-send-btn:active:not(:disabled) { transform: scale(0.98); box-shadow: 0 1px 6px rgba(255,255,255,0.08); }
 .ai-send-btn:disabled { opacity: 0.32; cursor: not-allowed; box-shadow: none; }
 .ai-send-btn svg { width: 15px; height: 15px; }
 
@@ -4649,6 +4696,7 @@ body.ai-tweaker-active .top-bar {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   padding: 5px 12px;
   font-size: 11px; color: rgba(118,112,92,0.55);
+  flex-shrink: 0;
 }
 .ai-privacy-strip svg { color: rgba(255,255,255,0.22); flex-shrink: 0; }
 
@@ -4768,8 +4816,62 @@ body.ai-tweaker-active .top-bar {
 }
 
 /* ── Right info column ── */
-.ai-right-col { display: flex; flex-direction: column; gap: 8px; }
+.ai-right-col { display: flex; flex-direction: column; gap: 8px; transition: opacity 0.18s ease; }
 .ai-info-col  { display: flex; flex-direction: column; gap: 8px; }
+
+/* ── Focus Mode button ── */
+.ai-focus-btn {
+  width: 28px; height: 28px; flex-shrink: 0;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 7px; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.18s, color 0.18s;
+}
+.ai-focus-btn:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+.ai-focus-btn svg { width: 12px; height: 12px; }
+.ai-focus-icon-exit { display: none; }
+
+/* ── Focus Mode layout ── */
+@keyframes ai-focus-expand {
+  from { transform: scale(0.995); opacity: 0.90; }
+  to   { transform: scale(1);     opacity: 1; }
+}
+@keyframes ai-focus-glow {
+  0%   { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), 0 6px 32px rgba(0,0,0,0.42); }
+  42%  { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22), 0 0 52px rgba(255,255,255,0.10), 0 0 0 1px rgba(255,255,255,0.07), 0 10px 44px rgba(255,255,255,0.06); }
+  100% { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), 0 0 30px rgba(255,255,255,0.05), 0 8px 38px rgba(0,0,0,0.36); }
+}
+
+#page-ai-tweaker.ai-focus-mode .ai-hero {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  pointer-events: none;
+}
+
+#page-ai-tweaker.ai-focus-mode .ai-content-layout {
+  grid-template-columns: 1fr 0px;
+  column-gap: 0;
+}
+
+#page-ai-tweaker.ai-focus-mode .ai-right-col {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#page-ai-tweaker.ai-focus-mode .ai-privacy-strip,
+#page-ai-tweaker.ai-focus-mode .ai-pull-card { display: none; }
+
+#page-ai-tweaker.ai-focus-mode .ai-main-card {
+  border-color: rgba(255,255,255,0.15);
+  animation: ai-focus-expand 0.28s cubic-bezier(0.22,1,0.36,1) forwards,
+             ai-focus-glow   0.32s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+
+#page-ai-tweaker.ai-focus-mode .ai-focus-icon-expand { display: none; }
+#page-ai-tweaker.ai-focus-mode .ai-focus-icon-exit   { display: block; }
 
 .ai-info-card {
   padding: 13px 14px;
@@ -4782,9 +4884,9 @@ body.ai-tweaker-active .top-bar {
 .ai-info-card-hdr {
   display: flex; align-items: center; gap: 6px; margin-bottom: 9px;
   font-size: 10.5px; font-weight: 800; letter-spacing: 0.9px; text-transform: uppercase;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.92);
 }
-.ai-info-card-hdr svg { color: rgba(195,195,200,0.55); flex-shrink: 0; }
+.ai-info-card-hdr svg { color: rgba(255,255,255,0.62); flex-shrink: 0; }
 
 .ai-info-rows { display: flex; flex-direction: column; gap: 5px; }
 
@@ -4796,9 +4898,9 @@ body.ai-tweaker-active .top-bar {
 }
 .ai-info-row:hover { background: rgba(255,255,255,0.045); }
 
-.ai-info-lbl { font-size: 12.5px; color: var(--text-muted); }
-.ai-info-val { font-size: 12.5px; font-weight: 600; color: var(--text-dim); text-align: right; }
-.ai-info-accent { color: rgba(255,255,255,0.85); }
+.ai-info-lbl { font-size: 12.5px; color: rgba(255,255,255,0.72); font-weight: 500; }
+.ai-info-val { font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.88); text-align: right; }
+.ai-info-accent { color: rgba(255,255,255,0.92); }
 .ai-info-good   { color: var(--success); }
 .ai-info-warn   { color: var(--warning); }
 .ai-info-err    { color: var(--error); }
@@ -4806,15 +4908,15 @@ body.ai-tweaker-active .top-bar {
 .ai-caps-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .ai-caps-list li {
   display: flex; align-items: center; gap: 7px;
-  font-size: 12.5px; color: var(--text-muted); line-height: 1.4;
+  font-size: 12.5px; font-weight: 500; color: rgba(255,255,255,0.72); line-height: 1.4;
 }
 .ai-caps-list li::before {
   content: ''; width: 4px; height: 4px; border-radius: 50%;
-  background: rgba(255,255,255,0.28); flex-shrink: 0;
+  background: rgba(255,255,255,0.45); flex-shrink: 0;
 }
 
 .ai-note-card { border-color: rgba(255,255,255,0.07); }
-.ai-note-text { font-size: 12.5px; color: var(--text-muted); line-height: 1.62; }
+.ai-note-text { font-size: 12.5px; font-weight: 500; color: rgba(255,255,255,0.72); line-height: 1.62; }
 
 /* ── Footer status bar (subtle) ── */
 .ai-footer-bar {
@@ -4923,7 +5025,8 @@ body.ai-tweaker-active .top-bar {
   align-items: center;
   gap: 9px;
   font-size: 12.5px;
-  color: var(--text-muted);
+  font-weight: 500;
+  color: rgba(255,255,255,0.75);
   line-height: 1.35;
   counter-increment: ai-step;
 }
@@ -5519,6 +5622,111 @@ ol.ai-msg-list li {
   border-top: 1px solid rgba(255,255,255,0.05);
 }
 
+/* ── "Don't suggest again" dismiss button per tweak row ── */
+.ai-tweak-dismiss-btn {
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 2px 6px;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 5px;
+  color: rgba(150,145,140,0.55);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+.ai-tweak-row:hover .ai-tweak-dismiss-btn { opacity: 1; }
+.ai-tweak-dismiss-btn:hover { color: rgba(252,165,165,0.8); border-color: rgba(252,165,165,0.3); }
+
+/* ── "Already Optimized" collapsible section ── */
+.ai-rec-already-section {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 0;
+}
+.ai-rec-already-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  color: rgba(110,231,183,0.65);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s;
+  letter-spacing: 0.02em;
+}
+.ai-rec-already-toggle:hover { color: rgba(110,231,183,0.9); }
+.ai-rec-already-toggle svg { transition: transform 0.2s; flex-shrink: 0; }
+.ai-rec-already-toggle.open svg { transform: rotate(90deg); }
+.ai-rec-already-list { padding-bottom: 4px; }
+
+/* ── "All done" message ── */
+.ai-rec-all-done {
+  padding: 12px 16px;
+  font-size: 12px;
+  color: rgba(110,231,183,0.70);
+  font-style: italic;
+}
+
+/* ── "Keep open" button in background card ── */
+.ai-bg-keep-btn {
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 3px 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 6px;
+  color: rgba(175,170,160,0.70);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.ai-bg-keep-btn:hover { background: rgba(255,255,255,0.09); color: rgba(220,215,205,0.9); }
+.ai-bg-keep-btn.ai-bg-keep-active {
+  color: rgba(110,231,183,0.80);
+  border-color: rgba(110,231,183,0.25);
+  background: rgba(110,231,183,0.06);
+}
+.ai-bg-keep-btn:disabled { cursor: default; }
+
+/* ── AI Tweaker: viewport-contained scrolling ── */
+/* When AI Tweaker is active, prevent the outer .content area from scrolling */
+.content:has(#page-ai-tweaker.active) {
+  overflow-y: hidden;
+}
+/* page-body becomes a full-height flex column so height flows down */
+.content:has(#page-ai-tweaker.active) .page-body {
+  height: 100%;
+  box-sizing: border-box;
+  padding-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+}
+/* AI Tweaker page fills its flex slot; override .page.active { display: block } */
+#page-ai-tweaker.active {
+  display: flex !important;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+/* Right info column scrolls independently if cards overflow the viewport */
+.ai-right-col {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.10) transparent;
+}
+.ai-right-col::-webkit-scrollbar { width: 3px; }
+.ai-right-col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 4px; }
+
 /* ── UI polish: hero glow, card focus glow ── */
 #page-ai-tweaker .ai-hero::before {
   content: '';
@@ -5572,18 +5780,16 @@ ol.ai-msg-list li {
 
 /* ── Card keyframes ── */
 @keyframes ai-welcome-card-in {
-  from { opacity: 0; transform: translateY(30px) scale(0.97); }
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
 @keyframes ai-welcome-card-out {
   from { opacity: 1; transform: translateY(0)    scale(1);    }
-  to   { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to   { opacity: 0; transform: translateY(12px) scale(0.96); }
 }
-
-/* ── Staggered fade-up for each modal element ── */
-@keyframes ai-welcome-fade-up {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0);    }
+@keyframes ai-welcome-svg-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
 
 /* ── Orb pulse ── */
@@ -5660,7 +5866,7 @@ ol.ai-msg-list li {
   padding: 24px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 300ms cubic-bezier(0.16,1,0.3,1);
+  transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .ai-welcome-overlay.is-open {
   opacity: 1;
@@ -5678,13 +5884,13 @@ ol.ai-msg-list li {
   opacity: 0;
   transition: opacity 300ms cubic-bezier(0.16,1,0.3,1);
 }
-
-/* ── Staggered element entrance ── */
+/* SVG entrance — slight delay so card outline appears first */
 .ai-welcome-overlay.is-open .ai-welcome-svg-asset {
-  animation: ai-welcome-fade-up 700ms cubic-bezier(0.22, 1, 0.36, 1) 0.10s both;
+  animation: ai-welcome-svg-in 800ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
 }
-.ai-welcome-overlay.is-open .ai-welcome-footer {
-  animation: ai-welcome-fade-up 550ms cubic-bezier(0.22, 1, 0.36, 1) 0.36s both;
+/* Keep SVG fully opaque during card-out so it fades with the card */
+.ai-welcome-overlay.is-closing .ai-welcome-svg-asset {
+  opacity: 1;
 }
 
 /* ── SVG main visual — fills modal top edge-to-edge ── */
@@ -5699,11 +5905,69 @@ ol.ai-msg-list li {
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
+  opacity: 0;
+}
+
+/* ── Inline SVG internal element setup ── */
+.ai-svg-orb,
+.ai-svg-orb-sphere,
+.ai-svg-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Orb group entrance — CSS triggered by is-open */
+.ai-welcome-overlay.is-open .ai-svg-orb {
+  animation: ai-svg-orb-in 700ms cubic-bezier(0.22, 1, 0.36, 1) 150ms both;
+}
+/* Orb sphere breathe glow — always loops when SVG is rendered */
+.ai-svg-orb-sphere {
+  animation: ai-svg-orb-glow 2.5s ease-in-out infinite;
+}
+/* Pagination dots group entrance */
+.ai-welcome-overlay.is-open .ai-svg-dots {
+  animation: ai-svg-fade-up 500ms cubic-bezier(0.22, 1, 0.36, 1) 300ms both;
+}
+/* Dots sequential pulse */
+.ai-svg-dot {
+  animation: ai-svg-dot-pulse 1.8s ease-in-out infinite;
+}
+.ai-svg-dots .ai-svg-dot:nth-child(2) { animation-delay: 0.30s; }
+.ai-svg-dots .ai-svg-dot:nth-child(3) { animation-delay: 0.60s; }
+/* Title entrance */
+.ai-welcome-overlay.is-open .ai-svg-title {
+  animation: ai-svg-fade-up 600ms cubic-bezier(0.22, 1, 0.36, 1) 360ms both;
+}
+/* Subtitle entrance */
+.ai-welcome-overlay.is-open .ai-svg-subtitle {
+  animation: ai-svg-fade-up 600ms cubic-bezier(0.22, 1, 0.36, 1) 460ms both;
+}
+/* Badge entrance */
+.ai-welcome-overlay.is-open .ai-svg-badge {
+  animation: ai-svg-fade-up 500ms cubic-bezier(0.22, 1, 0.36, 1) 560ms both;
+}
+
+@keyframes ai-svg-orb-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0px)  scale(1);    }
+}
+@keyframes ai-svg-orb-glow {
+  0%, 100% { filter: drop-shadow(0 0  6px rgba(255,255,255,0.10)); }
+  50%       { filter: drop-shadow(0 0 22px rgba(255,255,255,0.45)); }
+}
+@keyframes ai-svg-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0px);  }
+}
+@keyframes ai-svg-dot-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(1);   }
+  50%       { opacity: 1;    transform: scale(1.4); }
 }
 
 /* Modal card — background matches SVG's #111 so SVG blends seamlessly */
 .ai-welcome-modal {
   width: 360px; max-width: 100%;
+  opacity: 0;
   background: #111111;
   border: 1px solid rgba(255,255,255,0.18);
   border-radius: 24px;
@@ -5885,9 +6149,17 @@ ol.ai-msg-list li {
 @media (prefers-reduced-motion: reduce) {
   .ai-welcome-overlay { transition: none !important; }
   .ai-welcome-overlay.is-open .ai-welcome-modal,
-  .ai-welcome-overlay.is-closing .ai-welcome-modal { animation: none !important; opacity: 1; transform: none; }
+  .ai-welcome-overlay.is-closing .ai-welcome-modal { animation: none !important; opacity: 1 !important; transform: none !important; }
   .ai-welcome-overlay.is-open .ai-welcome-svg-asset,
-  .ai-welcome-overlay.is-open .ai-welcome-footer { animation: none !important; opacity: 1; transform: none; }
+  .ai-welcome-overlay.is-closing .ai-welcome-svg-asset { animation: none !important; opacity: 1 !important; transform: none !important; }
+  /* Internal SVG groups — show immediately, no entrance motion */
+  .ai-welcome-overlay.is-open .ai-svg-orb,
+  .ai-welcome-overlay.is-open .ai-svg-dots,
+  .ai-welcome-overlay.is-open .ai-svg-title,
+  .ai-welcome-overlay.is-open .ai-svg-subtitle,
+  .ai-welcome-overlay.is-open .ai-svg-badge { animation: none !important; opacity: 1 !important; transform: none !important; }
+  /* Disable loop animations on SVG internals */
+  .ai-svg-orb-sphere, .ai-svg-dot { animation: none !important; }
   .ai-welcome-ambient,
   .ai-welcome-init-dot,
   .ai-welcome-continue-btn::after { animation: none !important; }
@@ -5948,6 +6220,7 @@ ol.ai-msg-list li {
   border-radius: 10px;
   margin: 0 14px 12px;
   overflow: hidden;
+  flex-shrink: 0;
   transition: border-color 0.2s, background 0.2s;
 }
 .ai-not-running-notice:hover {
@@ -5986,98 +6259,126 @@ ol.ai-msg-list li {
   font-size: 11px; color: rgba(145,143,140,0.72); line-height: 1.4;
 }
 
-.ai-nrn-actions {
-  display: flex; align-items: center; gap: 7px; flex-shrink: 0;
+.ai-nrn-cta-row {
+  padding: 0 15px 15px;
 }
 
-/* ── Sweep border: custom property for conic-gradient angle animation ── */
-@property --nrn-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-@keyframes nrn-border-sweep {
-  to { --nrn-angle: 360deg; }
+/* ── Shine sweep across the glass button face ── */
+@keyframes nrn-shine-sweep {
+  0%     { transform: skewX(-12deg) translateX(-130%); opacity: 0; }
+  4%     { opacity: 0.70; }
+  22%    { transform: skewX(-12deg) translateX(280%);  opacity: 0.70; }
+  24%    { transform: skewX(-12deg) translateX(280%);  opacity: 0; }
+  24.01% { transform: skewX(-12deg) translateX(-130%); opacity: 0; }
+  100%   { transform: skewX(-12deg) translateX(-130%); opacity: 0; }
 }
 
+/* White liquid-glass primary CTA */
 .ai-nrn-primary {
-  padding: 6px 13px;
-  background: rgba(255,255,255,0.09);
-  border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 7px;
-  color: rgba(255,255,255,0.95);
-  font-size: 12px; font-weight: 700;
+  /* Size & layout */
+  width: 100%;
+  padding: 11px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 10px;
+
+  /* Glass surface */
+  background: linear-gradient(
+    158deg,
+    rgba(255,255,255,0.97) 0%,
+    rgba(224,224,230,0.93) 100%
+  );
+  border: 1px solid rgba(255,255,255,0.78);
+  color: rgba(10,10,14,0.90);
+
+  /* Typography */
+  font-size: 13px;
+  font-weight: 800;
   font-family: 'Outfit', sans-serif;
-  cursor: pointer; white-space: nowrap;
-  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+  letter-spacing: 0.015em;
+  cursor: pointer;
+  white-space: nowrap;
+
+  /* Default soft glow */
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.22),
+    0 0 0 1px rgba(255,255,255,0.14),
+    0 2px 18px rgba(255,255,255,0.08),
+    inset 0 1px 0 rgba(255,255,255,1);
+
+  /* Transitions */
+  transition: background 0.20s, box-shadow 0.22s, transform 0.14s, border-color 0.18s;
+
+  /* Clip the shine pseudo-element */
+  overflow: hidden;
   position: relative;
 }
 
-/* Animated sweeping glow-line around the button border */
+/* Animated shine sweep across the glass face */
 .ai-nrn-primary::before {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: 7px;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--nrn-angle),
-    rgba(255,255,255,0)     0deg,
-    rgba(255,255,255,0)   278deg,
-    rgba(255,255,255,0.07) 294deg,
-    rgba(255,255,255,0.48) 312deg,
-    rgba(255,255,255,0.88) 327deg,
-    rgba(255,255,255,0.48) 342deg,
-    rgba(255,255,255,0.07) 354deg,
-    rgba(255,255,255,0)   360deg
+  top: -25%;
+  left: 0;
+  width: 42%;
+  height: 150%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.58) 50%,
+    transparent 100%
   );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: destination-out;
-  mask-composite: exclude;
-  animation: nrn-border-sweep 2.4s linear infinite;
-  filter: drop-shadow(0 0 3px rgba(255,255,255,0.28));
+  transform: skewX(-12deg) translateX(-130%);
+  animation: nrn-shine-sweep 4.5s linear infinite;
   pointer-events: none;
-  transition: filter 0.18s ease, opacity 0.18s ease;
-}
-.ai-nrn-primary:hover:not(:disabled)::before {
-  filter: drop-shadow(0 0 6px rgba(255,255,255,0.52));
-}
-.ai-nrn-primary:active:not(:disabled)::before {
-  filter: drop-shadow(0 0 2px rgba(255,255,255,0.18));
-  opacity: 0.55;
-}
-.ai-nrn-primary:disabled::before {
-  animation-play-state: paused;
-  opacity: 0.15;
-  filter: none;
 }
 
 .ai-nrn-primary:hover:not(:disabled) {
-  background: rgba(255,255,255,0.16);
-  border-color: rgba(255,255,255,0.28);
+  background: linear-gradient(
+    158deg,
+    rgba(255,255,255,1) 0%,
+    rgba(236,236,242,0.98) 100%
+  );
+  border-color: rgba(255,255,255,0.92);
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.18),
+    0 0 0 1px rgba(255,255,255,0.28),
+    0 4px 28px rgba(255,255,255,0.18),
+    0 0 48px rgba(255,255,255,0.07),
+    inset 0 1px 0 rgba(255,255,255,1);
   transform: translateY(-1px);
 }
-.ai-nrn-primary:active:not(:disabled) { transform: translateY(0); }
-.ai-nrn-primary:disabled {
-  opacity: 0.38; cursor: not-allowed; transform: none;
+
+.ai-nrn-primary:active:not(:disabled) {
+  background: linear-gradient(
+    158deg,
+    rgba(228,228,234,0.97) 0%,
+    rgba(212,212,218,0.95) 100%
+  );
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.20),
+    0 0 0 1px rgba(255,255,255,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.82),
+    inset 0 1px 3px rgba(0,0,0,0.06);
+  transform: scale(0.987) translateY(0.5px);
 }
 
-.ai-nrn-recheck {
-  padding: 6px 11px;
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 7px;
-  color: rgba(155,153,150,0.70);
-  font-size: 11.5px; font-family: 'Outfit', sans-serif;
-  cursor: pointer; white-space: nowrap;
-  transition: background 0.14s, border-color 0.14s, color 0.14s;
+.ai-nrn-primary:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  transform: none;
 }
-.ai-nrn-recheck:hover {
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.15);
-  color: rgba(200,198,195,0.85);
+
+.ai-nrn-primary:disabled::before {
+  animation-play-state: paused;
+  opacity: 0;
+}
+
+.ai-nrn-btn-icon {
+  flex-shrink: 0;
+  opacity: 0.65;
 }
 
 /* Animated progress bar inside the strip */
@@ -6131,9 +6432,16 @@ ol.ai-msg-list li {
 
 /* Reduced motion for new elements */
 @media (prefers-reduced-motion: reduce) {
-  .ai-nrn-progress-bar { animation: none !important; }
-  .ai-nrn-primary::before { animation: none !important; opacity: 0 !important; }
+  .ai-nrn-progress-bar         { animation: none !important; }
+  .ai-nrn-primary::before      { animation: none !important; opacity: 0 !important; }
+  .ai-nrn-primary:hover:not(:disabled) { transform: none; }
   .ai-chip { transform: none !important; transition: background 0.14s, border-color 0.14s; }
+  .ai-input-bar::before        { animation: none !important; opacity: 0 !important; }
+  .ai-hero                     { transition: none !important; }
+  .ai-content-layout           { transition: none !important; }
+  .ai-right-col                { transition: none !important; }
+  .ai-main-card                { transition: none !important; }
+  #page-ai-tweaker.ai-focus-mode .ai-main-card { animation: none !important; }
   .ai-online-dot.connected,
   .ai-footer-dot.connected { animation: none !important; }
 }
