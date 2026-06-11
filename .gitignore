@@ -4,4 +4,16 @@ dist/
 .env
 .env.local
 *.log
-firebase-service-account.json
+firebase-service-account.jsonnode_modules/
+build/
+bin/
+dist/
+.env
+.env.*
+*.log
+.claude/
+.codex/
+.cursor/
+.continue/
+.vscode/.chat/
+.DS_Store
