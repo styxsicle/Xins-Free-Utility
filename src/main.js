@@ -10,6 +10,10 @@ const xinAuth = require('./xin-auth');
 const firebaseConfig = require('./firebase-config');
 const APP_ID = 'xin-premium-optimizer';
 
+// Set userData before ready so Electron can create its cache without access-denied errors.
+const appDataRoot = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+app.setPath('userData', path.join(appDataRoot, 'XinPremiumOptimizer'));
+
 let mainWindow;
 let nativeAddon = null;
 
@@ -55,12 +59,8 @@ app.whenReady().then(async () => {
         return;
     }
 
-    console.log('\n╔════════════════════════════════════════════════════════════╗');
-    console.log('║   Xin Tweaks - Ultimate Tweaking Utility by Xin            ║');
-    console.log('║                      Debug Console                          ║');
-    console.log('╚════════════════════════════════════════════════════════════╝\n');
-    console.log('[STARTUP] Application starting...');
-    console.log('[STARTUP] All tweak operations will be logged below.\n');
+    console.log('[XIN TWEAKS] Xin Premium Optimizer starting...');
+    console.log('[XIN TWEAKS] Debug console ready. All tweak operations will be logged below.');
     createWindow();
 });
 
