@@ -11,8 +11,6 @@ dist/
 .env
 .env.*
 *.log
-.claude/
-.codex/
 .cursor/
 .continue/
 .vscode/.chat/
