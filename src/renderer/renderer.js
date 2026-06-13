@@ -22,6 +22,8 @@ function initializeApp() {
     startLiveMonitoring();
     initializeGpuPage();
     initializeAiTweaker();
+    initializeNetworkCards();
+    initializeDnsOptimizer();
 }
 
 function initializeExternalLinks() {
@@ -52,6 +54,25 @@ function initializeWindowControls() {
     });
 }
 
+function _integrateNetTopBar() {
+    const bar = document.querySelector('.top-bar');
+    const netPage = document.getElementById('page-network');
+    const filterBar = netPage && netPage.querySelector('.net-filter-bar');
+    if (!bar || !netPage || !filterBar || bar.parentElement === netPage) return;
+    netPage.insertBefore(bar, filterBar);
+    bar.classList.add('net-integrated');
+}
+
+function _restoreNetTopBar() {
+    const bar = document.querySelector('.top-bar');
+    if (!bar || !bar.classList.contains('net-integrated')) return;
+    const main = document.querySelector('.content');
+    const pageBody = document.querySelector('.page-body');
+    if (!main || !pageBody) return;
+    main.insertBefore(bar, pageBody);
+    bar.classList.remove('net-integrated');
+}
+
 function initializeNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     const pages = document.querySelectorAll('.page');
@@ -72,6 +93,8 @@ function initializeNavigation() {
 
             if (targetPage === 'ai-tweaker') {
                 document.body.classList.add('ai-tweaker-active');
+                document.body.classList.remove('net-page-active');
+                _restoreNetTopBar();
                 // Re-run entrance animation on every visit
                 const aiPage = document.getElementById('page-ai-tweaker');
                 if (aiPage) {
@@ -86,8 +109,14 @@ function initializeNavigation() {
                         if (ov) { ov.classList.remove('is-closing'); ov.classList.add('is-open'); }
                     }, 60);
                 }
+            } else if (targetPage === 'network') {
+                document.body.classList.remove('ai-tweaker-active');
+                document.body.classList.add('net-page-active');
+                _integrateNetTopBar();
             } else {
                 document.body.classList.remove('ai-tweaker-active');
+                document.body.classList.remove('net-page-active');
+                _restoreNetTopBar();
             }
         });
     });
@@ -1642,12 +1671,13 @@ function initializeDashboardExtras() {
         });
     });
 
-    // Global search — simple filter across toggle/tweak/cleanup cards by title text
+    // Global search — filter across toggle/tweak/cleanup cards by title text
+    // Network cards (data-net-cat) are excluded here; applyNetworkFilter() handles them
     const search = document.getElementById('global-search');
     if (search) {
         search.addEventListener('input', (e) => {
             const q = e.target.value.trim().toLowerCase();
-            const cards = document.querySelectorAll('.toggle-card, .tweak-card, .cleanup-card, .slider-card');
+            const cards = document.querySelectorAll('.toggle-card:not([data-net-cat]), .tweak-card, .cleanup-card, .slider-card');
             cards.forEach(card => {
                 const text = card.textContent.toLowerCase();
                 card.style.display = !q || text.includes(q) ? '' : 'none';
@@ -2466,6 +2496,9 @@ function initializeAiTweaker() {
             'explain why they affect performance, and give a risk level (Safe / Review). ' +
             'Do not recommend disabling critical Windows services (audio, network, security, RPC, WMI, etc.). ' +
             'Do not recommend closing security software. ' +
+            'NEVER recommend disabling or closing anti-cheat software: Riot Vanguard (vgc.exe, vgtray.exe), Easy Anti-Cheat (EasyAntiCheat.exe, EasyAntiCheat_launcher.exe), or BattlEye (BEService.exe, BELauncher.exe). These are kernel-level security drivers — disabling them will prevent protected games from launching and can result in hardware bans. Always warn the user if they ask about them. ' +
+            'Lunar Client (lunarclient.exe) is a Minecraft launcher with its own overlay and auto-updater — it is safe to close when not gaming. ' +
+            'NVIDIA ShadowPlay / GeForce Experience overlay (nvsphelper64.exe, nvsphelper.exe) hooks into the graphics pipeline; suggest disabling the in-game overlay in GeForce Experience settings rather than killing the process. ' +
             'If something is already optimized, say so rather than inventing improvements. ' +
             'Always say XTweaks will handle the action — never claim you directly closed or disabled anything. ' +
             'Always let the user confirm before any changes are made. ' +
@@ -2531,6 +2564,9 @@ function initializeAiTweaker() {
         'free up ram', 'free up memory', 'why is my pc slow', 'why is my computer slow',
         'what is slowing', 'optimize gaming', 'optimize my pc', 'kill background', 'check my background',
         'overlays', 'overlay apps', 'rgb software',
+        'anti cheat', 'anticheat', 'vanguard', 'battleye', 'easy anti cheat',
+        'lunar client', 'nvidia overlay', 'shadowplay', 'geforce overlay',
+        'adobe updater', 'google updater', 'onedrive sync',
         // Optimization status queries — also trigger bg context for full picture
         'how optimized', 'optimization score', 'optimization readiness', 'how good is my pc',
         'what have i tweaked', 'what tweaks did i', 'what have i applied', 'is my pc optimized',
@@ -2570,6 +2606,9 @@ function initializeAiTweaker() {
     let bgContext         = null;
     let bgContextTime     = 0;
     const BG_CONTEXT_TTL  = 60000;
+    let startupContext    = null;
+    let startupContextTime = 0;
+    const STARTUP_CTX_TTL_R = 90000;
     let pcContextFetchedAt = 0;
     const PC_CONTEXT_TTL   = 90000;
 
@@ -2587,25 +2626,63 @@ function initializeAiTweaker() {
 
     /* ── App name normalizer (dedup + display) ── */
     const APP_NAME_MAP = {
+        // OneDrive
         'onedrive': 'OneDrive', 'onedrivesetup': 'OneDrive', 'onedriveupdater': 'OneDrive',
+        // Epic Games
         'epicgameslauncher': 'Epic Games Launcher', 'epicwebhelper': 'Epic Games Launcher',
         'epiconlineservices': 'Epic Games Launcher',
+        // Google
         'googleupdater': 'Google Updater', 'googleupdatertaskuser': 'Google Updater',
-        'googledrivesync': 'Google Drive', 'googledrive': 'Google Drive',
+        'googleupdate': 'Google Updater', 'googleupdatecore': 'Google Updater',
+        'googledrivesync': 'Google Drive', 'googledrive': 'Google Drive', 'googledrivefs': 'Google Drive',
         'chrome': 'Google Chrome', 'googlechrome': 'Google Chrome',
+        // Steam
         'steam': 'Steam', 'steamwebhelper': 'Steam', 'steamservice': 'Steam',
+        'steamclient': 'Steam', 'steamerrorreporter': 'Steam',
+        // NVIDIA
         'nvcontainer': 'NVIDIA Services', 'nvtelemetrycontainer': 'NVIDIA Services',
+        'nvshadowplay': 'NVIDIA ShadowPlay', 'nvsphelper64': 'NVIDIA ShadowPlay', 'nvsphelper': 'NVIDIA ShadowPlay',
+        'geforceexperience': 'GeForce Experience', 'nvdisplay.container': 'NVIDIA Services',
+        'nvbackend': 'NVIDIA ShadowPlay',
+        // Riot / Vanguard
         'riotclientservices': 'Riot Client', 'riotclientux': 'Riot Client',
+        'riotclientcrashhandler': 'Riot Client',
+        'vgc': 'Riot Vanguard', 'vgtray': 'Riot Vanguard',
+        // EA
         'eadesktop': 'EA App', 'eabackgroundservice': 'EA App', 'easteam': 'EA App',
-        'battlenet': 'Battle.net',
+        'ealaunchhelper': 'EA App',
+        // Battle.net / Blizzard
+        'battlenet': 'Battle.net', 'battlenetlauncher': 'Battle.net', 'blizzardagent': 'Battle.net',
+        // Discord
         'discord': 'Discord', 'discordptb': 'Discord', 'discordcanary': 'Discord',
-        'teams': 'Microsoft Teams',
+        'update': 'Discord',
+        // Teams
+        'teams': 'Microsoft Teams', 'ms-teams': 'Microsoft Teams',
+        // Lunar Client
+        'lunarclient': 'Lunar Client', 'lunar': 'Lunar Client',
+        // Anti-cheat (display only — never suggest closing)
+        'easyanticheat': 'Easy Anti-Cheat', 'easyanticheat_launcher': 'Easy Anti-Cheat',
+        'eaclaunch': 'Easy Anti-Cheat',
+        'beservice': 'BattlEye', 'belvservice': 'BattlEye', 'belauncher': 'BattlEye',
+        // Adobe
+        'adobeupdateservice': 'Adobe Updater', 'adobeupdatedaemon': 'Adobe Updater',
+        'adobegcclient': 'Adobe Creative Cloud', 'creativecloudapp': 'Adobe Creative Cloud',
+        'coresyncdaemon': 'Adobe Creative Cloud', 'adobeipccbroker': 'Adobe Creative Cloud',
+        'adobedesktop': 'Adobe Creative Cloud',
+        // Xbox / Game Bar (Windows built-in)
+        'gamebar': 'Xbox Game Bar', 'xboxgamemonitor': 'Xbox Game Monitor',
+        'gamebarftserver': 'Xbox Game Bar', 'gamebarfthost': 'Xbox Game Bar',
     };
     function normalizeAppName(raw) {
         if (!raw) return raw || '';
-        const key = raw.toLowerCase().replace(/[\s._\-]+/g, '');
+        const key = raw.toLowerCase().replace(/[\s._\-]+/g, '').replace(/\.exe$/i, '');
         return APP_NAME_MAP[key] || raw;
     }
+
+    // Apps that must never be recommended for closing/disabling — flagged in AI context
+    const PROTECTED_APPS = new Set([
+        'Riot Vanguard', 'Easy Anti-Cheat', 'BattlEye',
+    ]);
 
     /* ── Optimization score — 5-category, confidence-aware ── */
     function computeOptimizationScore(states, bgCtx) {
@@ -3442,7 +3519,9 @@ function initializeAiTweaker() {
                 const ram      = p?.ramMB ? `, ${p.ramMB} MB RAM` : '';
                 const states   = [p && 'Running', s && 'Startup Enabled'].filter(Boolean).join(' + ');
                 const canClose = p?.safeToClose, canDisable = s?.safeToDisable;
-                const action   = canClose && canDisable ? 'safe to close and disable from startup'
+                const isProtected = PROTECTED_APPS.has(name);
+                const action   = isProtected          ? 'DO NOT DISABLE — anti-cheat/security software'
+                               : canClose && canDisable ? 'safe to close and disable from startup'
                                : canClose               ? 'safe to close'
                                : canDisable             ? 'safe to disable from startup'
                                : 'review only';
@@ -3461,6 +3540,63 @@ function initializeAiTweaker() {
         }
 
         return lines.length > 0 ? lines.join('\n') : '';
+    }
+
+    /* ── Startup context helpers ── */
+    async function loadStartupContext() {
+        if (!window.electronAPI.getStartupContext) return;
+        if (startupContext && !startupContext.scanFailed && (Date.now() - startupContextTime) < STARTUP_CTX_TTL_R) return;
+        try {
+            const data = await window.electronAPI.getStartupContext();
+            if (data) { startupContext = data; startupContextTime = Date.now(); }
+        } catch { startupContext = { scanFailed: true }; }
+    }
+
+    const BUCKET_LABEL = {
+        safe:           'Usually safe to disable from startup',
+        'game-dependent':'Game-dependent — keep if you use this game',
+        review:         'Review before disabling',
+        protected:      'Do not disable (system/driver)',
+        unknown:        'Unknown — review manually',
+        optional:       'Optional / user preference',
+    };
+
+    function formatStartupContextForAI(ctx) {
+        if (!ctx || ctx.scanFailed) {
+            return ctx && ctx.scanFailed
+                ? 'Startup Scan: failed — could not read startup data from this PC. Do not guess startup apps.'
+                : '';
+        }
+        const ageS   = ctx.scannedAt ? Math.round((Date.now() - ctx.scannedAt) / 1000) : 0;
+        const source = ctx.fromCache  ? `cached ${ageS}s ago` : `live scan ${ageS}s ago`;
+        const lines  = [`Startup Scan Results (${source}):`];
+
+        const all = [
+            ...(ctx.registryEntries || []).map(e => ({ ...e, sourceLabel: 'Registry Run' })),
+            ...(ctx.folderEntries   || []).map(e => ({ ...e, sourceLabel: 'Startup Folder' })),
+        ];
+
+        if (all.length > 0) {
+            lines.push('Registry & Folder Startup Entries:');
+            for (const e of all) {
+                const bucket = BUCKET_LABEL[e.bucket] || e.bucket;
+                const cmd    = e.command ? ` [${e.command.slice(0, 80)}]` : '';
+                lines.push(`  - ${e.display || e.name} (${e.category}) [${e.sourceLabel}] — ${bucket}${cmd}`);
+            }
+        } else {
+            lines.push('Registry & Folder Startup Entries: none found (scan may have returned empty).');
+        }
+
+        const tasks = ctx.scheduledTasks || [];
+        if (tasks.length > 0) {
+            lines.push('Scheduled Startup Tasks (logon/boot triggered, non-Microsoft):');
+            for (const t of tasks.slice(0, 25)) {
+                const bucket = BUCKET_LABEL[t.bucket] || t.bucket;
+                lines.push(`  - ${t.display || t.name} (${t.category}) [${t.state}] — ${bucket}`);
+            }
+        }
+
+        return lines.join('\n');
     }
 
     /* ── Background Optimization Card ── */
@@ -4031,12 +4167,15 @@ function initializeAiTweaker() {
             const intent = detectIntent(trimmed);
             if (intent) {
                 if (intent.type === 'background') {
-                    // Refresh bg context if stale, then show bg card
-                    const needRefresh = !bgContext || (Date.now() - bgContextTime) > BG_CONTEXT_TTL;
-                    (needRefresh
-                        ? window.electronAPI.getBackgroundContext().then(d => { if (d) { bgContext = d; bgContextTime = Date.now(); } }).catch(() => {})
-                        : Promise.resolve()
-                    ).then(() => {
+                    // Refresh bg context + startup context if stale, then show bg card
+                    const needBgRefresh      = !bgContext      || (Date.now() - bgContextTime)      > BG_CONTEXT_TTL;
+                    const needStartupRefresh = !startupContext || (Date.now() - startupContextTime) > STARTUP_CTX_TTL_R;
+                    const refreshes = [];
+                    if (needBgRefresh)
+                        refreshes.push(window.electronAPI.getBackgroundContext().then(d => { if (d) { bgContext = d; bgContextTime = Date.now(); } }).catch(() => {}));
+                    if (needStartupRefresh && window.electronAPI.getStartupContext)
+                        refreshes.push(window.electronAPI.getStartupContext().then(d => { if (d) { startupContext = d; startupContextTime = Date.now(); } }).catch(() => {}));
+                    Promise.all(refreshes).then(() => {
                         setTimeout(() => {
                             const bgCard = buildBackgroundOptCard();
                             if (bgCard) {
@@ -4155,11 +4294,13 @@ function initializeAiTweaker() {
 
         const p = (async () => {
             try {
-                const [raw, bgRaw] = await Promise.all([
+                const [raw, bgRaw, startupRaw] = await Promise.all([
                     window.electronAPI.getAISystemContext(),
-                    window.electronAPI.getBackgroundContext().catch(() => null)
+                    window.electronAPI.getBackgroundContext().catch(() => null),
+                    window.electronAPI.getStartupContext ? window.electronAPI.getStartupContext().catch(() => null) : Promise.resolve(null),
                 ]);
-                if (bgRaw) { bgContext = bgRaw; bgContextTime = Date.now(); }
+                if (bgRaw)      { bgContext = bgRaw;           bgContextTime     = Date.now(); }
+                if (startupRaw) { startupContext = startupRaw; startupContextTime = Date.now(); }
                 const lines = [];
 
                 // CPU
@@ -4255,6 +4396,9 @@ function initializeAiTweaker() {
 
                 const bgStr = formatBgContextForAI(bgContext);
                 if (bgStr) pcContext += '\n\n' + bgStr;
+
+                const startupStr = formatStartupContextForAI(startupContext);
+                if (startupStr) pcContext += '\n\n' + startupStr;
 
                 // Attach saved preferences for AI context
                 const prefs = loadAIPrefs();
@@ -4520,4 +4664,845 @@ function initializeAiTweaker() {
 
     setInputEnabled(false);
     checkOllama();
+}
+
+// ── Network Card Actions ──────────────────────────────────────
+function initializeNetworkCards() {
+    // ── Tab filter + search ────────────────────────────────────
+    let netActiveFilter = 'all';
+
+    function applyNetworkFilter() {
+        const q = (document.getElementById('global-search')?.value || '').trim().toLowerCase();
+        const allCards = document.querySelectorAll('#page-network [data-net-cat]');
+        let featuredVisible = 0;
+        let advancedVisible = 0;
+
+        allCards.forEach(card => {
+            const cats = (card.dataset.netCat || '').split(' ');
+            const text  = card.textContent.toLowerCase();
+            const catOk  = netActiveFilter === 'all' || cats.includes(netActiveFilter);
+            const textOk = !q || text.includes(q);
+            const show   = catOk && textOk;
+            card.style.display = show ? '' : 'none';
+            if (show) {
+                if (card.classList.contains('net-pcard'))   featuredVisible++;
+                else                                        advancedVisible++;
+            }
+        });
+
+        // Show/hide whole sections (heading + grid) when empty
+        const featuredSection = document.querySelector('#page-network .net-section:not(.net-section-adv)');
+        const advancedSection = document.querySelector('#page-network .net-section-adv');
+        if (featuredSection) featuredSection.style.display = featuredVisible  > 0 ? '' : 'none';
+        if (advancedSection) advancedSection.style.display = advancedVisible > 0 ? '' : 'none';
+
+        // Empty state message
+        let emptyEl = document.getElementById('net-empty-state');
+        if (!emptyEl) {
+            emptyEl = document.createElement('p');
+            emptyEl.id        = 'net-empty-state';
+            emptyEl.className = 'net-empty-state';
+            emptyEl.textContent = 'No matching network tools found.';
+            document.getElementById('page-network')?.appendChild(emptyEl);
+        }
+        emptyEl.style.display = (featuredVisible + advancedVisible) === 0 ? '' : 'none';
+    }
+
+    // Wire pointer-following aurora for network cards (not handled by enhanceToggleCards)
+    document.querySelectorAll('#page-network [data-net-cat]').forEach(card => {
+        card.addEventListener('pointermove', (e) => {
+            const r = card.getBoundingClientRect();
+            card.style.setProperty('--mx', `${((e.clientX - r.left) / r.width)  * 100}%`);
+            card.style.setProperty('--my', `${((e.clientY - r.top)  / r.height) * 100}%`);
+        });
+    });
+
+    // Tab clicks
+    document.getElementById('net-filter-tabs')?.addEventListener('click', (e) => {
+        const tab = e.target.closest('.net-filter-tab');
+        if (!tab) return;
+        document.querySelectorAll('.net-filter-tab').forEach(t => {
+            t.classList.remove('net-filter-active');
+            t.classList.remove('is-activating');
+        });
+        tab.classList.add('net-filter-active');
+        // Trigger flash keyframe — class removed when animation completes
+        tab.classList.add('is-activating');
+        tab.addEventListener('animationend', () => tab.classList.remove('is-activating'), { once: true });
+        netActiveFilter = tab.dataset.filter || 'all';
+        applyNetworkFilter();
+    });
+
+    // Search — re-run combined filter when network page is active
+    document.getElementById('global-search')?.addEventListener('input', () => {
+        if (document.getElementById('page-network')?.classList.contains('active')) {
+            applyNetworkFilter();
+        }
+    });
+
+    // Flush DNS
+    document.getElementById('flush-dns-btn')?.addEventListener('click', async function () {
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Flushing...';
+        try {
+            const r = await window.electronAPI.flushDns();
+            if (r.success) {
+                showNotification('success', 'DNS Flushed', 'DNS resolver cache cleared successfully.');
+            } else {
+                showNotification('error', 'Flush Failed', r.message || 'Could not flush DNS cache.');
+            }
+        } catch { showNotification('error', 'Error', 'Unexpected error during DNS flush.'); }
+        btn.disabled = false;
+        btn.textContent = 'Flush DNS';
+    });
+
+    // Release / Renew IP
+    document.getElementById('release-renew-btn')?.addEventListener('click', async function () {
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Working...';
+        showNotification('warning', 'IP Renewal', 'Releasing and renewing IP — may take up to 30s...');
+        try {
+            const r = await window.electronAPI.releaseRenewIp();
+            if (r.success) {
+                showNotification('success', 'IP Renewed', 'IP address released and renewed successfully.');
+            } else {
+                showNotification('error', 'IP Renewal Failed', r.message || 'Could not release/renew IP.');
+            }
+        } catch { showNotification('error', 'Error', 'Unexpected error during IP renewal.'); }
+        btn.disabled = false;
+        btn.textContent = 'Release/Renew';
+    });
+
+    // Packet Loss Test (10-ping to 1.1.1.1)
+    document.getElementById('packet-test-btn')?.addEventListener('click', async function () {
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Testing...';
+        try {
+            const r = await window.electronAPI.runPacketTest('1.1.1.1');
+            if (r.success && r.stats) {
+                const { averageMs, packetLoss, jitterMs } = r.stats;
+                showNotification('success', 'Packet Test — 1.1.1.1',
+                    `Avg: ${averageMs !== null ? averageMs + 'ms' : 'N/A'} | Loss: ${packetLoss !== null ? packetLoss + '%' : 'N/A'} | Jitter: ${jitterMs !== null ? Math.round(jitterMs) + 'ms' : 'N/A'}`
+                );
+            } else {
+                showNotification('error', 'Test Failed', r.message || 'Could not complete packet loss test.');
+            }
+        } catch { showNotification('error', 'Error', 'Unexpected error during packet test.'); }
+        btn.disabled = false;
+        btn.textContent = 'Run Test';
+    });
+
+    // Winsock Reset
+    document.getElementById('winsock-reset-btn')?.addEventListener('click', async function () {
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Resetting...';
+        try {
+            const r = await window.electronAPI.resetWinsock();
+            if (r.success) {
+                showNotification('warning', 'Winsock Reset', 'Winsock reset completed. A restart is required to take full effect.');
+            } else if (r.message && (r.message.toLowerCase().includes('access') || r.message.toLowerCase().includes('denied') || r.message.toLowerCase().includes('admin'))) {
+                showNotification('error', 'Admin Required', 'Run this app as Administrator to reset Winsock.');
+            } else {
+                showNotification('error', 'Reset Failed', r.message || 'Could not reset Winsock.');
+            }
+        } catch { showNotification('error', 'Error', 'Unexpected error during Winsock reset.'); }
+        btn.disabled = false;
+        btn.textContent = 'Reset Winsock';
+    });
+}
+
+// ── DNS Optimizer Popcard ─────────────────────────────────────
+function initializeDnsOptimizer() {
+    const modal    = document.getElementById('dns-modal');
+    const openBtn  = document.getElementById('open-dns-optimizer-btn');
+    const closeBtn = document.getElementById('dns-modal-close');
+    const backdrop = document.getElementById('dns-modal-backdrop');
+    if (!modal || !openBtn) return;
+
+    const DNS_CONFIGS = {
+        'Cloudflare': { servers: ['1.1.1.1',  '1.0.0.1'],           detail: 'Fast general-purpose DNS' },
+        'Google':     { servers: ['8.8.8.8',  '8.8.4.4'],            detail: 'Reliable, widely supported DNS' },
+        'Quad9':      { servers: ['9.9.9.9',  '149.112.112.112'],     detail: 'Security-focused DNS' },
+    };
+
+    let scanData         = null;
+    let selectedDns      = null;
+    let isCurrentDnsBest = false;
+    let currentRec       = null;   // latest pickRecommendation() output
+    let mode             = 'balanced'; // balanced | fastest | security
+    let scanDepth        = 'accurate'; // quick | accurate | deep
+    const SCAN_DEPTHS    = { quick: 1, accurate: 3, deep: 5 };
+    let lastScanTime     = null;
+    const fmtTime        = (d) => d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    // ── Open / Close ────────────────────────────────────────
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', closeModal);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.getAttribute('aria-hidden')) closeModal();
+    });
+
+    function openModal() {
+        modal.removeAttribute('aria-hidden');
+        modal.classList.add('dns-modal-visible');
+        runScan();
+    }
+    function closeModal() {
+        modal.setAttribute('aria-hidden', 'true');
+        modal.classList.remove('dns-modal-visible');
+        resetLog();
+    }
+
+    // ── State helpers ───────────────────────────────────────
+    function showState(id) {
+        document.querySelectorAll('.dns-state').forEach(el => el.classList.add('dns-hidden'));
+        document.getElementById(id)?.classList.remove('dns-hidden');
+    }
+    function setScanProgress(pct) {
+        const bar = document.getElementById('dns-scan-bar');
+        if (bar) bar.style.width = `${pct}%`;
+    }
+    function setScanStatus(msg) {
+        const el = document.getElementById('dns-scan-status');
+        if (el) el.textContent = msg;
+    }
+
+    // ── Log drawer ──────────────────────────────────────────
+    function resetLog() {
+        const el = document.getElementById('dns-log-entries');
+        if (el) el.innerHTML = '';
+    }
+    function addLog(msg, type = 'info') {
+        const el = document.getElementById('dns-log-entries');
+        if (!el) return;
+        const row = document.createElement('div');
+        row.className = `dns-log-row dns-log-${type}`;
+        const t = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        row.innerHTML = `<span class="dns-log-time">${t}</span><span class="dns-log-msg">${msg}</span>`;
+        el.appendChild(row);
+        el.scrollTop = el.scrollHeight;
+    }
+
+    // ── Rescan wiring ───────────────────────────────────────
+    document.getElementById('dns-rescan-btn')?.addEventListener('click', runScan);
+
+    // ── Mode selector wiring ─────────────────────────────────
+    document.getElementById('dns-mode-selector')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.dns-mode-btn');
+        if (!btn) return;
+        const newMode = btn.dataset.mode;
+        if (!newMode || newMode === mode) return;
+        mode = newMode;
+        document.querySelectorAll('.dns-mode-btn').forEach(b => b.classList.remove('dns-mode-active'));
+        btn.classList.add('dns-mode-active');
+        if (scanData) {
+            showResults(scanData); // re-evaluate with new mode, no rescan
+        }
+    });
+
+    document.getElementById('dns-depth-selector')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.dns-depth-btn');
+        if (!btn) return;
+        const newDepth = btn.dataset.depth;
+        if (!newDepth || newDepth === scanDepth) return;
+        scanDepth = newDepth;
+        document.querySelectorAll('.dns-depth-btn').forEach(b => b.classList.remove('dns-depth-active'));
+        btn.classList.add('dns-depth-active');
+        if (scanData) runScan(); // depth changed — old results are now stale
+    });
+
+    // VPN scope change invalidates current results
+    document.getElementById('dns-include-vpn')?.addEventListener('change', () => {
+        if (scanData) runScan();
+    });
+
+    // ── Confidence calculation ───────────────────────────────
+    function calcConfidence(pingResults, dnsLookup, dk, rounds) {
+        const issues = [];
+        let deductions = 0;
+
+        // Depth-based confidence adjustment
+        const r = rounds || 1;
+        if (r === 1) {
+            deductions += 15; // Quick scan: single round is noisy
+        } else if (r >= 5) {
+            deductions -= 10; // Deep scan: more data = more confidence
+        }
+
+        // Packet loss on any provider
+        pingResults.forEach(r => {
+            if (r.available && r.loss !== null && r.loss > 0) {
+                issues.push(`${r.loss}% packet loss on ${r.label}`);
+                deductions += r.loss > 10 ? 40 : 25;
+            }
+        });
+
+        // High jitter (>15 ms) on any provider
+        pingResults.forEach(r => {
+            if (r.available && r.jitter !== null && r.jitter > 15) {
+                issues.push(`high jitter on ${r.label} (${r.jitter}ms)`);
+                deductions += r.jitter > 30 ? 20 : 10;
+            }
+        });
+
+        // Margin between best and second-best DNS lookup
+        const withLookup = pingResults.filter(r => r.available && dnsLookup[dk(r.label)]?.available);
+        if (withLookup.length >= 2) {
+            const sorted = [...withLookup].sort((a, b) =>
+                dnsLookup[dk(a.label)].avg - dnsLookup[dk(b.label)].avg);
+            const margin = dnsLookup[dk(sorted[1].label)].avg - dnsLookup[dk(sorted[0].label)].avg;
+            if (margin < 5) {
+                issues.push(`results within 5ms — effectively identical`);
+                deductions += 35;
+            } else if (margin < 15) {
+                issues.push(`small margin between providers (${margin}ms)`);
+                deductions += 15;
+            }
+        } else if (withLookup.length < 2) {
+            issues.push('too few providers responded for comparison');
+            deductions += 20;
+        }
+
+        const score = Math.max(0, 100 - deductions);
+        return {
+            level: score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low',
+            score,
+            issues,
+        };
+    }
+
+    // ── Recommendation logic ─────────────────────────────────
+    // All providers compete on equal footing. Provider identity only affects
+    // labelling, not scoring — except in Security Focused mode where Quad9 is
+    // the explicit target.
+    function pickRecommendation(data, selectedMode, confidence) {
+        const dk = (label) => label === 'Current DNS' ? 'CurrentDNS' : label;
+        const allAvailable = data.pingResults.filter(r => r.available);
+        if (allAvailable.length === 0) {
+            return { action: 'none', best: null, reason: 'No providers responded.' };
+        }
+
+        const currentDl = data.dnsLookup?.['CurrentDNS'];
+
+        // Sort by DNS lookup latency; Current DNS wins ties so users aren't
+        // nudged into a switch with no real benefit.
+        const sorted = [...allAvailable].sort((a, b) => {
+            const dlA = data.dnsLookup?.[dk(a.label)];
+            const dlB = data.dnsLookup?.[dk(b.label)];
+            if (dlA?.available && dlB?.available) {
+                if (dlA.avg !== dlB.avg) return dlA.avg - dlB.avg;
+                if (a.label === 'Current DNS') return -1;
+                if (b.label === 'Current DNS') return 1;
+                return 0;
+            }
+            if (dlA?.available) return -1;
+            if (dlB?.available) return 1;
+            return (a.avg ?? 9999) - (b.avg ?? 9999);
+        });
+
+        const fastest    = sorted[0];
+        const fastestDl  = data.dnsLookup?.[dk(fastest.label)];
+        // Best non-Current provider by measurement (no provider pre-selected)
+        const bestProvider = sorted.find(r => r.label !== 'Current DNS' && DNS_CONFIGS[r.label]);
+        const bestProvDl   = bestProvider ? data.dnsLookup?.[bestProvider.label] : null;
+
+        // ms saved by switching to testDl vs current DNS (positive = faster)
+        const improvement = (testDl) =>
+            currentDl?.available && testDl?.available ? currentDl.avg - testDl.avg : null;
+
+        // Low-confidence note appended to switch reasons
+        const stabilityNote = confidence.level === 'low'
+            ? ' Results may vary — network looked unstable. Retest with downloads paused.' : '';
+
+        // ── SECURITY mode ──────────────────────────────────────────
+        if (selectedMode === 'security') {
+            const quad9Row = allAvailable.find(r => r.label === 'Quad9');
+            const quad9Dl  = data.dnsLookup?.['Quad9'];
+            const isAlreadyQuad9 = data.adapter.dnsServers[0] === '9.9.9.9';
+
+            if (!quad9Row || !quad9Dl?.available) {
+                return { action: 'keep', best: fastest,
+                    reason: 'Quad9 did not respond in this scan. Cannot recommend it — keeping current DNS. Try again or check your connection.' };
+            }
+
+            if (isAlreadyQuad9) {
+                return { action: 'keep', best: quad9Row,
+                    reason: 'Quad9 security-focused DNS is already active — no change needed.' };
+            }
+
+            const lagVsFastest = fastestDl?.available ? quad9Dl.avg - fastestDl.avg : 0;
+            if (lagVsFastest > 60) {
+                return { action: 'keep', best: fastest,
+                    reason: `Quad9 is ${lagVsFastest}ms slower than the fastest provider in this scan. This is a significant trade-off — keeping current DNS. Try again on a quieter network, or use Balanced mode.` };
+            }
+
+            const imp       = improvement(quad9Dl);
+            const speedDesc = lagVsFastest <= 0 ? 'the fastest option in this scan'
+                            : `${lagVsFastest}ms slower than fastest`;
+            const tradeoff  = imp !== null && imp < 0
+                ? ` Trade-off: ${Math.abs(imp)}ms slower than your current DNS.` : '';
+            return {
+                action: 'switch', best: quad9Row, provider: 'Quad9',
+                reason: `Quad9 is ${speedDesc} and filters malicious domains.${tradeoff}${stabilityNote}`,
+            };
+        }
+
+        // ── FASTEST mode ──────────────────────────────────────────
+        if (selectedMode === 'fastest') {
+            if (fastest.label === 'Current DNS') {
+                return { action: 'keep', best: fastest,
+                    reason: 'Current DNS measured fastest in this scan — no change needed.' };
+            }
+            const imp = improvement(fastestDl);
+            if (imp !== null && imp < 5) {
+                return { action: 'keep', best: fastest,
+                    reason: `${fastest.label} is only ${imp}ms faster than current DNS — too small to matter (under 5ms threshold).` };
+            }
+            return {
+                action: 'switch', best: fastest, provider: fastest.label,
+                reason: imp !== null
+                    ? `${fastest.label} measured ${imp}ms faster than current DNS.${stabilityNote}`
+                    : `Fastest DNS lookup in this scan.${stabilityNote}`,
+            };
+        }
+
+        // ── BALANCED mode ────────────────────────────────────────
+        // All providers compete equally. Current DNS wins ties.
+        if (fastest.label === 'Current DNS') {
+            return { action: 'keep', best: fastest,
+                reason: 'Current DNS is already strong — no change needed.' };
+        }
+
+        if (!bestProvider) {
+            return { action: 'keep', best: fastest,
+                reason: 'No switchable provider outperformed current DNS in this scan.' };
+        }
+
+        const imp = improvement(bestProvDl);
+
+        // Conservative switch threshold that scales with confidence
+        const threshold = confidence.level === 'high' ? 15
+                        : confidence.level === 'medium' ? 25
+                        : 40;
+
+        if (imp !== null && imp < threshold) {
+            if (imp <= 0) {
+                return { action: 'keep', best: fastest,
+                    reason: `Current DNS is already comparable to ${bestProvider.label} — no major improvement found.` };
+            }
+            return { action: 'keep', best: fastest,
+                reason: `${bestProvider.label} is ${imp}ms faster — within the ${threshold}ms keep-current threshold for ${confidence.level}-confidence results. Not enough to justify a change.` };
+        }
+
+        return {
+            action: 'switch', best: bestProvider, provider: bestProvider.label,
+            reason: imp !== null
+                ? `${bestProvider.label} is ${imp}ms faster than current DNS.${stabilityNote}`
+                : `Fastest switchable DNS in this scan.${stabilityNote}`,
+        };
+    }
+
+    // ── Scan ────────────────────────────────────────────────
+    async function runScan() {
+        scanData      = null;
+        lastScanTime  = null;
+        selectedDns   = null;
+        resetLog();
+        showState('dns-state-scan');
+        setScanProgress(5);
+        setScanStatus('Detecting physical adapter...');
+        addLog(`Scan started at ${fmtTime(new Date())}`);
+
+        const includeVpn = document.getElementById('dns-include-vpn')?.checked ?? false;
+        if (includeVpn) addLog('VPN/virtual adapters included in search.');
+
+        setScanProgress(15);
+        let result;
+        try {
+            result = await window.electronAPI.dnsOptimizerScan({ includeVpn, rounds: SCAN_DEPTHS[scanDepth] });
+        } catch (err) {
+            addLog(`Error: ${err.message}`, 'error');
+            showScanError('Unexpected error during scan.');
+            return;
+        }
+
+        if (!result.success) {
+            // Log any skipped adapters before showing error
+            (result.skippedAdapters || []).forEach(s =>
+                addLog(`Skipped "${s}" — virtual/VPN adapter ignored by default.`, 'warning'));
+            addLog(`Scan failed: ${result.message}`, 'error');
+            showScanError(result.message || 'Could not detect network adapter.');
+            return;
+        }
+
+        // Log skipped adapters even on success
+        (result.skippedAdapters || []).forEach(s =>
+            addLog(`Skipped "${s}" — virtual/VPN adapter.`, 'warning'));
+
+        scanData     = result;
+        lastScanTime = new Date();
+        setScanProgress(40);
+        setScanStatus('Running latency and DNS lookup tests...');
+
+        addLog(`Adapter: ${result.adapter.name} (${result.adapter.connType})`);
+        if (result.adapter.ipv4)    addLog(`IPv4: ${result.adapter.ipv4}`);
+        if (result.adapter.gateway) addLog(`Gateway: ${result.adapter.gateway}`);
+        addLog(`Current DNS: ${result.adapter.dnsServers.join(', ') || 'Unknown'}`);
+
+        // Animate progress while waiting for the concurrent tests (already running)
+        for (let p = 50; p <= 88; p += 6) {
+            await new Promise(r => setTimeout(r, 300));
+            setScanProgress(p);
+        }
+
+        result.pingResults.forEach(r => {
+            if (r.available) {
+                const lossStr = r.loss !== null ? `${r.loss}%` : '?';
+                addLog(`Ping ${r.label} (${r.ip}): ${r.avg}ms avg  ${r.jitter}ms jitter  ${lossStr} loss`);
+            } else {
+                addLog(`Ping ${r.label} (${r.ip || 'N/A'}): Unavailable`);
+            }
+        });
+
+        if (result.dnsLookup) {
+            for (const [k, v] of Object.entries(result.dnsLookup)) {
+                const label = k === 'CurrentDNS' ? 'Current DNS' : k;
+                if (v?.available) {
+                    addLog(`DNS lookup ${label}: ${v.avg}ms avg (${v.samples} domains tested)`);
+                } else {
+                    addLog(`DNS lookup ${label}: Unavailable`);
+                }
+            }
+        }
+        if (result.currentDnsMatchesProvider) {
+            addLog(`Current DNS IP matches ${result.currentDnsMatchesProvider} — lookup result shared within this scan (not re-tested separately).`);
+        }
+        if (result.testParams) {
+            const { domains, rounds, pingCount } = result.testParams;
+            addLog(`Test params: ${rounds} round${rounds !== 1 ? 's' : ''} × ${domains} domains per provider · ${pingCount} pings per target`);
+        }
+        addLog(`Scan completed at ${fmtTime(new Date())} — fresh results`);
+
+        setScanProgress(100);
+        setTimeout(() => showResults(result), 350);
+    }
+
+    // ── Results ─────────────────────────────────────────────
+    function showResults(data) {
+        showState('dns-state-results');
+        isCurrentDnsBest = false;
+        selectedDns      = null;
+        currentRec       = null;
+
+        // Last tested timestamp
+        const ltEl = document.getElementById('dns-last-tested');
+        if (ltEl) {
+            ltEl.textContent = lastScanTime ? `Last tested: ${fmtTime(lastScanTime)}` : '';
+        }
+
+        // Sync mode button active state (handles re-entry from mode change)
+        document.querySelectorAll('.dns-mode-btn').forEach(b => {
+            b.classList.toggle('dns-mode-active', b.dataset.mode === mode);
+        });
+
+        // Adapter info card
+        const adEl = document.getElementById('dns-adapter-info');
+        if (adEl) {
+            adEl.innerHTML = `
+                <div class="dns-info-row"><span>Adapter</span><b title="${data.adapter.name}">${data.adapter.name}</b></div>
+                <div class="dns-info-row"><span>Type</span><b>${data.adapter.connType}</b></div>
+                <div class="dns-info-row"><span>IPv4</span><b>${data.adapter.ipv4 || '—'}</b></div>
+                <div class="dns-info-row"><span>Current DNS</span><b>${data.adapter.dnsServers.join(', ') || '—'}</b></div>
+            `;
+        }
+
+        const dk = (label) => label === 'Current DNS' ? 'CurrentDNS' : label;
+
+        // Confidence + recommendation
+        const confidence = calcConfidence(data.pingResults, data.dnsLookup, dk, data.testParams?.rounds);
+        const rec        = pickRecommendation(data, mode, confidence);
+        currentRec       = rec;
+
+        // Which row gets the "best" badge
+        const badgeLabel = rec.action === 'switch' ? rec.provider
+                         : rec.action === 'keep'   ? rec.best?.label
+                         : null;
+
+        // isCurrentDnsBest: true only when current DNS is genuinely fastest in raw sort
+        const allAvailable = data.pingResults.filter(r => r.available);
+        const rawSorted = [...allAvailable].sort((a, b) => {
+            const dlA = data.dnsLookup?.[dk(a.label)];
+            const dlB = data.dnsLookup?.[dk(b.label)];
+            if (dlA?.available && dlB?.available) {
+                if (dlA.avg !== dlB.avg) return dlA.avg - dlB.avg;
+                if (a.label === 'Current DNS') return -1;
+                if (b.label === 'Current DNS') return 1;
+                return 0;
+            }
+            if (dlA?.available) return -1;
+            if (dlB?.available) return 1;
+            return (a.avg ?? 9999) - (b.avg ?? 9999);
+        });
+        isCurrentDnsBest = rawSorted[0]?.label === 'Current DNS';
+
+        // Wire up apply
+        if (rec.action === 'switch' && DNS_CONFIGS[rec.provider]) {
+            selectedDns = { label: rec.provider, servers: DNS_CONFIGS[rec.provider].servers };
+        }
+
+        // Build comparison table
+        const tableEl = document.getElementById('dns-comparison-table');
+        if (tableEl) {
+            tableEl.innerHTML = '';
+            data.pingResults.forEach(r => {
+                const cfg          = DNS_CONFIGS[r.label];
+                const isCurrentRow = r.label === 'Current DNS';
+                const dl           = data.dnsLookup?.[dk(r.label)];
+                const isBadge      = r.label === badgeLabel;
+                const isActive     = selectedDns?.label === r.label;
+
+                const row = document.createElement('div');
+                row.className = [
+                    'dns-row',
+                    isActive     ? 'dns-row-active'      : '',
+                    !r.available ? 'dns-row-unavailable' : '',
+                    isCurrentRow ? 'dns-row-current'     : '',
+                ].filter(Boolean).join(' ');
+
+                const barMs  = (dl?.available ? dl.avg : r.avg) || 0;
+                const barPct = Math.min(100, barMs / 2);
+                const latBar = r.available
+                    ? `<div class="dns-lat-bar"><div class="dns-lat-fill" style="width:${barPct}%"></div></div>`
+                    : '';
+
+                const lookupStr = dl?.available ? `${dl.avg}ms` : r.available ? 'Unavail' : '—';
+                const pingStr   = r.available && r.avg   !== null ? `${r.avg}ms`   : '—';
+                const jitterStr = r.available && r.jitter !== null ? `${r.jitter}ms` : '—';
+                const lossStr   = r.available && r.loss   !== null ? `${r.loss}%`   : '—';
+
+                let serverLine;
+                if (isCurrentRow) {
+                    const ips = data.adapter.dnsServers.join(', ') || r.ip || '—';
+                    const matchTag = data.currentDnsMatchesProvider
+                        ? `<span class="dns-current-match">= ${data.currentDnsMatchesProvider}</span>` : '';
+                    serverLine = `${ips} ${matchTag}`;
+                } else {
+                    serverLine = cfg ? cfg.servers.join(', ') : (r.ip || '—');
+                }
+
+                const detailLine = isCurrentRow ? 'Your currently configured DNS server'
+                                 : (cfg ? cfg.detail : '');
+
+                let badgeHtml = '';
+                if (isBadge && isCurrentRow && rec.action === 'keep') {
+                    badgeHtml = isCurrentDnsBest
+                        ? '<span class="dns-badge-current">Active · Optimal</span>'
+                        : '<span class="dns-badge-current">Keeping</span>';
+                } else if (isBadge && !isCurrentRow) {
+                    badgeHtml = '<span class="dns-badge-best">Recommended</span>';
+                }
+
+                row.innerHTML = `
+                    <div class="dns-row-left">
+                        <div class="dns-row-name">${r.label} ${badgeHtml}</div>
+                        <div class="dns-row-ip">${serverLine}</div>
+                        ${detailLine ? `<div class="dns-row-detail">${detailLine}</div>` : ''}
+                    </div>
+                    <div class="dns-row-right">
+                        ${r.available ? `
+                            <div class="dns-stat-group">
+                                <div class="dns-stat"><span class="dns-stat-val dns-lookup-val">${lookupStr}</span><span class="dns-stat-lbl dns-stat-lbl-tip" title="DNS resolution time — how long this server takes to resolve domain names via Resolve-DnsName">lookup</span></div>
+                                <div class="dns-stat"><span class="dns-stat-val">${pingStr}</span><span class="dns-stat-lbl dns-stat-lbl-tip" title="Network round-trip time to the DNS server IP — different from lookup time">ping</span></div>
+                                <div class="dns-stat"><span class="dns-stat-val">${jitterStr}</span><span class="dns-stat-lbl">jitter</span></div>
+                                <div class="dns-stat"><span class="dns-stat-val">${lossStr}</span><span class="dns-stat-lbl">loss</span></div>
+                            </div>
+                            ${latBar}
+                        ` : '<span class="dns-unavail-tag">Unavailable</span>'}
+                    </div>
+                `;
+
+                if (cfg && !isCurrentRow) {
+                    row.style.cursor = 'pointer';
+                    row.addEventListener('click', () => {
+                        tableEl.querySelectorAll('.dns-row').forEach(el => el.classList.remove('dns-row-active'));
+                        row.classList.add('dns-row-active');
+                        selectedDns = { label: r.label, servers: cfg.servers };
+                        currentRec  = { action: 'switch', provider: r.label };
+                        isCurrentDnsBest = false;
+                        updateApplyBtn();
+                        addLog(`Manually selected: ${r.label}`);
+                    });
+                }
+                tableEl.appendChild(row);
+            });
+        }
+
+        // Methodology note — derived from actual testParams in scan result
+        const methodEl = document.getElementById('dns-methodology-note');
+        if (methodEl) {
+            if (data.testParams) {
+                const { domains, rounds, pingCount } = data.testParams;
+                methodEl.textContent = `Tested ${domains} domains × ${rounds} lookup${rounds !== 1 ? 's' : ''} per provider · ${pingCount} ping samples per target`;
+            } else {
+                methodEl.textContent = '';
+            }
+        }
+
+        // Confidence badge
+        const badge = document.getElementById('dns-confidence-badge');
+        if (badge) {
+            const label = confidence.level.charAt(0).toUpperCase() + confidence.level.slice(1);
+            badge.textContent = `${label} Confidence`;
+            badge.className = `dns-confidence-badge dns-confidence-${confidence.level}`;
+        }
+
+        // Recommendation text
+        const recEl = document.getElementById('dns-recommendation-text');
+        if (recEl) {
+            if (rec.action === 'none') {
+                recEl.innerHTML = 'No providers responded — try again.';
+            } else if (rec.action === 'keep') {
+                const matchNote = (isCurrentDnsBest && data.currentDnsMatchesProvider)
+                    ? `Current DNS = ${data.currentDnsMatchesProvider} — already strong, no change needed.`
+                    : rec.reason;
+                recEl.innerHTML = matchNote;
+            } else {
+                const noteHtml = rec.note ? `<em> ${rec.note}</em>` : '';
+                recEl.innerHTML = `<b>${rec.provider} DNS</b> — ${rec.reason}${noteHtml}`;
+            }
+        }
+
+        // Log confidence, stability issues, mode, and reasoning
+        addLog(`Confidence: ${confidence.level}${confidence.issues.length ? ' — ' + confidence.issues.join('; ') : ''}`);
+        addLog(`Mode: ${mode} → ${rec.action === 'switch' ? 'Recommend switch to ' + rec.provider : 'Keep current DNS'}`);
+        addLog(rec.reason);
+        // Log whether current DNS was close to the best
+        const currentDlLog = data.dnsLookup?.['CurrentDNS'];
+        const bestForLog   = data.pingResults.filter(r => r.available && DNS_CONFIGS[r.label])
+            .sort((a, b) => (data.dnsLookup?.[a.label]?.avg ?? 9999) - (data.dnsLookup?.[b.label]?.avg ?? 9999))[0];
+        if (currentDlLog?.available && bestForLog) {
+            const margin = (data.dnsLookup?.[bestForLog.label]?.avg ?? null);
+            if (margin !== null) {
+                const diff = currentDlLog.avg - margin;
+                if (diff <= 0) addLog(`Current DNS is ${Math.abs(diff)}ms faster than best provider.`);
+                else addLog(`Current DNS is ${diff}ms slower than ${bestForLog.label}.`);
+            }
+        }
+
+        updateApplyBtn();
+    }
+
+    function updateApplyBtn() {
+        const btn = document.getElementById('dns-apply-btn');
+        if (!btn) return;
+        if (currentRec?.action === 'switch' && selectedDns) {
+            btn.disabled    = false;
+            btn.textContent = `Apply ${selectedDns.label} DNS`;
+        } else if (currentRec?.action === 'keep' || (!selectedDns && currentRec?.action !== 'switch')) {
+            btn.disabled    = true;
+            btn.textContent = isCurrentDnsBest
+                ? 'Current DNS is Already Optimal'
+                : 'No Meaningful Improvement Found';
+        } else {
+            btn.disabled    = true;
+            btn.textContent = 'Select a DNS Provider Above';
+        }
+    }
+
+    // ── Apply ───────────────────────────────────────────────
+    document.getElementById('dns-apply-btn')?.addEventListener('click', async function () {
+        if (!selectedDns || !scanData) return;
+        const btn = this;
+        btn.disabled    = true;
+        btn.textContent = 'Applying...';
+        addLog(`Applying ${selectedDns.label}: ${selectedDns.servers.join(', ')}`);
+
+        let result;
+        try {
+            result = await window.electronAPI.dnsOptimizerApply({
+                ifIndex:     scanData.adapter.ifIndex,
+                dnsServers:  selectedDns.servers,
+                adapterName: scanData.adapter.name,
+            });
+        } catch (err) {
+            addLog(`Error: ${err.message}`, 'error');
+            btn.disabled    = false;
+            btn.textContent = `Apply ${selectedDns.label} DNS`;
+            showNotification('error', 'Apply Error', err.message);
+            return;
+        }
+
+        if (result.requiresAdmin) {
+            addLog('Admin required — right-click app → Run as administrator', 'error');
+            btn.disabled    = false;
+            btn.textContent = `Apply ${selectedDns.label} DNS`;
+            showNotification('error', 'Admin Required', 'Right-click the app and choose "Run as administrator", then try again.');
+            return;
+        }
+        if (!result.success) {
+            addLog(`Apply failed: ${result.message}`, 'error');
+            btn.disabled    = false;
+            btn.textContent = `Apply ${selectedDns.label} DNS`;
+            showNotification('error', 'DNS Apply Failed', result.message || 'Unknown error.');
+            return;
+        }
+
+        addLog('DNS applied successfully.', 'success');
+        showApplied();
+    });
+
+    function showApplied() {
+        showState('dns-state-applied');
+        document.getElementById('dns-applied-label').textContent = selectedDns.label;
+        document.getElementById('dns-before-dns').textContent    = scanData?.adapter?.dnsServers?.join(', ') || '—';
+        document.getElementById('dns-after-dns').textContent     = selectedDns.servers.join(', ');
+    }
+
+    function showScanError(msg) {
+        showState('dns-state-error');
+        const el = document.getElementById('dns-error-msg');
+        if (el) el.textContent = msg || 'An unknown error occurred.';
+    }
+
+    // ── Restore ─────────────────────────────────────────────
+    document.getElementById('dns-restore-btn')?.addEventListener('click', async function () {
+        const btn = this;
+        btn.disabled    = true;
+        btn.textContent = 'Restoring...';
+        addLog('Restoring original DNS...');
+        let result;
+        try { result = await window.electronAPI.dnsOptimizerRestore(); }
+        catch (err) {
+            addLog(`Error: ${err.message}`, 'error');
+            btn.disabled    = false;
+            btn.textContent = 'Restore Original DNS';
+            showNotification('error', 'Restore Error', err.message);
+            return;
+        }
+        if (result.requiresAdmin) {
+            addLog('Admin required', 'error');
+            btn.disabled    = false;
+            btn.textContent = 'Restore Original DNS';
+            showNotification('error', 'Admin Required', 'Run as Administrator to restore DNS.');
+            return;
+        }
+        if (result.success) {
+            addLog('DNS restored.', 'success');
+            showNotification('success', 'DNS Restored', 'Original DNS settings restored.');
+            closeModal();
+        } else {
+            addLog(`Restore failed: ${result.message}`, 'error');
+            btn.disabled    = false;
+            btn.textContent = 'Restore Original DNS';
+            showNotification('error', 'Restore Failed', result.message || 'Unknown error.');
+        }
+    });
+
+    // ── Retry / Rescan ──────────────────────────────────────
+    document.getElementById('dns-retry-btn')?.addEventListener('click', runScan);
 }

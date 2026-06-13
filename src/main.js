@@ -651,7 +651,7 @@ function parsePingOutput(output) {
         sent: packetMatch ? Number(packetMatch[1]) : times.length,
         received: packetMatch ? Number(packetMatch[2]) : times.length,
         lost: packetMatch ? Number(packetMatch[3]) : 0,
-        packetLoss: packetMatch ? Number(packetMatch[4]) : 0,
+        packetLoss: packetMatch ? Number(packetMatch[4]) : null,
         minimumMs: minimumMatch ? Number(minimumMatch[1]) : (times.length ? Math.min(...times) : null),
         maximumMs: maximumMatch ? Number(maximumMatch[1]) : (times.length ? Math.max(...times) : null),
         averageMs: averageMatch ? Number(averageMatch[1]) : (times.length ? Math.round(times.reduce((total, value) => total + value, 0) / times.length) : null),
@@ -1623,6 +1623,28 @@ const PROCESS_CATALOG = new Map([
     // Desktop / Other
     ['wallpaperengine64',    { display: 'Wallpaper Engine',     category: 'Desktop App',       safeToClose: true,  safeToDisableStartup: false }],
     ['parsec',               { display: 'Parsec',               category: 'Remote Access',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['spotify',              { display: 'Spotify',              category: 'Desktop App',       safeToClose: true,  safeToDisableStartup: true  }],
+    // Anti-cheat — never safe to close/disable
+    ['vgc',                  { display: 'Riot Vanguard',        category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['vgtray',               { display: 'Riot Vanguard',        category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['easyanticheat',        { display: 'Easy Anti-Cheat',      category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['easyanticheat_launcher',{ display: 'Easy Anti-Cheat',     category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['beservice',            { display: 'BattlEye',             category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['belvservice',          { display: 'BattlEye',             category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    ['faceitclient',         { display: 'FACEIT Client',        category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
+    // Lunar Client
+    ['lunarclient',          { display: 'Lunar Client',         category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    // NVIDIA ShadowPlay / GeForce
+    ['nvsphelper64',         { display: 'NVIDIA ShadowPlay',    category: 'Overlay',           safeToClose: false, safeToDisableStartup: true  }],
+    ['nvsphelper',           { display: 'NVIDIA ShadowPlay',    category: 'Overlay',           safeToClose: false, safeToDisableStartup: true  }],
+    ['nvbackend',            { display: 'NVIDIA ShadowPlay',    category: 'Overlay',           safeToClose: false, safeToDisableStartup: true  }],
+    // Adobe
+    ['adobeupdatedaemon',    { display: 'Adobe Updater',        category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['adobegcclient',        { display: 'Adobe Creative Cloud', category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['creativecloudapp',     { display: 'Adobe Creative Cloud', category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
+    // Extra game launchers
+    ['heroiclauncher',       { display: 'Heroic Games Launcher',category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['xboxapp',              { display: 'Xbox App',             category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
 ]);
 
 const CRITICAL_SERVICES = new Set([
@@ -1795,6 +1817,178 @@ ipcMain.handle('get-background-context', async () => {
     _bgContextCache = data;
     _bgContextTime  = now;
     return data;
+});
+
+// ── Startup Context (real registry / folder / task / service scan) ───────────
+
+// Safety buckets: safe | game-dependent | review | protected | unknown
+function classifyStartupEntry(rawName, rawCmd) {
+    const n = (rawName || '').toLowerCase().replace(/[\s._\-]+/g, '').replace(/\.exe$/i, '');
+    const c = (rawCmd  || '').toLowerCase();
+
+    // Internal — never surface
+    if (INTERNAL_PROTECTED_PROCESSES.has(n)) return null;
+
+    // Direct PROCESS_CATALOG match
+    if (PROCESS_CATALOG.has(n)) {
+        const info   = PROCESS_CATALOG.get(n);
+        const bucket = info.category === 'Anti-Cheat'     ? 'game-dependent'
+                     : info.safeToDisableStartup           ? 'safe'
+                     : info.category === 'Overlay'         ? 'review'
+                     : 'review';
+        return { display: info.display, category: info.category, bucket, safe: info.safeToDisableStartup };
+    }
+    // Partial match — iterate
+    for (const [key, info] of PROCESS_CATALOG) {
+        if (n.includes(key) || (n.length >= 6 && key.includes(n.slice(0, 6)))) {
+            const bucket = info.category === 'Anti-Cheat' ? 'game-dependent'
+                         : info.safeToDisableStartup       ? 'safe'
+                         : 'review';
+            return { display: info.display, category: info.category, bucket, safe: info.safeToDisableStartup };
+        }
+    }
+
+    // Pattern-based protected
+    const protectedPat = /^(windows|windefend|microsoftedge|edgeupdate|msiexec|svchost|lsass|wuauclt|spoolsv|audiodg|dwm|csrss|winlogon|services|smss|taskhostw|runtimebroker)/;
+    if (protectedPat.test(n) || /windows\s*(defender|security|update)/i.test(rawName || '')) {
+        return { display: rawName, category: 'System / Windows', bucket: 'protected', safe: false };
+    }
+    // Driver / hardware vendors
+    if (/^(realtek|amd|nvidia|intel|synaptics|wacom|asustek|dell|hp|lenovo|logitech)(audio|app|hd|display|driver|osd|helper)/i.test(n)) {
+        return { display: rawName, category: 'Driver / Hardware', bucket: 'protected', safe: false };
+    }
+    // Generic updater pattern
+    if (/updater?|autoupdate|updateservice/.test(n) && !/windows|microsoft|defender/.test(n)) {
+        return { display: rawName, category: 'Updater', bucket: 'safe', safe: true };
+    }
+
+    return { display: rawName, category: 'Unknown', bucket: 'unknown', safe: false };
+}
+
+let _startupCtxCache = null;
+let _startupCtxTime  = 0;
+const STARTUP_CTX_TTL = 90000;
+
+async function collectStartupContext() {
+    function runPS(script, timeoutMs = 10000) {
+        return new Promise((resolve) => {
+            const proc = spawn('powershell.exe', [
+                '-NonInteractive', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script
+            ], { windowsHide: true });
+            let out = '';
+            proc.stdout.on('data', d => { out += d.toString(); });
+            proc.stderr.on('data', () => {});
+            proc.on('error', () => resolve(null));
+            const timer = setTimeout(() => { try { proc.kill(); } catch {} resolve(null); }, timeoutMs);
+            proc.on('close', () => {
+                clearTimeout(timer);
+                const t = out.trim();
+                if (!t) return resolve(null);
+                try { resolve(JSON.parse(t)); } catch { resolve(null); }
+            });
+        });
+    }
+
+    // ── Script 1: Registry Run keys + startup folders ──────────────────────
+    const regScript =
+        `$r=@();` +
+        `$keys=@('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',` +
+        `'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',` +
+        `'HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Run');` +
+        `foreach($k in $keys){if(Test-Path $k){` +
+        `$p=Get-ItemProperty -Path $k -EA SilentlyContinue;` +
+        `if($p){$p.PSObject.Properties|Where-Object{$_.Name -notmatch '^PS'}|ForEach-Object{` +
+        `$r+=@{Name=$_.Name;Cmd=[string]$_.Value;Source=$k}}}}}` +
+        `;$sf=@([System.Environment]::GetFolderPath('Startup'),[System.Environment]::GetFolderPath('CommonStartup'));` +
+        `foreach($f in $sf){if(Test-Path $f){Get-ChildItem -Path $f -EA SilentlyContinue|ForEach-Object{` +
+        `$r+=@{Name=$_.BaseName;Cmd=$_.FullName;Source='StartupFolder'}}}}` +
+        `;if($r.Count -eq 0){return '[]'} else {$r|ConvertTo-Json -Compress}`;
+
+    // ── Script 2: Scheduled tasks with logon/boot triggers ──────────────────
+    const taskScript =
+        `$r=@();` +
+        `try{Get-ScheduledTask -EA SilentlyContinue|Where-Object{$_.State -ne 'Disabled' -and $_.TaskPath -notlike '\\Microsoft\\*'}|ForEach-Object{` +
+        `$t=$_;$hasTrig=$false;` +
+        `foreach($tr in $t.Triggers){if($tr -and $tr.CimClass -and $tr.CimClass.CimClassName -match 'Logon|Boot'){$hasTrig=$true;break}};` +
+        `if($hasTrig){$act='';try{$act=[string]($t.Actions|Select-Object -First 1).Execute}catch{};` +
+        `$r+=@{Name=[string]$t.TaskName;Path=[string]$t.TaskPath;State=[string]$t.State;Action=$act}` +
+        `}}}catch{};` +
+        `if($r.Count -eq 0){return '[]'} else {($r|Select-Object -First 40)|ConvertTo-Json -Compress}`;
+
+    const [rawReg, rawTasks] = await Promise.all([
+        runPS(regScript, 12000),
+        runPS(taskScript, 14000),
+    ]);
+
+    // ── Parse registry + startup folder entries ────────────────────────────
+    let regRaw = rawReg;
+    if (regRaw && !Array.isArray(regRaw)) regRaw = [regRaw];
+    const registryEntries = [];
+    const folderEntries   = [];
+    if (Array.isArray(regRaw)) {
+        for (const entry of regRaw) {
+            if (!entry || !entry.Name) continue;
+            if (INTERNAL_PROTECTED_PROCESSES.has((entry.Name || '').toLowerCase().replace(/\s+/g, ''))) continue;
+            const cls = classifyStartupEntry(entry.Name, entry.Cmd);
+            if (!cls) continue;
+            const item = {
+                name:     entry.Name,
+                command:  (entry.Cmd || '').slice(0, 200),
+                source:   entry.Source === 'StartupFolder' ? 'Startup Folder' : (entry.Source || ''),
+                display:  cls.display,
+                category: cls.category,
+                bucket:   cls.bucket,
+                safe:     cls.safe,
+            };
+            if (entry.Source === 'StartupFolder') folderEntries.push(item);
+            else                                   registryEntries.push(item);
+        }
+    }
+
+    // ── Parse scheduled tasks ──────────────────────────────────────────────
+    let tasksRaw = rawTasks;
+    if (tasksRaw && !Array.isArray(tasksRaw)) tasksRaw = [tasksRaw];
+    const scheduledTasks = [];
+    if (Array.isArray(tasksRaw)) {
+        for (const t of tasksRaw) {
+            if (!t || !t.Name) continue;
+            const cls = classifyStartupEntry(t.Name, t.Action);
+            if (cls && cls.bucket === 'protected') continue; // skip Windows-protected tasks
+            scheduledTasks.push({
+                name:     t.Name,
+                path:     t.Path || '\\',
+                state:    t.State || 'Ready',
+                action:   (t.Action || '').slice(0, 150),
+                display:  cls ? cls.display : t.Name,
+                category: cls ? cls.category : 'Unknown',
+                bucket:   cls ? cls.bucket   : 'unknown',
+                safe:     cls ? cls.safe      : false,
+            });
+        }
+    }
+
+    return {
+        registryEntries,
+        folderEntries,
+        scheduledTasks,
+        scannedAt: Date.now(),
+        scanFailed: false,
+    };
+}
+
+ipcMain.handle('get-startup-context', async () => {
+    const now = Date.now();
+    if (_startupCtxCache && (now - _startupCtxTime) < STARTUP_CTX_TTL) {
+        return { ..._startupCtxCache, fromCache: true };
+    }
+    try {
+        const data = await collectStartupContext();
+        _startupCtxCache = data;
+        _startupCtxTime  = now;
+        return data;
+    } catch {
+        return { registryEntries: [], folderEntries: [], scheduledTasks: [], scannedAt: now, scanFailed: true };
+    }
 });
 
 ipcMain.handle('close-process', async (event, pid, processName) => {
@@ -2007,4 +2201,309 @@ ipcMain.handle('get-gpu-info', async () => {
         console.error('[GPU INFO] Query failed:', err.message);
         return { success: false, error: err.message, gpus: [] };
     }
+});
+
+// ── Admin Check ────────────────────────────────────────────────
+ipcMain.handle('check-admin', () =>
+    new Promise(resolve =>
+        exec('net session', { windowsHide: true, timeout: 3000 }, err => resolve({ isAdmin: !err }))
+    )
+);
+
+// ── DNS Optimizer ──────────────────────────────────────────────
+const DNS_BACKUP_PATH = path.join(app.getPath('userData'), 'dns-backup.json');
+
+ipcMain.handle('dns-optimizer-scan', async (event, opts) => {
+    const includeVpn = opts?.includeVpn === true;
+    const rounds = Math.max(1, Math.min(5, parseInt(opts?.rounds) || 3));
+
+    // ── Physical adapter detection ────────────────────────────
+    const adapterScript = `
+$ErrorActionPreference = 'SilentlyContinue'
+$incVpn = ${includeVpn ? '$true' : '$false'}
+$VIRT = @('radmin','vpn','tailscale','wireguard','openvpn',' tap','tun','hamachi','zerotier',
+           'nordvpn','nordlynx','proton','surfshark','cisco','anyconnect','hyper-v','vethernet',
+           'vmware','virtualbox','vbox','wsl','loopback','bluetooth','pptp','l2tp',
+           'ras async','isatap','teredo','tunneladapter')
+function IsVirt([string]$n,[string]$d) {
+    $c = ($n + ' ' + $d).ToLower()
+    foreach ($p in $VIRT) { if ($c.Contains($p.Trim())) { return $true } }
+    return $false
+}
+$skipped = @()
+$chosen  = $null
+$routes  = Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -EA SilentlyContinue |
+           Where-Object { $_.NextHop -ne '0.0.0.0' } | Sort-Object RouteMetric
+foreach ($rt in $routes) {
+    $a = Get-NetAdapter -InterfaceIndex $rt.InterfaceIndex -EA SilentlyContinue
+    if (-not $a -or $a.Status -ne 'Up') { continue }
+    if (-not $incVpn -and (IsVirt $a.Name $a.InterfaceDescription)) {
+        if ($skipped -notcontains $a.Name) { $skipped += $a.Name }
+        continue
+    }
+    $chosen = $a; break
+}
+if (-not $chosen) {
+    $allUp = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Sort-Object LinkSpeed -Descending
+    foreach ($a in $allUp) {
+        if (-not $incVpn -and (IsVirt $a.Name $a.InterfaceDescription)) {
+            if ($skipped -notcontains $a.Name) { $skipped += $a.Name }
+        } else { $chosen = $a; break }
+    }
+}
+if (-not $chosen) {
+    [PSCustomObject]@{ error='no_physical_adapter'; skipped=@($skipped) } | ConvertTo-Json -Compress
+    exit
+}
+$cfg = Get-NetIPConfiguration -InterfaceIndex $chosen.ifIndex -EA SilentlyContinue
+$dnsA = Get-DnsClientServerAddress -InterfaceIndex $chosen.ifIndex -AddressFamily IPv4 -EA SilentlyContinue
+$gw  = if ($cfg.IPv4DefaultGateway) { $cfg.IPv4DefaultGateway.NextHop } else { $null }
+$ip  = if ($cfg.IPv4Address) { ($cfg.IPv4Address | Select-Object -First 1).IPAddress } else { $null }
+$ct  = 'Network'
+if ($chosen.Name -like '*Wi-Fi*' -or $chosen.Name -like '*Wireless*' -or $chosen.Name -like '*WLAN*') { $ct = 'Wi-Fi' }
+elseif ($chosen.InterfaceDescription -like '*Wireless*' -or $chosen.InterfaceDescription -like '*802.11*') { $ct = 'Wi-Fi' }
+elseif ($chosen.Name -like '*Ethernet*' -or $chosen.Name -like '*LAN*') { $ct = 'Ethernet' }
+elseif ($chosen.InterfaceDescription -like '*Ethernet*') { $ct = 'Ethernet' }
+[PSCustomObject]@{
+    name       = $chosen.Name
+    description= $chosen.InterfaceDescription
+    linkSpeed  = $chosen.LinkSpeed
+    ifIndex    = [int]$chosen.ifIndex
+    ipv4       = $ip
+    gateway    = $gw
+    dnsServers = @($dnsA.ServerAddresses)
+    connType   = $ct
+    skipped    = @($skipped)
+} | ConvertTo-Json -Compress
+`;
+
+    const adapterResult = await runNetworkPowerShellJson(adapterScript, 14000);
+    if (!adapterResult.success || !adapterResult.data || typeof adapterResult.data !== 'object') {
+        return { success: false, message: 'Could not detect active network adapter.' };
+    }
+
+    const adapter = adapterResult.data;
+
+    if (adapter.error === 'no_physical_adapter') {
+        const sk = Array.isArray(adapter.skipped) ? adapter.skipped.filter(Boolean) : [];
+        const skipMsg = sk.length ? ` Skipped: ${sk.join(', ')}.` : '';
+        return {
+            success: false,
+            message: `No physical adapter found.${skipMsg} Enable "Include VPN / virtual adapters" in Details & Log and rescan.`,
+            skippedAdapters: sk,
+        };
+    }
+
+    const currentDns      = Array.isArray(adapter.dnsServers) ? adapter.dnsServers.filter(Boolean) : [];
+    const skippedAdapters = Array.isArray(adapter.skipped)    ? adapter.skipped.filter(Boolean)    : [];
+    const primaryDnsIp    = currentDns[0] || null;
+
+    // Map known public DNS IPs to provider names for "Same as X" display
+    const PROVIDER_IP_MAP = {
+        '1.1.1.1':         'Cloudflare', '1.0.0.1':         'Cloudflare',
+        '8.8.8.8':         'Google',     '8.8.4.4':         'Google',
+        '9.9.9.9':         'Quad9',      '149.112.112.112': 'Quad9',
+    };
+    const currentDnsMatchesProvider = primaryDnsIp ? (PROVIDER_IP_MAP[primaryDnsIp] || null) : null;
+
+    // ── Ping targets — 4 pings, 2 s timeout per reply ────────
+    const pingTargets = [
+        { label: 'Current DNS', ip: primaryDnsIp },
+        { label: 'Cloudflare',  ip: '1.1.1.1' },
+        { label: 'Google',      ip: '8.8.8.8'  },
+        { label: 'Quad9',       ip: '9.9.9.9'  },
+    ];
+
+    // DNS lookup script: tests current DNS + 3 providers using Resolve-DnsName.
+    // Results are cached by IP so if the current DNS is the same as a provider IP,
+    // the lookup is performed only once and reused.
+    const safePrimaryDns = primaryDnsIp && /^[\d.a-fA-F:]+$/.test(primaryDnsIp) ? primaryDnsIp : '';
+    const dnsLookupScript = `
+$ErrorActionPreference = 'SilentlyContinue'
+$curIp = '${safePrimaryDns}'
+$res = [ordered]@{
+    'CurrentDNS' = $curIp
+    'Cloudflare'  = '1.1.1.1'
+    'Google'      = '8.8.8.8'
+    'Quad9'       = '9.9.9.9'
+}
+$dom   = @('google.com','youtube.com','cloudflare.com','microsoft.com','github.com')
+$rounds = ${rounds}
+$cache = @{}
+$out   = [ordered]@{}
+foreach ($rn in $res.Keys) {
+    $ip = $res[$rn]
+    if ([string]::IsNullOrEmpty($ip)) { $out[$rn] = [PSCustomObject]@{ available=$false }; continue }
+    if ($cache.ContainsKey($ip)) { $out[$rn] = $cache[$ip]; continue }
+    $times = @()
+    foreach ($d in $dom) {
+        for ($ri = 0; $ri -lt $rounds; $ri++) {
+            $sw = [System.Diagnostics.Stopwatch]::StartNew()
+            $r  = Resolve-DnsName -Name $d -Server $ip -Type A -DnsOnly -QuickTimeout -EA SilentlyContinue
+            $sw.Stop()
+            if ($null -ne $r -and $sw.ElapsedMilliseconds -lt 4000) { $times += [int]$sw.ElapsedMilliseconds }
+        }
+    }
+    $result = if ($times.Count -gt 0) {
+        [PSCustomObject]@{
+            available = $true
+            avg     = [int][Math]::Round(($times | Measure-Object -Average).Average)
+            min     = [int]($times | Measure-Object -Minimum).Minimum
+            max     = [int]($times | Measure-Object -Maximum).Maximum
+            samples = $times.Count
+        }
+    } else { [PSCustomObject]@{ available = $false } }
+    $cache[$ip] = $result
+    $out[$rn]   = $result
+}
+$out | ConvertTo-Json -Compress -Depth 3
+`;
+
+    // Run pings and DNS lookups concurrently
+    const [pingResults, dnsLookupRaw] = await Promise.all([
+        Promise.all(pingTargets.map(async (t) => {
+            if (!t.ip || !isValidPingTarget(t.ip)) return { label: t.label, ip: t.ip, available: false };
+            try {
+                const r     = await runNetworkCommand('ping', ['-n', '4', '-w', '2000', t.ip], 16000);
+                const stats = parsePingOutput(r.output);
+                const ok    = stats && stats.averageMs !== null;
+                return {
+                    label:     t.label,
+                    ip:        t.ip,
+                    available: ok,
+                    avg:       ok ? stats.averageMs            : null,
+                    jitter:    ok ? Math.round(stats.jitterMs) : null,
+                    loss:      ok ? stats.packetLoss           : null,
+                };
+            } catch { return { label: t.label, ip: t.ip, available: false }; }
+        })),
+        runNetworkPowerShellJson(dnsLookupScript, Math.max(30000, rounds * 15000)),
+    ]);
+
+    // Parse DNS lookup results — CurrentDNS is the current adapter's primary DNS
+    const dnsLookup = {};
+    if (dnsLookupRaw.success && dnsLookupRaw.data && typeof dnsLookupRaw.data === 'object') {
+        for (const key of ['CurrentDNS', 'Cloudflare', 'Google', 'Quad9']) {
+            const d = dnsLookupRaw.data[key];
+            dnsLookup[key] = (d && d.available === true && typeof d.avg === 'number')
+                ? { available: true, avg: d.avg, min: d.min, max: d.max, samples: d.samples }
+                : { available: false };
+        }
+    }
+
+    return {
+        success: true,
+        adapter: {
+            name:        adapter.name        || 'Unknown',
+            description: adapter.description || 'Unknown',
+            connType:    adapter.connType    || 'Unknown',
+            linkSpeed:   adapter.linkSpeed   || null,
+            ipv4:        adapter.ipv4        || null,
+            gateway:     adapter.gateway     || null,
+            dnsServers:  currentDns,
+            ifIndex:     adapter.ifIndex,
+        },
+        skippedAdapters,
+        pingResults,
+        dnsLookup,
+        currentDnsMatchesProvider,
+        // Actual test parameters — displayed verbatim in the UI methodology note
+        testParams: { domains: 5, rounds, pingCount: 4, providers: 3 },
+    };
+});
+
+ipcMain.handle('dns-optimizer-apply', async (event, { ifIndex, dnsServers, adapterName }) => {
+    const { isAdmin } = await new Promise(resolve =>
+        exec('net session', { windowsHide: true, timeout: 3000 }, err => resolve({ isAdmin: !err })));
+    if (!isAdmin) {
+        return { success: false, requiresAdmin: true, message: 'Administrator privileges required to change DNS settings.' };
+    }
+    if (!ifIndex || !Array.isArray(dnsServers) || dnsServers.length === 0) {
+        return { success: false, message: 'Invalid parameters.' };
+    }
+
+    // Back up current DNS
+    try {
+        const bkScript = `(Get-DnsClientServerAddress -InterfaceIndex ${parseInt(ifIndex)} -AddressFamily IPv4 -EA SilentlyContinue).ServerAddresses | ConvertTo-Json -Compress`;
+        const bk = await runNetworkPowerShellJson(bkScript, 8000);
+        const originalDns = (bk.success && bk.data) ? (Array.isArray(bk.data) ? bk.data : [bk.data]) : [];
+        fs.writeFileSync(DNS_BACKUP_PATH, JSON.stringify({ ifIndex, adapterName, originalDns, timestamp: Date.now() }), 'utf8');
+    } catch (e) { console.error('[DNS] Backup failed:', e.message); }
+
+    const name = String(adapterName).replace(/"/g, '').replace(/\\/g, '');
+    let cmd = `netsh interface ip set dns "${name}" static ${dnsServers[0]}`;
+    if (dnsServers[1]) cmd += ` && netsh interface ip add dns "${name}" ${dnsServers[1]} index=2`;
+
+    const result = await runNetworkCommand('cmd.exe', ['/d', '/s', '/c', cmd], 15000);
+    return {
+        success: result.success,
+        message: result.success ? `DNS set to ${dnsServers.join(', ')}` : (result.message || 'Failed to apply DNS.'),
+        output:  result.output,
+    };
+});
+
+ipcMain.handle('dns-optimizer-restore', async () => {
+    const { isAdmin } = await new Promise(resolve =>
+        exec('net session', { windowsHide: true, timeout: 3000 }, err => resolve({ isAdmin: !err })));
+    if (!isAdmin) {
+        return { success: false, requiresAdmin: true, message: 'Administrator privileges required to restore DNS.' };
+    }
+
+    let backup;
+    try { backup = JSON.parse(fs.readFileSync(DNS_BACKUP_PATH, 'utf8')); }
+    catch { return { success: false, message: 'No DNS backup found. Restore could not be completed.' }; }
+
+    const name = String(backup.adapterName).replace(/"/g, '').replace(/\\/g, '');
+    const orig = Array.isArray(backup.originalDns) ? backup.originalDns.filter(Boolean) : [];
+    let cmd = orig.length === 0
+        ? `netsh interface ip set dns "${name}" dhcp`
+        : `netsh interface ip set dns "${name}" static ${orig[0]}${orig[1] ? ` && netsh interface ip add dns "${name}" ${orig[1]} index=2` : ''}`;
+
+    const result = await runNetworkCommand('cmd.exe', ['/d', '/s', '/c', cmd], 15000);
+    if (result.success) { try { fs.unlinkSync(DNS_BACKUP_PATH); } catch {} }
+    return {
+        success: result.success,
+        message: result.success ? 'DNS restored to original settings.' : (result.message || 'Restore failed.'),
+        output:  result.output,
+    };
+});
+
+ipcMain.handle('dns-backup-exists', async () => {
+    try {
+        const data = JSON.parse(fs.readFileSync(DNS_BACKUP_PATH, 'utf8'));
+        return { exists: true, data };
+    } catch { return { exists: false }; }
+});
+
+// ── GPU Gaming Tweaks Status ───────────────────────────────────
+ipcMain.handle('gpu-gaming-status', async () => {
+    const script = `
+$ErrorActionPreference = 'SilentlyContinue'
+$dvr   = (Get-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\GameDVR' -Name AppCaptureEnabled -EA SilentlyContinue).AppCaptureEnabled
+$gm    = (Get-ItemProperty 'HKCU:\\SOFTWARE\\Microsoft\\GameBar' -Name AutoGameModeEnabled -EA SilentlyContinue).AutoGameModeEnabled
+$hwSch = (Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers' -Name HwSchMode -EA SilentlyContinue).HwSchMode
+@{
+    gameDvrEnabled  = ($dvr -eq 1)
+    gameModeEnabled = ($null -ne $gm -and $gm -ne 0)
+    hagsEnabled     = ($hwSch -eq 2)
+    hagsSupported   = ($null -ne $hwSch)
+} | ConvertTo-Json -Compress
+`;
+    const r = await runNetworkPowerShellJson(script, 8000);
+    if (!r.success || !r.data) return { success: false, message: r.message || 'Could not read gaming settings.' };
+    return { success: true, status: r.data };
+});
+
+// ── Network TCP/IP Stack Reset ─────────────────────────────────
+ipcMain.handle('network-ip-reset', async () => {
+    const { isAdmin } = await new Promise(resolve =>
+        exec('net session', { windowsHide: true, timeout: 3000 }, err => resolve({ isAdmin: !err })));
+    if (!isAdmin) return { success: false, requiresAdmin: true, message: 'Administrator privileges required.' };
+    const r = await runNetworkCommand('netsh', ['int', 'ip', 'reset'], 20000);
+    return {
+        success:         r.success,
+        message:         r.success ? 'TCP/IP stack reset. Restart required to complete.' : (r.message || 'Reset failed.'),
+        restartRequired: r.success,
+        output:          r.output,
+    };
 });

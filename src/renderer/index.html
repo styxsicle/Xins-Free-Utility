@@ -1629,20 +1629,62 @@
                 </div>
 
                 <div id="page-network" class="page">
-                    <div class="page-header">
-                        <h1>Network Tweaks</h1>
-                        <p class="page-subtitle">Network diagnostics and connection tuning tools</p>
+
+                    <!-- ══ HERO ══ -->
+                    <div class="net-hero">
+                        <div class="net-hero-bg" aria-hidden="true">
+                            <div class="net-hero-wave1"></div>
+                            <div class="net-hero-wave2"></div>
+                        </div>
+                        <div class="net-hero-body">
+                            <div class="net-hero-left">
+                                <span class="net-hero-eyebrow">CURATED NETWORK TUNING</span>
+                                <h1 class="net-hero-title">Network</h1>
+                                <p class="net-hero-sub">One-click network presets and advanced tuning for gaming, streaming, and daily use.</p>
+                            </div>
+                            <div class="net-hero-right">
+                                <div class="net-hero-pill">
+                                    <span class="net-pill-dot"></span>
+                                    Tweaks local
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="controls-section">
-                        <h3 class="section-title">Network Tools</h3>
-                        <div class="toggles-grid network-grid">
-                            <div class="toggle-card network-card" data-network-card="auto-dns-finder" data-cat="network">
+                    <!-- ══ FILTER BAR ══ -->
+                    <div class="net-filter-bar">
+                        <div class="net-filter-tabs" id="net-filter-tabs">
+                            <button class="net-filter-tab net-filter-active" data-filter="all">All Tools</button>
+                            <button class="net-filter-tab" data-filter="dns">DNS</button>
+                            <button class="net-filter-tab" data-filter="repair">Repair</button>
+                            <button class="net-filter-tab" data-filter="diagnostics">Diagnostics</button>
+                            <button class="net-filter-tab" data-filter="more">More</button>
+                        </div>
+                        <span class="net-sort-label">Sort by: <b>Recommended</b></span>
+                    </div>
+
+                    <!-- ══ FEATURED SECTION ══ -->
+                    <div class="net-section">
+                        <div class="net-section-top">
+                            <div class="net-section-head-left">
+                                <span class="net-eyebrow-sm">FEATURED PRESETS</span>
+                                <h2 class="net-section-h2">Recommended Optimizations</h2>
+                                <p class="net-section-desc">Core one-click tools for network performance and repair.</p>
+                            </div>
+                            <div class="net-section-head-right">
+                                <span class="net-meta-pill">4 tools</span>
+                                <span class="net-meta-pill">Local only</span>
+                            </div>
+                        </div>
+                        <div class="net-pcard-grid">
+
+                            <!-- AI DNS Optimizer -->
+                            <div class="toggle-card net-pcard" data-network-card="auto-dns-finder" data-cat="network" data-net-cat="dns">
                                 <span class="tc-aurora" aria-hidden="true"></span>
                                 <span class="tc-shine" aria-hidden="true"></span>
                                 <span class="tc-accent" aria-hidden="true"></span>
-                                <div class="tc-head">
-                                    <div class="tc-icon">
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <circle cx="12" cy="12" r="10" />
                                             <path d="M2 12h20" />
@@ -1650,52 +1692,33 @@
                                             <path d="M12 2a15.3 15.3 0 0 0 0 20" />
                                         </svg>
                                     </div>
-                                    <div class="tc-titles">
-                                        <h4>Auto DNS Finder</h4>
-                                        <p>Compare DNS latency</p>
-                                    </div>
+                                    <span class="pcard-cat-pill">DNS Tool</span>
                                 </div>
-                                <div class="tc-foot">
-                                    <div class="tc-status">
-                                        <span class="tc-status-dot"></span>
-                                        <span class="tc-status-text">Network</span>
-                                    </div>
-                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">AI DNS Optimizer</h4>
+                                    <p class="pcard-desc">Scan and apply the fastest DNS server for your connection. Tests all major providers and recommends the best one.</p>
                                 </div>
-                            </div>
-
-                            <div class="toggle-card network-card" data-network-card="network-doctor" data-cat="network">
-                                <span class="tc-aurora" aria-hidden="true"></span>
-                                <span class="tc-shine" aria-hidden="true"></span>
-                                <span class="tc-accent" aria-hidden="true"></span>
-                                <div class="tc-head">
-                                    <div class="tc-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M3 12h3l2-5 4 10 2-5h7" />
-                                            <circle cx="3" cy="12" r="1" />
-                                            <circle cx="21" cy="12" r="1" />
-                                        </svg>
-                                    </div>
-                                    <div class="tc-titles">
-                                        <h4>Network Doctor</h4>
-                                        <p>Scan common issues</p>
-                                    </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Recommended</span>
+                                    <span class="pcard-tag">Safe</span>
+                                    <span class="pcard-tag">Local</span>
                                 </div>
-                                <div class="tc-foot">
-                                    <div class="tc-status">
-                                        <span class="tc-status-dot"></span>
-                                        <span class="tc-status-text">Safe</span>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Ready</span>
                                     </div>
-                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
+                                    <button class="pcard-btn-primary" id="open-dns-optimizer-btn">Open</button>
                                 </div>
                             </div>
 
-                            <div class="toggle-card network-card" data-network-card="flush-dns-cache" data-cat="network">
+                            <!-- Flush DNS Cache -->
+                            <div class="toggle-card net-pcard" data-network-card="flush-dns-cache" data-cat="network" data-net-cat="dns repair">
                                 <span class="tc-aurora" aria-hidden="true"></span>
                                 <span class="tc-shine" aria-hidden="true"></span>
                                 <span class="tc-accent" aria-hidden="true"></span>
-                                <div class="tc-head">
-                                    <div class="tc-icon">
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M4 7h16" />
                                             <path d="M4 12h16" />
@@ -1703,26 +1726,32 @@
                                             <path d="M18 15l2 2 2-2" />
                                         </svg>
                                     </div>
-                                    <div class="tc-titles">
-                                        <h4>Flush DNS Cache</h4>
-                                        <p>Clear resolver cache</p>
-                                    </div>
+                                    <span class="pcard-cat-pill">Network Preset</span>
                                 </div>
-                                <div class="tc-foot">
-                                    <div class="tc-status">
-                                        <span class="tc-status-dot"></span>
-                                        <span class="tc-status-text">Locked</span>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Flush DNS Cache</h4>
+                                    <p class="pcard-desc">Clear the resolver cache to fix stale DNS entries and resolve connection issues caused by outdated records.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Safe</span>
+                                    <span class="pcard-tag">Local</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Safe</span>
                                     </div>
-                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
+                                    <button class="pcard-btn-primary" id="flush-dns-btn">Flush DNS</button>
                                 </div>
                             </div>
 
-                            <div class="toggle-card network-card" data-network-card="adapter-reset" data-cat="network">
+                            <!-- Release / Renew IP -->
+                            <div class="toggle-card net-pcard" data-network-card="adapter-reset" data-cat="network" data-net-cat="repair">
                                 <span class="tc-aurora" aria-hidden="true"></span>
                                 <span class="tc-shine" aria-hidden="true"></span>
                                 <span class="tc-accent" aria-hidden="true"></span>
-                                <div class="tc-head">
-                                    <div class="tc-icon">
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <rect x="3" y="5" width="18" height="14" rx="2" />
                                             <path d="M8 21h8" />
@@ -1731,129 +1760,171 @@
                                             <path d="M8 14h5" />
                                         </svg>
                                     </div>
-                                    <div class="tc-titles">
-                                        <h4>Adapter Reset</h4>
-                                        <p>Restart selected adapter</p>
-                                    </div>
+                                    <span class="pcard-cat-pill">Network Preset</span>
                                 </div>
-                                <div class="tc-foot">
-                                    <div class="tc-status">
-                                        <span class="tc-status-dot"></span>
-                                        <span class="tc-status-text">Locked</span>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Release / Renew IP</h4>
+                                    <p class="pcard-desc">Force a fresh DHCP lease from your router. Fixes IP conflicts and connectivity drops without a restart.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Safe</span>
+                                    <span class="pcard-tag">Local</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Safe</span>
                                     </div>
-                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
+                                    <button class="pcard-btn-primary" id="release-renew-btn">Release/Renew</button>
                                 </div>
                             </div>
 
-                            <div class="toggle-card network-card" data-network-card="packet-loss-test" data-cat="network">
+                            <!-- Packet Loss Test -->
+                            <div class="toggle-card net-pcard" data-network-card="packet-loss-test" data-cat="network" data-net-cat="diagnostics">
                                 <span class="tc-aurora" aria-hidden="true"></span>
                                 <span class="tc-shine" aria-hidden="true"></span>
                                 <span class="tc-accent" aria-hidden="true"></span>
-                                <div class="tc-head">
-                                    <div class="tc-icon">
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M3 12h4l3 8 4-16 3 8h4" />
                                         </svg>
                                     </div>
-                                    <div class="tc-titles">
-                                        <h4>Packet Loss Test</h4>
-                                        <p>Check loss and jitter</p>
-                                    </div>
+                                    <span class="pcard-cat-pill">Diagnostics</span>
                                 </div>
-                                <div class="tc-foot">
-                                    <div class="tc-status">
-                                        <span class="tc-status-dot"></span>
-                                        <span class="tc-status-text">Network</span>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Packet Loss Test</h4>
+                                    <p class="pcard-desc">Check connection loss and jitter via 1.1.1.1. Identifies real-world network instability and packet drop rates.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Network</span>
+                                    <span class="pcard-tag">Local</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Network</span>
                                     </div>
-                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
+                                    <button class="pcard-btn-primary" id="packet-test-btn">Run Test</button>
                                 </div>
                             </div>
 
-                            <div class="toggle-card network-card" data-network-card="tcp-ip-repair" data-cat="network">
+                        </div>
+                    </div>
+
+                    <!-- ══ ADVANCED TOOLS ══ -->
+                    <div class="net-section net-section-adv">
+                        <div class="net-section-top net-section-top-sm">
+                            <span class="net-section-label-sm">Advanced Network Tools</span>
+                        </div>
+                        <div class="net-adv-grid">
+
+                            <!-- Winsock Reset -->
+                            <div class="toggle-card net-adv-card" data-network-card="tcp-ip-repair" data-cat="network" data-net-cat="repair more">
                                 <span class="tc-aurora" aria-hidden="true"></span>
-                                <span class="tc-shine" aria-hidden="true"></span>
                                 <span class="tc-accent" aria-hidden="true"></span>
-                                <div class="tc-head">
-                                    <div class="tc-icon">
+                                <div class="adv-card-head">
+                                    <div class="adv-card-icon">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M12 2v4" />
-                                            <path d="M12 18v4" />
-                                            <path d="M4.93 4.93l2.83 2.83" />
-                                            <path d="M16.24 16.24l2.83 2.83" />
-                                            <path d="M2 12h4" />
-                                            <path d="M18 12h4" />
+                                            <path d="M12 2v4" /><path d="M12 18v4" />
+                                            <path d="M4.93 4.93l2.83 2.83" /><path d="M16.24 16.24l2.83 2.83" />
+                                            <path d="M2 12h4" /><path d="M18 12h4" />
                                             <circle cx="12" cy="12" r="3" />
                                         </svg>
                                     </div>
-                                    <div class="tc-titles">
-                                        <h4>TCP/IP Repair</h4>
-                                        <p>Repair actions with warning</p>
+                                    <div class="adv-card-titles">
+                                        <h4>Winsock Reset</h4>
+                                        <p>Restart required after reset</p>
                                     </div>
                                 </div>
-                                <div class="tc-foot">
-                                    <div class="tc-status">
-                                        <span class="tc-status-dot"></span>
-                                        <span class="tc-status-text">Safe</span>
+                                <div class="adv-card-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Admin</span>
                                     </div>
-                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
+                                    <button class="pcard-btn-secondary" id="winsock-reset-btn">Reset Winsock</button>
                                 </div>
                             </div>
 
-                            <div class="toggle-card network-card" data-network-card="dns-server-manager" data-cat="network">
+                            <!-- DNS Server Manager -->
+                            <div class="toggle-card net-adv-card" data-network-card="dns-server-manager" data-cat="network" data-net-cat="dns more">
                                 <span class="tc-aurora" aria-hidden="true"></span>
-                                <span class="tc-shine" aria-hidden="true"></span>
                                 <span class="tc-accent" aria-hidden="true"></span>
-                                <div class="tc-head">
-                                    <div class="tc-icon">
+                                <div class="adv-card-head">
+                                    <div class="adv-card-icon">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M4 6h16" />
-                                            <path d="M4 12h16" />
-                                            <path d="M4 18h10" />
-                                            <circle cx="18" cy="18" r="2" />
+                                            <path d="M4 6h16" /><path d="M4 12h16" />
+                                            <path d="M4 18h10" /><circle cx="18" cy="18" r="2" />
                                         </svg>
                                     </div>
-                                    <div class="tc-titles">
+                                    <div class="adv-card-titles">
                                         <h4>DNS Server Manager</h4>
                                         <p>View DNS profiles</p>
                                     </div>
                                 </div>
-                                <div class="tc-foot">
-                                    <div class="tc-status">
+                                <div class="adv-card-foot">
+                                    <div class="pcard-status">
                                         <span class="tc-status-dot"></span>
-                                        <span class="tc-status-text">Coming Soon</span>
+                                        <span class="pcard-status-text">Soon</span>
                                     </div>
-                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
+                                    <button class="pcard-btn-secondary network-placeholder-btn" disabled>Coming Soon</button>
                                 </div>
                             </div>
 
-                            <div class="toggle-card network-card" data-network-card="game-route-checker" data-cat="network">
+                            <!-- Network Doctor -->
+                            <div class="toggle-card net-adv-card" data-network-card="network-doctor" data-cat="network" data-net-cat="repair diagnostics more">
                                 <span class="tc-aurora" aria-hidden="true"></span>
-                                <span class="tc-shine" aria-hidden="true"></span>
                                 <span class="tc-accent" aria-hidden="true"></span>
-                                <div class="tc-head">
-                                    <div class="tc-icon">
+                                <div class="adv-card-head">
+                                    <div class="adv-card-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M3 12h3l2-5 4 10 2-5h7" />
+                                            <circle cx="3" cy="12" r="1" /><circle cx="21" cy="12" r="1" />
+                                        </svg>
+                                    </div>
+                                    <div class="adv-card-titles">
+                                        <h4>Network Doctor</h4>
+                                        <p>Scan common issues</p>
+                                    </div>
+                                </div>
+                                <div class="adv-card-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot"></span>
+                                        <span class="pcard-status-text">Soon</span>
+                                    </div>
+                                    <button class="pcard-btn-secondary network-placeholder-btn" disabled>Coming Soon</button>
+                                </div>
+                            </div>
+
+                            <!-- Game Route Checker -->
+                            <div class="toggle-card net-adv-card" data-network-card="game-route-checker" data-cat="network" data-net-cat="diagnostics more">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="adv-card-head">
+                                    <div class="adv-card-icon">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <circle cx="12" cy="12" r="10" />
                                             <path d="M12 6v6l4 2" />
-                                            <path d="M4 4l3 3" />
-                                            <path d="M20 4l-3 3" />
+                                            <path d="M4 4l3 3" /><path d="M20 4l-3 3" />
                                         </svg>
                                     </div>
-                                    <div class="tc-titles">
+                                    <div class="adv-card-titles">
                                         <h4>Game Route Checker</h4>
                                         <p>Check game region routes</p>
                                     </div>
                                 </div>
-                                <div class="tc-foot">
-                                    <div class="tc-status">
+                                <div class="adv-card-foot">
+                                    <div class="pcard-status">
                                         <span class="tc-status-dot"></span>
-                                        <span class="tc-status-text">Network</span>
+                                        <span class="pcard-status-text">Soon</span>
                                     </div>
-                                    <button class="tweak-btn apply network-placeholder-btn" disabled>Coming Soon</button>
+                                    <button class="pcard-btn-secondary network-placeholder-btn" disabled>Coming Soon</button>
                                 </div>
                             </div>
+
                         </div>
                     </div>
+
                 </div>
 
                 <div id="page-cleanup" class="page">
@@ -2708,6 +2779,169 @@
 
     <script src="ai-client.js"></script>
     <script src="renderer.js"></script>
+
+    <!-- ── AI DNS Optimizer Popcard ─────────────────────────────── -->
+    <div class="dns-modal-overlay" id="dns-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dns-modal-title">
+        <div class="dns-modal-backdrop" id="dns-modal-backdrop"></div>
+        <div class="dns-modal-card">
+            <!-- Ambient background decorations -->
+            <div class="dns-bg-wrap" aria-hidden="true">
+                <div class="dns-bg-glow"></div>
+                <div class="dns-bg-node dns-node-a"></div>
+                <div class="dns-bg-node dns-node-b"></div>
+                <div class="dns-bg-node dns-node-c"></div>
+                <div class="dns-bg-node dns-node-d"></div>
+                <div class="dns-bg-node dns-node-e"></div>
+                <div class="dns-shine-sweep"></div>
+            </div>
+
+            <div class="dns-modal-content">
+                <!-- Close -->
+                <button class="dns-modal-close" id="dns-modal-close" aria-label="Close DNS Optimizer">
+                    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M1 1L13 13M13 1L1 13"/>
+                    </svg>
+                </button>
+
+                <!-- ── STATE: Scanning ── -->
+                <div class="dns-state" id="dns-state-scan">
+                    <div class="dns-scan-visual">
+                        <div class="dns-scan-ring">
+                            <div class="dns-scan-ring-inner">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M2 12h20"/>
+                                    <path d="M12 2a15.3 15.3 0 0 1 0 20"/>
+                                    <path d="M12 2a15.3 15.3 0 0 0 0 20"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <h2 class="dns-modal-title" id="dns-modal-title">AI DNS Optimizer</h2>
+                    <p class="dns-modal-subtitle" id="dns-scan-status">Scanning your active connection...</p>
+                    <div class="dns-progress-track">
+                        <div class="dns-progress-fill" id="dns-scan-bar" style="width:0%"></div>
+                    </div>
+                    <p class="dns-scan-note">Testing latency to Cloudflare, Google, and Quad9 — this may take 15–30s</p>
+                </div>
+
+                <!-- ── STATE: Results ── -->
+                <div class="dns-state dns-hidden" id="dns-state-results">
+                    <div class="dns-results-header">
+                        <h2 class="dns-modal-title">AI DNS Optimizer</h2>
+                        <p class="dns-modal-subtitle">Scan complete — select and apply</p>
+                        <div id="dns-last-tested" class="dns-last-tested"></div>
+                    </div>
+
+                    <div class="dns-adapter-card" id="dns-adapter-info"></div>
+
+                    <div class="dns-mode-selector" id="dns-mode-selector">
+                        <button class="dns-mode-btn dns-mode-active" data-mode="balanced">Balanced</button>
+                        <button class="dns-mode-btn" data-mode="fastest">Fastest Lookup</button>
+                        <button class="dns-mode-btn" data-mode="security">Security Focused</button>
+                    </div>
+
+                    <div class="dns-section-label">DNS Latency Comparison</div>
+                    <div class="dns-comparison-table" id="dns-comparison-table"></div>
+                    <div id="dns-methodology-note" class="dns-methodology-note"></div>
+                    <p class="dns-metric-note">Lookup = time to resolve a domain name. Ping = round-trip to the DNS server IP. These measure different things and will not match <code>ping</code> in Command Prompt.</p>
+
+                    <div class="dns-recommendation-box" id="dns-recommendation-box">
+                        <div class="dns-rec-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            </svg>
+                        </div>
+                        <div class="dns-rec-body">
+                            <div id="dns-confidence-badge" class="dns-confidence-badge"></div>
+                            <div class="dns-rec-text" id="dns-recommendation-text">Analyzing...</div>
+                        </div>
+                    </div>
+
+                    <div class="dns-honest-note">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="13" height="13" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        May improve DNS response time. Will not directly increase FPS.
+                    </div>
+
+                    <button class="dns-apply-btn" id="dns-apply-btn" disabled>Select a DNS provider above</button>
+                </div>
+
+                <!-- ── STATE: Applied ── -->
+                <div class="dns-state dns-hidden" id="dns-state-applied">
+                    <div class="dns-success-visual">
+                        <div class="dns-success-ring">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <h2 class="dns-modal-title dns-title-success">DNS Applied</h2>
+                    <p class="dns-modal-subtitle"><span id="dns-applied-label">Cloudflare</span> DNS is now active</p>
+
+                    <div class="dns-before-after">
+                        <div class="dns-ba-col">
+                            <span class="dns-ba-label">Before</span>
+                            <span class="dns-ba-val" id="dns-before-dns">—</span>
+                        </div>
+                        <div class="dns-ba-arrow" aria-hidden="true">→</div>
+                        <div class="dns-ba-col">
+                            <span class="dns-ba-label">After</span>
+                            <span class="dns-ba-val dns-ba-val-new" id="dns-after-dns">—</span>
+                        </div>
+                    </div>
+
+                    <div class="dns-notice-row">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Restart not required — takes effect immediately.
+                    </div>
+
+                    <button class="dns-restore-btn" id="dns-restore-btn">Restore Original DNS</button>
+                </div>
+
+                <!-- ── STATE: Error ── -->
+                <div class="dns-state dns-hidden" id="dns-state-error">
+                    <div class="dns-error-visual" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                    </div>
+                    <h2 class="dns-modal-title">Scan Failed</h2>
+                    <p class="dns-error-msg" id="dns-error-msg">An error occurred while scanning.</p>
+                    <button class="dns-retry-btn" id="dns-retry-btn">Try Again</button>
+                </div>
+
+                <!-- ── Log Drawer ── -->
+                <details class="dns-log-details" id="dns-log">
+                    <summary>Details &amp; Log</summary>
+                    <p class="dns-scan-quality-note">Pause downloads, streams, VPNs, and game updates for the most accurate test.</p>
+                    <div class="dns-advanced-opts">
+                        <label class="dns-vpn-label">
+                            <input type="checkbox" id="dns-include-vpn">
+                            <span>Include VPN / virtual adapters</span>
+                        </label>
+                        <button class="dns-rescan-btn" id="dns-rescan-btn">Retest Now</button>
+                    </div>
+                    <p class="dns-vpn-note">VPN and virtual adapters are excluded by default to avoid testing the wrong connection.</p>
+                    <div class="dns-depth-row">
+                        <span class="dns-depth-label">Scan depth</span>
+                        <div class="dns-depth-selector" id="dns-depth-selector">
+                            <button class="dns-depth-btn" data-depth="quick">Quick</button>
+                            <button class="dns-depth-btn dns-depth-active" data-depth="accurate">Accurate</button>
+                            <button class="dns-depth-btn" data-depth="deep">Deep</button>
+                        </div>
+                    </div>
+                    <p class="dns-depth-hint">Accurate is recommended for most users. Deep adds more rounds for the steadiest results on noisy connections. Quick is useful for a rough check only.</p>
+                    <div class="dns-log-entries" id="dns-log-entries"></div>
+                </details>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

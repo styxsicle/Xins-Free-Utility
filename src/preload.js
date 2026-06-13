@@ -60,6 +60,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
 
     getBackgroundContext: () => ipcRenderer.invoke('get-background-context'),
+    getStartupContext:    () => ipcRenderer.invoke('get-startup-context'),
     closeProcess: (pid, processName) => ipcRenderer.invoke('close-process', pid, processName),
     disableStartupEntry: (name, location) => ipcRenderer.invoke('disable-startup-entry', name, location),
+
+    // DNS Optimizer & Network
+    checkAdmin:          ()       => ipcRenderer.invoke('check-admin'),
+    dnsOptimizerScan:    (opts)   => ipcRenderer.invoke('dns-optimizer-scan', opts),
+    dnsOptimizerApply:   (params) => ipcRenderer.invoke('dns-optimizer-apply', params),
+    dnsOptimizerRestore: ()       => ipcRenderer.invoke('dns-optimizer-restore'),
+    dnsBackupExists:     ()       => ipcRenderer.invoke('dns-backup-exists'),
+    gpuGamingStatus:     ()       => ipcRenderer.invoke('gpu-gaming-status'),
+    networkIpReset:      ()       => ipcRenderer.invoke('network-ip-reset'),
 });

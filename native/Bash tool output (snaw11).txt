@@ -1,0 +1,10 @@
+✓ main: collectStartupContext
+✓ main: IPC handler
+✓ main: classifyStartupEntry
+✓ main: vgc anti-cheat
+✓ main: Lunar Client
+✓ preload: getStartupContext
+✓ renderer: startupContext var
+✓ renderer: loadStartupContext fn
+✓ renderer: formatStartupContextForAI fn
+✓ renderer: parallel fetch
