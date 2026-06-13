@@ -4674,27 +4674,68 @@ function initializeNetworkCards() {
     function applyNetworkFilter() {
         const q = (document.getElementById('global-search')?.value || '').trim().toLowerCase();
         const allCards = document.querySelectorAll('#page-network [data-net-cat]');
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         let featuredVisible = 0;
         let advancedVisible = 0;
+        let enterIndex = 0;
 
         allCards.forEach(card => {
-            const cats = (card.dataset.netCat || '').split(' ');
-            const text  = card.textContent.toLowerCase();
+            const cats   = (card.dataset.netCat || '').split(' ');
+            const text   = card.textContent.toLowerCase();
             const catOk  = netActiveFilter === 'all' || cats.includes(netActiveFilter);
             const textOk = !q || text.includes(q);
             const show   = catOk && textOk;
-            card.style.display = show ? '' : 'none';
+
             if (show) {
-                if (card.classList.contains('net-pcard'))   featuredVisible++;
-                else                                        advancedVisible++;
+                // Cancel any pending leave timer so display:none doesn't land mid-enter
+                if (card._netLeaveTimer) {
+                    clearTimeout(card._netLeaveTimer);
+                    card._netLeaveTimer = null;
+                }
+                card.classList.remove('is-leaving');
+                card.style.display = '';           // restore before measuring
+
+                if (!reducedMotion) {
+                    card.style.setProperty('--net-delay', `${enterIndex * 35}ms`);
+                    card.classList.remove('is-entering');
+                    void card.offsetHeight;        // force reflow so animation replays
+                    card.classList.add('is-entering');
+                }
+                enterIndex++;
+
+                if (card.classList.contains('net-pcard')) featuredVisible++;
+                else advancedVisible++;
+            } else {
+                // Already hidden — nothing to animate
+                if (card.style.display === 'none') return;
+
+                card.classList.remove('is-entering');
+
+                if (reducedMotion) {
+                    card.style.display = 'none';
+                    return;
+                }
+
+                // Phase 1: play leave animation
+                card.classList.add('is-leaving');
+
+                // Phase 2: set display:none AFTER leave animation finishes (150ms)
+                if (card._netLeaveTimer) clearTimeout(card._netLeaveTimer);
+                card._netLeaveTimer = setTimeout(() => {
+                    card.style.display = 'none';
+                    card.classList.remove('is-leaving');
+                    card._netLeaveTimer = null;
+                }, 180);
             }
         });
 
-        // Show/hide whole sections (heading + grid) when empty
+        // Show/hide section containers (delay hiding so leaving cards don't jump)
         const featuredSection = document.querySelector('#page-network .net-section:not(.net-section-adv)');
         const advancedSection = document.querySelector('#page-network .net-section-adv');
-        if (featuredSection) featuredSection.style.display = featuredVisible  > 0 ? '' : 'none';
-        if (advancedSection) advancedSection.style.display = advancedVisible > 0 ? '' : 'none';
+        if (featuredVisible > 0)  { if (featuredSection) featuredSection.style.display = ''; }
+        else { setTimeout(() => { if (featuredSection) featuredSection.style.display = 'none'; }, 190); }
+        if (advancedVisible > 0)  { if (advancedSection) advancedSection.style.display = ''; }
+        else { setTimeout(() => { if (advancedSection) advancedSection.style.display = 'none'; }, 190); }
 
         // Empty state message
         let emptyEl = document.getElementById('net-empty-state');
@@ -4721,14 +4762,20 @@ function initializeNetworkCards() {
     document.getElementById('net-filter-tabs')?.addEventListener('click', (e) => {
         const tab = e.target.closest('.net-filter-tab');
         if (!tab) return;
+
+        // Update active state
         document.querySelectorAll('.net-filter-tab').forEach(t => {
-            t.classList.remove('net-filter-active');
-            t.classList.remove('is-activating');
+            t.classList.remove('net-filter-active', 'is-activating');
         });
         tab.classList.add('net-filter-active');
-        // Trigger flash keyframe — class removed when animation completes
+
+        // Replay press animation — force reflow guarantees it replays on same-tab re-click
+        void tab.offsetWidth;
         tab.classList.add('is-activating');
-        tab.addEventListener('animationend', () => tab.classList.remove('is-activating'), { once: true });
+        const removeActivating = () => tab.classList.remove('is-activating');
+        tab.addEventListener('animationend', removeActivating, { once: true });
+        setTimeout(removeActivating, 400); // fallback if animationend misfires
+
         netActiveFilter = tab.dataset.filter || 'all';
         applyNetworkFilter();
     });

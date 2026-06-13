@@ -6739,22 +6739,33 @@ ol.ai-msg-list li {
 
 /* ── Network animations ────────────────────────────────────────── */
 
-/* Hero background-warp breathing — larger delta so it's perceptible */
-@keyframes net-hero-breathe {
-  0%, 100% { opacity: 0.45; transform: scale(1)    rotate(-18deg); }
-  50%       { opacity: 1;    transform: scale(1.10) rotate(-18deg); }
+/* Card enters: fade up into place */
+@keyframes net-card-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#page-network .is-entering {
+  animation: net-card-enter 0.22s ease-out calc(var(--net-delay, 0ms)) both;
 }
 
-/* Hero top-glass gloss pulse — very slow, premium breathing */
-@keyframes net-hero-gloss-pulse {
-  0%, 100% { opacity: 0.55; }
-  50%       { opacity: 1;    }
+/* Card leaves: fade up and out before display:none lands */
+@keyframes net-card-leave {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-5px); }
+}
+#page-network .is-leaving {
+  animation: net-card-leave 0.15s ease-in both;
+  pointer-events: none;
 }
 
-/* Card hover shine sweep — translates a stripe left-to-right */
-@keyframes net-card-shine {
-  0%   { transform: translateX(-120%) skewX(-12deg); }
-  100% { transform: translateX( 220%) skewX(-12deg); }
+/* Tab press: compress → spring → settle — visible on every click */
+@keyframes net-tab-press {
+  0%   { transform: scale(0.93); }
+  55%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+#page-network .net-filter-tab.is-activating {
+  animation: net-tab-press 0.32s ease-out forwards;
 }
 
 /* ── Hero ─────────────────────────────────────────────────────── */
@@ -6774,7 +6785,7 @@ ol.ai-msg-list li {
     0 24px 72px rgba(0,0,0,0.8),
     0 2px 8px rgba(0,0,0,0.6);
 }
-/* Diagonal silver gloss sweep — liquid glass, slow pulse */
+/* Diagonal silver gloss — static decoration */
 #page-network .net-hero::before {
   content: '';
   position: absolute;
@@ -6787,7 +6798,6 @@ ol.ai-msg-list li {
   );
   pointer-events: none;
   z-index: 0;
-  animation: net-hero-gloss-pulse 6s ease-in-out infinite;
 }
 /* Top-edge silver mirror line */
 #page-network .net-hero::after {
@@ -6820,7 +6830,7 @@ ol.ai-msg-list li {
   border-radius: 30% 70% 70% 30% / 40% 30% 70% 60%;
   transform: rotate(-18deg);
   filter: blur(52px);
-  animation: net-hero-breathe 9s ease-in-out infinite;
+  opacity: 0.75;
 }
 #page-network .net-hero-wave2 {
   position: absolute;
@@ -6892,12 +6902,6 @@ ol.ai-msg-list li {
 
 /* ── Filter Bar ────────────────────────────────────────────────── */
 
-/* Click-flash: ring starts bright then settles — same feel as sidebar press */
-@keyframes net-tab-activate {
-  0%   { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.60), 0 4px 22px rgba(255,255,255,0.30); }
-  100% { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35), 0 4px 18px rgba(255,255,255,0.18); }
-}
-
 #page-network .net-filter-bar {
   display: flex;
   align-items: center;
@@ -6949,22 +6953,6 @@ ol.ai-msg-list li {
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35), 0 4px 18px rgba(255,255,255,0.18);
 }
 
-/* Bottom accent bar — horizontal pill adaptation of the sidebar's left accent bar */
-#page-network .net-filter-tab.net-filter-active::before {
-  content: '';
-  position: absolute;
-  bottom: 4px;
-  left: 24%; right: 24%;
-  height: 2px;
-  background: var(--gradient-primary);
-  border-radius: 2px;
-  box-shadow: 0 0 7px rgba(255,255,255,0.55);
-}
-
-/* Click flash — activated by .is-activating class added via JS, removed on animationend */
-#page-network .net-filter-tab.is-activating {
-  animation: net-tab-activate 0.38s ease-out forwards;
-}
 
 #page-network .net-sort-label {
   font-size: 11.5px;
@@ -7047,31 +7035,6 @@ ol.ai-msg-list li {
   padding: 20px 20px 16px;       /* slightly more padding than toggle-card */
   gap: 0;                        /* override toggle-card gap; use margins below */
   font-family: inherit;
-}
-
-/* Hover shine sweep via ::after — layered below content (z-index 0), above card bg */
-#page-network .net-pcard::after {
-  content: '';
-  position: absolute;
-  top: 0; bottom: 0;
-  left: 0;
-  width: 45%;
-  background: linear-gradient(
-    105deg,
-    transparent 20%,
-    rgba(255,255,255,0.07) 45%,
-    rgba(255,255,255,0.13) 50%,
-    rgba(255,255,255,0.07) 55%,
-    transparent 80%
-  );
-  transform: translateX(-120%) skewX(-12deg);
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0;
-}
-#page-network .net-pcard:hover::after {
-  opacity: 1;
-  animation: net-card-shine 0.65s ease-out forwards;
 }
 
 /* pcard-top — matches tc-head style */
@@ -7317,6 +7280,19 @@ ol.ai-msg-list li {
   color: rgba(255,255,255,0.32);
   text-align: center;
   display: none;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  #page-network .is-entering,
+  #page-network .is-leaving,
+  #page-network .net-filter-tab.is-activating,
+  #page-network .net-filter-tab {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 /* ── Network sidebar nav active state ─────────────────────────── */
