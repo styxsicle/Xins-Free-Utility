@@ -700,6 +700,60 @@ $ErrorActionPreference = 'Stop'
     };
 });
 
+ipcMain.handle('get-active-network', async () => {
+    const script = `
+$ErrorActionPreference = 'SilentlyContinue'
+$VIRT = @('radmin','vpn','tailscale','wireguard','openvpn',' tap','tun','hamachi','zerotier',
+           'nordvpn','nordlynx','proton','surfshark','cisco','anyconnect','hyper-v','vethernet',
+           'vmware','virtualbox','vbox','wsl','loopback','bluetooth','pptp','l2tp',
+           'ras async','isatap','teredo','tunneladapter')
+function IsVirt([string]$n,[string]$d) {
+    $c = ($n + ' ' + $d).ToLower()
+    foreach ($p in $VIRT) { if ($c.Contains($p.Trim())) { return $true } }
+    return $false
+}
+$chosen = $null
+$routes = Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -EA SilentlyContinue |
+          Where-Object { $_.NextHop -ne '0.0.0.0' } | Sort-Object RouteMetric
+foreach ($rt in $routes) {
+    $a = Get-NetAdapter -InterfaceIndex $rt.InterfaceIndex -EA SilentlyContinue
+    if (-not $a -or $a.Status -ne 'Up') { continue }
+    if (IsVirt $a.Name $a.InterfaceDescription) { continue }
+    $chosen = $a; break
+}
+if (-not $chosen) {
+    $allUp = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Sort-Object LinkSpeed -Descending
+    foreach ($a in $allUp) {
+        if (-not (IsVirt $a.Name $a.InterfaceDescription)) { $chosen = $a; break }
+    }
+}
+if (-not $chosen) {
+    [PSCustomObject]@{ gateway=$null; primaryDns=$null; adapterName=$null } | ConvertTo-Json -Compress
+    exit
+}
+$cfg  = Get-NetIPConfiguration -InterfaceIndex $chosen.ifIndex -EA SilentlyContinue
+$dnsA = Get-DnsClientServerAddress -InterfaceIndex $chosen.ifIndex -AddressFamily IPv4 -EA SilentlyContinue
+$gw   = if ($cfg.IPv4DefaultGateway) { $cfg.IPv4DefaultGateway.NextHop } else { $null }
+$dns  = $dnsA.ServerAddresses | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' } | Select-Object -First 1
+[PSCustomObject]@{
+    gateway    = $gw
+    primaryDns = $dns
+    adapterName= $chosen.Name
+} | ConvertTo-Json -Compress
+`;
+
+    const result = await runNetworkPowerShellJson(script, 10000);
+    if (!result.success || !result.data || typeof result.data !== 'object') {
+        return { success: false, gateway: null, primaryDns: null, adapterName: null };
+    }
+    return {
+        success: true,
+        gateway:     result.data.gateway     || null,
+        primaryDns:  result.data.primaryDns  || null,
+        adapterName: result.data.adapterName || null,
+    };
+});
+
 ipcMain.handle('network-flush-dns', async () => {
     const result = await runNetworkCommand('ipconfig', ['/flushdns'], 10000);
     return {

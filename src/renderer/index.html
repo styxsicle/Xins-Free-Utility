@@ -1073,12 +1073,24 @@
                                 <div class="gpu-scan-orb-wrap">
                                     <div class="gpu-scan-orb"></div>
                                     <div class="gpu-scan-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-                                            <rect x="1" y="7" width="22" height="10" rx="2"/>
-                                            <path d="M6 7V5M10 7V5M14 7V5M18 7V5"/>
-                                            <path d="M6 17v2M10 17v2M14 17v2M18 17v2"/>
-                                            <line x1="1" y1="12" x2="4" y2="12"/>
-                                            <line x1="20" y1="12" x2="23" y2="12"/>
+                                        <svg class="gpu-chip-loader-svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                                            <g class="gpu-loader-lines" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                                                <line x1="32" y1="7" x2="32" y2="13" opacity="1"/>
+                                                <line x1="49.7" y1="14.3" x2="45.5" y2="18.5" opacity="0.86"/>
+                                                <line x1="57" y1="32" x2="51" y2="32" opacity="0.72"/>
+                                                <line x1="49.7" y1="49.7" x2="45.5" y2="45.5" opacity="0.58"/>
+                                                <line x1="32" y1="57" x2="32" y2="51" opacity="0.44"/>
+                                                <line x1="14.3" y1="49.7" x2="18.5" y2="45.5" opacity="0.34"/>
+                                                <line x1="7" y1="32" x2="13" y2="32" opacity="0.26"/>
+                                                <line x1="14.3" y1="14.3" x2="18.5" y2="18.5" opacity="0.18"/>
+                                            </g>
+                                            <g class="gpu-loader-chip" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <rect x="18" y="25" width="28" height="14" rx="2.5"/>
+                                                <path d="M23 25v-4M29 25v-4M35 25v-4M41 25v-4"/>
+                                                <path d="M23 39v4M29 39v4M35 39v4M41 39v4"/>
+                                                <path d="M18 32h-5M46 32h5"/>
+                                                <circle cx="51" cy="32" r="2.2"/>
+                                            </g>
                                         </svg>
                                     </div>
                                 </div>
@@ -1661,6 +1673,7 @@
                             <button class="net-filter-tab" data-filter="more">More</button>
                         </div>
                         <span class="net-sort-label">Sort by: <b>Recommended</b></span>
+                        <button id="net-replay-btn" class="net-replay-btn" title="Replay card animations" aria-hidden="true">↺</button>
                     </div>
 
                     <!-- ══ FEATURED SECTION ══ -->
@@ -1725,6 +1738,13 @@
                                             <path d="M4 17h10" />
                                             <path d="M18 15l2 2 2-2" />
                                         </svg>
+                                        <span class="net-action-loader" aria-hidden="true">
+                                            <svg viewBox="0 0 32 32" class="net-loader-svg">
+                                                <circle class="net-loader-track" cx="16" cy="16" r="11"></circle>
+                                                <path class="net-loader-arc" d="M16 5a11 11 0 0 1 11 11"></path>
+                                                <circle class="net-loader-dot" cx="27" cy="16" r="2"></circle>
+                                            </svg>
+                                        </span>
                                     </div>
                                     <span class="pcard-cat-pill">Network Preset</span>
                                 </div>
@@ -1759,6 +1779,13 @@
                                             <path d="M8 10h8" />
                                             <path d="M8 14h5" />
                                         </svg>
+                                        <span class="net-action-loader" aria-hidden="true">
+                                            <svg viewBox="0 0 32 32" class="net-loader-svg">
+                                                <circle class="net-loader-track" cx="16" cy="16" r="11"></circle>
+                                                <path class="net-loader-arc" d="M16 5a11 11 0 0 1 11 11"></path>
+                                                <circle class="net-loader-dot" cx="27" cy="16" r="2"></circle>
+                                            </svg>
+                                        </span>
                                     </div>
                                     <span class="pcard-cat-pill">Network Preset</span>
                                 </div>
@@ -1789,12 +1816,19 @@
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M3 12h4l3 8 4-16 3 8h4" />
                                         </svg>
+                                        <span class="net-action-loader" aria-hidden="true">
+                                            <svg viewBox="0 0 32 32" class="net-loader-svg">
+                                                <circle class="net-loader-track" cx="16" cy="16" r="11"></circle>
+                                                <path class="net-loader-arc" d="M16 5a11 11 0 0 1 11 11"></path>
+                                                <circle class="net-loader-dot" cx="27" cy="16" r="2"></circle>
+                                            </svg>
+                                        </span>
                                     </div>
                                     <span class="pcard-cat-pill">Diagnostics</span>
                                 </div>
                                 <div class="pcard-body">
                                     <h4 class="pcard-title">Packet Loss Test</h4>
-                                    <p class="pcard-desc">Check connection loss and jitter via 1.1.1.1. Identifies real-world network instability and packet drop rates.</p>
+                                    <p class="pcard-desc">Check packet loss and jitter across your gateway, current DNS, and stable public endpoints.</p>
                                 </div>
                                 <div class="pcard-tags">
                                     <span class="pcard-tag">Network</span>
@@ -1831,6 +1865,13 @@
                                             <path d="M2 12h4" /><path d="M18 12h4" />
                                             <circle cx="12" cy="12" r="3" />
                                         </svg>
+                                        <span class="net-action-loader" aria-hidden="true">
+                                            <svg viewBox="0 0 32 32" class="net-loader-svg">
+                                                <circle class="net-loader-track" cx="16" cy="16" r="11"></circle>
+                                                <path class="net-loader-arc" d="M16 5a11 11 0 0 1 11 11"></path>
+                                                <circle class="net-loader-dot" cx="27" cy="16" r="2"></circle>
+                                            </svg>
+                                        </span>
                                     </div>
                                     <div class="adv-card-titles">
                                         <h4>Winsock Reset</h4>

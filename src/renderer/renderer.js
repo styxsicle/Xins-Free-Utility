@@ -1775,45 +1775,66 @@ const TOGGLE_DETAILS = {
 };
 
 const NETWORK_DETAILS = {
+    // ── Featured functional pcards ────────────────────────────────
     'auto-dns-finder': {
         impact: 'Low',
-        category: 'Network',
-        body: 'Coming soon: tests popular DNS providers and recommends the lowest latency option detected for the current connection.'
-    },
-    'network-doctor': {
-        impact: 'Medium',
-        category: 'Safe',
-        body: 'Coming soon: scans common network issues and suggests fixes without applying changes automatically.'
+        impactLabel: 'Low Risk',
+        category: 'DNS Tool',
+        body: 'Tests your current DNS against trusted providers and recommends the fastest stable option for your connection.',
+        hint: 'Opens DNS scan modal'
     },
     'flush-dns-cache': {
         impact: 'Low',
-        category: 'Locked',
-        body: 'Coming soon: clears the local DNS resolver cache after the action is explicitly enabled.'
+        impactLabel: 'Safe',
+        category: 'Repair',
+        body: 'Clears stale DNS resolver entries that can cause websites, launchers, or services to connect slowly or fail.',
+        hint: 'Safe local command'
     },
     'adapter-reset': {
-        impact: 'Medium',
-        category: 'Locked',
-        body: 'Coming soon: restarts a selected network adapter with a clear warning before anything runs.'
+        impact: 'Low',
+        impactLabel: 'Safe',
+        category: 'Repair',
+        body: 'Requests a fresh network lease from your router. Useful for IP conflicts, stuck connections, or router-side lease issues.',
+        hint: 'May briefly reconnect'
     },
     'packet-loss-test': {
         impact: 'Low',
-        category: 'Network',
-        body: 'Coming soon: checks packet loss and jitter using ping samples and reports measured results.'
+        impactLabel: 'Safe',
+        category: 'Diagnostics',
+        body: 'Checks packet loss and jitter across your gateway, current DNS, and stable public endpoints to pinpoint where instability starts.',
+        hint: 'No settings changed'
     },
+    // ── Advanced cards ─────────────────────────────────────────────
     'tcp-ip-repair': {
-        impact: 'High',
-        category: 'Safe',
-        body: 'Coming soon: groups Winsock and IP repair actions behind warnings so repair steps are explicit.'
+        impact: 'Medium',
+        impactLabel: 'Admin',
+        category: 'Repair',
+        body: 'Resets the Winsock catalog and TCP/IP stack to factory defaults. Resolves stubborn network breakage caused by corrupt socket entries.',
+        hint: 'Restart required'
+    },
+    'network-doctor': {
+        impact: 'Low',
+        impactLabel: 'Safe',
+        category: 'Diagnostics',
+        body: 'Coming soon: scans common network configuration issues and suggests targeted fixes without applying any changes automatically.',
+        hint: 'Not yet available',
+        comingSoon: true
     },
     'dns-server-manager': {
-        impact: 'Medium',
-        category: 'Coming Soon',
-        body: 'Coming soon: view DNS profiles and apply selected servers after showing exactly what will change.'
+        impact: 'Low',
+        impactLabel: 'Safe',
+        category: 'DNS',
+        body: 'Coming soon: save and switch between DNS server profiles. Shows the exact servers that will be applied before confirming.',
+        hint: 'Not yet available',
+        comingSoon: true
     },
     'game-route-checker': {
         impact: 'Low',
-        category: 'Network',
-        body: 'Coming soon: checks ping to common game regions and servers without promising guaranteed latency changes.'
+        impactLabel: 'Safe',
+        category: 'Routing',
+        body: 'Coming soon: measures ping and hop count to common game server regions to help identify routing issues on your path.',
+        hint: 'Not yet available',
+        comingSoon: true
     }
 };
 
@@ -1880,7 +1901,9 @@ function showTooltipFor(card) {
     const id = card.dataset.toggle || card.dataset.networkCard || '';
     const category = card.dataset.cat || 'default';
     const isGpuCard = card.dataset.gpuCard === '1';
-    const isNetworkPlaceholder = !!card.dataset.networkCard;
+    const isNetPcard = card.classList.contains('net-pcard');
+    const isNetAdvCard = card.classList.contains('net-adv-card');
+    const isNetworkPlaceholder = !!card.dataset.networkCard && !isNetPcard && !isNetAdvCard;
 
     let detail;
     if (isGpuCard) {
@@ -1894,25 +1917,44 @@ function showTooltipFor(card) {
         detail = TOGGLE_DETAILS[id] || NETWORK_DETAILS[id] || { impact: 'Medium', category: 'Tweak', body: 'Refines a system behavior to favor responsiveness over background activity.' };
     }
 
+    // Pcards use .pcard-title; adv-cards use .adv-card-titles h4; toggle-cards use .tc-titles h4
     const title = isGpuCard
         ? (card.querySelector('.gpu-card-title')?.textContent || '')
-        : (card.querySelector('.tc-titles h4')?.textContent || '');
+        : (card.querySelector('.tc-titles h4')?.textContent || card.querySelector('.pcard-title')?.textContent || card.querySelector('.adv-card-titles h4')?.textContent || '');
     const isOn = card.classList.contains('on');
 
-    tt.dataset.cat = category;
+    // Network pcards and adv-cards get a silver tooltip; everything else keeps its cat color
+    tt.dataset.cat = (isNetPcard || isNetAdvCard) ? 'network-tool' : category;
     tt.dataset.impact = detail.impact.toLowerCase();
     tt.querySelector('.tt-title').textContent = title;
     tt.querySelector('.tt-cat').textContent = detail.category;
-    tt.querySelector('.tt-impact-text').textContent = `${detail.impact} impact`;
+    tt.querySelector('.tt-impact-text').textContent = detail.impactLabel || `${detail.impact} impact`;
     tt.querySelector('.tt-body').textContent = detail.body;
 
     if (isGpuCard) {
         tt.querySelector('.tt-state-text').textContent = 'Coming soon';
         tt.querySelector('.tt-hint').textContent = 'Placeholder · not yet active';
+        tt.classList.remove('is-on', 'is-ready');
+    } else if (isNetPcard) {
+        tt.querySelector('.tt-state-text').textContent = 'Ready';
+        tt.querySelector('.tt-hint').textContent = detail.hint || 'Click to run';
         tt.classList.remove('is-on');
+        tt.classList.add('is-ready');
+    } else if (isNetAdvCard) {
+        if (detail.comingSoon) {
+            tt.querySelector('.tt-state-text').textContent = 'Coming soon';
+            tt.querySelector('.tt-hint').textContent = detail.hint || 'Not yet available';
+            tt.classList.remove('is-on', 'is-ready');
+        } else {
+            tt.querySelector('.tt-state-text').textContent = 'Ready';
+            tt.querySelector('.tt-hint').textContent = detail.hint || 'Click to run';
+            tt.classList.remove('is-on');
+            tt.classList.add('is-ready');
+        }
     } else {
         tt.querySelector('.tt-state-text').textContent = isNetworkPlaceholder ? 'Placeholder locked' : (isOn ? 'Currently active' : 'Currently inactive');
         tt.querySelector('.tt-hint').textContent = isNetworkPlaceholder ? 'Coming soon' : 'Toggle to apply';
+        tt.classList.remove('is-ready');
         tt.classList.toggle('is-on', isOn);
     }
 
@@ -4672,72 +4714,112 @@ function initializeNetworkCards() {
     let netActiveFilter = 'all';
 
     function applyNetworkFilter() {
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const q = (document.getElementById('global-search')?.value || '').trim().toLowerCase();
         const allCards = document.querySelectorAll('#page-network [data-net-cat]');
-        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         let featuredVisible = 0;
         let advancedVisible = 0;
         let enterIndex = 0;
 
         allCards.forEach(card => {
-            const cats   = (card.dataset.netCat || '').split(' ');
-            const text   = card.textContent.toLowerCase();
-            const catOk  = netActiveFilter === 'all' || cats.includes(netActiveFilter);
+            const cats  = (card.dataset.netCat || '').split(' ');
+            const text  = card.textContent.toLowerCase();
+            const catOk = netActiveFilter === 'all' || cats.includes(netActiveFilter);
             const textOk = !q || text.includes(q);
             const show   = catOk && textOk;
 
+            const wasHidden = card.style.display === 'none';
+
             if (show) {
-                // Cancel any pending leave timer so display:none doesn't land mid-enter
-                if (card._netLeaveTimer) {
-                    clearTimeout(card._netLeaveTimer);
-                    card._netLeaveTimer = null;
-                }
-                card.classList.remove('is-leaving');
-                card.style.display = '';           // restore before measuring
-
-                if (!reducedMotion) {
-                    card.style.setProperty('--net-delay', `${enterIndex * 35}ms`);
-                    card.classList.remove('is-entering');
-                    void card.offsetHeight;        // force reflow so animation replays
-                    card.classList.add('is-entering');
-                }
-                enterIndex++;
-
                 if (card.classList.contains('net-pcard')) featuredVisible++;
                 else advancedVisible++;
-            } else {
-                // Already hidden — nothing to animate
-                if (card.style.display === 'none') return;
 
-                card.classList.remove('is-entering');
+                if (wasHidden) {
+                    // Card was truly hidden — cancel any stale anim and animate it in
+                    if (card._netAnim) { card._netAnim.cancel(); card._netAnim = null; }
+                    card.style.display = '';
+
+                    if (!reducedMotion) {
+                        const delay = Math.min(enterIndex * 25, 140);
+                        card.style.opacity = '0';
+                        card.style.transform = 'translateY(8px)';
+                        const anim = card.animate(
+                            [{ opacity: 0, transform: 'translateY(8px)' },
+                             { opacity: 1, transform: 'translateY(0)' }],
+                            { duration: 210, delay, easing: 'ease-out', fill: 'none' }
+                        );
+                        card._netAnim = anim;
+                        const finish = () => {
+                            if (card._netAnim === anim) {
+                                card._netAnim = null;
+                                card.style.opacity = '';
+                                card.style.transform = '';
+                            }
+                        };
+                        anim.onfinish = finish;
+                        anim.oncancel = finish;
+                    }
+                    enterIndex++;
+                } else {
+                    // Card already visible — cancel any leave anim and let it stay
+                    if (card._netAnim) {
+                        card._netAnim.cancel();
+                        card._netAnim = null;
+                        card.style.opacity = '';
+                        card.style.transform = '';
+                    }
+                }
+            } else {
+                if (wasHidden) return; // Already hidden — nothing to do
+
+                // Cancel any enter anim so card is at CSS opacity:1 before leaving
+                if (card._netAnim) {
+                    card._netAnim.cancel();
+                    card._netAnim = null;
+                    card.style.opacity = '';
+                    card.style.transform = '';
+                }
 
                 if (reducedMotion) {
                     card.style.display = 'none';
                     return;
                 }
 
-                // Phase 1: play leave animation
-                card.classList.add('is-leaving');
-
-                // Phase 2: set display:none AFTER leave animation finishes (150ms)
-                if (card._netLeaveTimer) clearTimeout(card._netLeaveTimer);
-                card._netLeaveTimer = setTimeout(() => {
-                    card.style.display = 'none';
-                    card.classList.remove('is-leaving');
-                    card._netLeaveTimer = null;
-                }, 180);
+                // Animate out, then set display:none in onfinish
+                const anim = card.animate(
+                    [{ opacity: 1, transform: 'translateY(0)' },
+                     { opacity: 0, transform: 'translateY(6px)' }],
+                    { duration: 155, easing: 'ease-in', fill: 'forwards' }
+                );
+                card._netAnim = anim;
+                anim.onfinish = () => {
+                    if (card._netAnim === anim) {
+                        card.style.display = 'none';
+                        try { anim.cancel(); } catch (_) {}
+                        card._netAnim = null;
+                        card.style.opacity = '';
+                        card.style.transform = '';
+                    }
+                };
+                anim.oncancel = () => {
+                    if (card._netAnim === anim) {
+                        card._netAnim = null;
+                        card.style.opacity = '';
+                        card.style.transform = '';
+                    }
+                };
             }
         });
 
-        // Show/hide section containers (delay hiding so leaving cards don't jump)
+        // Show/hide section containers — defer hiding to let leave anims finish
         const featuredSection = document.querySelector('#page-network .net-section:not(.net-section-adv)');
         const advancedSection = document.querySelector('#page-network .net-section-adv');
-        if (featuredVisible > 0)  { if (featuredSection) featuredSection.style.display = ''; }
-        else { setTimeout(() => { if (featuredSection) featuredSection.style.display = 'none'; }, 190); }
-        if (advancedVisible > 0)  { if (advancedSection) advancedSection.style.display = ''; }
-        else { setTimeout(() => { if (advancedSection) advancedSection.style.display = 'none'; }, 190); }
+        if (featuredVisible > 0) { if (featuredSection) featuredSection.style.display = ''; }
+        else { setTimeout(() => { if (featuredSection) featuredSection.style.display = 'none'; }, 200); }
+        if (advancedVisible > 0) { if (advancedSection) advancedSection.style.display = ''; }
+        else { setTimeout(() => { if (advancedSection) advancedSection.style.display = 'none'; }, 200); }
 
-        // Empty state message
+        // Empty state
         let emptyEl = document.getElementById('net-empty-state');
         if (!emptyEl) {
             emptyEl = document.createElement('p');
@@ -4763,18 +4845,22 @@ function initializeNetworkCards() {
         const tab = e.target.closest('.net-filter-tab');
         if (!tab) return;
 
-        // Update active state
-        document.querySelectorAll('.net-filter-tab').forEach(t => {
-            t.classList.remove('net-filter-active', 'is-activating');
-        });
+        // Update visual active state
+        document.querySelectorAll('.net-filter-tab').forEach(t => t.classList.remove('net-filter-active'));
         tab.classList.add('net-filter-active');
 
-        // Replay press animation — force reflow guarantees it replays on same-tab re-click
-        void tab.offsetWidth;
-        tab.classList.add('is-activating');
-        const removeActivating = () => tab.classList.remove('is-activating');
-        tab.addEventListener('animationend', removeActivating, { once: true });
-        setTimeout(removeActivating, 400); // fallback if animationend misfires
+        // Spring press via Web Animations API — always creates a new animation,
+        // replays even on same-tab re-click, no CSS class/transition conflict
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            if (tab._pressAnim) tab._pressAnim.cancel();
+            tab._pressAnim = tab.animate(
+                [{ transform: 'scale(0.91)' },
+                 { transform: 'scale(1.05)', offset: 0.5 },
+                 { transform: 'scale(1)' }],
+                { duration: 260, easing: 'ease-out' }
+            );
+            tab._pressAnim.onfinish = tab._pressAnim.oncancel = () => { tab._pressAnim = null; };
+        }
 
         netActiveFilter = tab.dataset.filter || 'all';
         applyNetworkFilter();
@@ -4787,19 +4873,74 @@ function initializeNetworkCards() {
         }
     });
 
+    // Dev replay button — re-runs the enter animation on all currently visible network cards
+    document.getElementById('net-replay-btn')?.addEventListener('click', () => {
+        let idx = 0;
+        document.querySelectorAll('#page-network [data-net-cat]').forEach(card => {
+            if (card.style.display === 'none') return;
+            if (card._netAnim) { card._netAnim.cancel(); card._netAnim = null; }
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(8px)';
+            const delay = Math.min(idx * 25, 160);
+            const anim = card.animate(
+                [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }],
+                { duration: 210, delay, easing: 'ease-out', fill: 'none' }
+            );
+            card._netAnim = anim;
+            const finish = () => {
+                if (card._netAnim === anim) {
+                    card._netAnim = null;
+                    card.style.opacity = '';
+                    card.style.transform = '';
+                }
+            };
+            anim.onfinish = anim.oncancel = finish;
+            idx++;
+        });
+    });
+
+    // Hover tooltip for featured pcards and advanced cards — reuses showTooltipFor/hideTooltip
+    document.querySelectorAll('#page-network .net-pcard[data-network-card], #page-network .net-adv-card[data-network-card]').forEach(card => {
+        let showTimer;
+        card.addEventListener('mouseenter', () => {
+            clearTimeout(showTimer);
+            showTimer = setTimeout(() => showTooltipFor(card), 220);
+        });
+        card.addEventListener('mouseleave', () => {
+            clearTimeout(showTimer);
+            hideTooltip();
+        });
+    });
+
+    const setNetworkActionRunning = (btn, running) => {
+        const card = btn.closest('[data-network-card]');
+        if (card) card.classList.toggle('net-action-running', running);
+    };
+
     // Flush DNS
     document.getElementById('flush-dns-btn')?.addEventListener('click', async function () {
         const btn = this;
+        const statusEl = btn.closest('[data-network-card]')?.querySelector('.pcard-status-text');
         btn.disabled = true;
-        btn.textContent = 'Flushing...';
+        setNetworkActionRunning(btn, true);
+        btn.textContent = 'Clearing...';
+        if (statusEl) statusEl.textContent = 'Clearing cache...';
         try {
             const r = await window.electronAPI.flushDns();
             if (r.success) {
-                showNotification('success', 'DNS Flushed', 'DNS resolver cache cleared successfully.');
+                if (statusEl) statusEl.textContent = 'Done';
+                showNotification('success', 'DNS Cache Cleared', 'Resolver cache flushed. Stale entries removed.');
+                setTimeout(() => { if (statusEl) statusEl.textContent = 'Ready'; }, 3000);
             } else {
+                if (statusEl) statusEl.textContent = 'Failed';
                 showNotification('error', 'Flush Failed', r.message || 'Could not flush DNS cache.');
+                setTimeout(() => { if (statusEl) statusEl.textContent = 'Ready'; }, 3000);
             }
-        } catch { showNotification('error', 'Error', 'Unexpected error during DNS flush.'); }
+        } catch {
+            if (statusEl) statusEl.textContent = 'Ready';
+            showNotification('error', 'Error', 'Unexpected error during DNS flush.');
+        }
+        setNetworkActionRunning(btn, false);
         btn.disabled = false;
         btn.textContent = 'Flush DNS';
     });
@@ -4807,37 +4948,134 @@ function initializeNetworkCards() {
     // Release / Renew IP
     document.getElementById('release-renew-btn')?.addEventListener('click', async function () {
         const btn = this;
+        const statusEl = btn.closest('[data-network-card]')?.querySelector('.pcard-status-text');
         btn.disabled = true;
-        btn.textContent = 'Working...';
-        showNotification('warning', 'IP Renewal', 'Releasing and renewing IP — may take up to 30s...');
+        setNetworkActionRunning(btn, true);
+        btn.textContent = 'Requesting...';
+        if (statusEl) statusEl.textContent = 'Requesting lease...';
+        showNotification('warning', 'IP Renewal', 'Releasing and renewing IP — connection may drop briefly.');
         try {
             const r = await window.electronAPI.releaseRenewIp();
             if (r.success) {
-                showNotification('success', 'IP Renewed', 'IP address released and renewed successfully.');
+                if (statusEl) statusEl.textContent = 'Renewed';
+                showNotification('success', 'IP Renewed', 'Fresh lease obtained from your router.');
+                setTimeout(() => { if (statusEl) statusEl.textContent = 'Ready'; }, 3000);
             } else {
+                if (statusEl) statusEl.textContent = 'Failed';
                 showNotification('error', 'IP Renewal Failed', r.message || 'Could not release/renew IP.');
+                setTimeout(() => { if (statusEl) statusEl.textContent = 'Ready'; }, 3000);
             }
-        } catch { showNotification('error', 'Error', 'Unexpected error during IP renewal.'); }
+        } catch {
+            if (statusEl) statusEl.textContent = 'Ready';
+            showNotification('error', 'Error', 'Unexpected error during IP renewal.');
+        }
+        setNetworkActionRunning(btn, false);
         btn.disabled = false;
         btn.textContent = 'Release/Renew';
     });
 
-    // Packet Loss Test (10-ping to 1.1.1.1)
+    // Packet Loss Test — gateway, current DNS, Cloudflare, Google (deduped, parallel)
     document.getElementById('packet-test-btn')?.addEventListener('click', async function () {
         const btn = this;
+        const statusEl = btn.closest('[data-network-card]')?.querySelector('.pcard-status-text');
         btn.disabled = true;
+        setNetworkActionRunning(btn, true);
         btn.textContent = 'Testing...';
+        if (statusEl) statusEl.textContent = 'Testing gateway, DNS, and public endpoints...';
         try {
-            const r = await window.electronAPI.runPacketTest('1.1.1.1');
-            if (r.success && r.stats) {
+            // Detect active physical adapter's gateway and primary DNS
+            let gateway = null;
+            let primaryDns = null;
+            try {
+                const net = await window.electronAPI.getActiveNetwork();
+                if (net?.success) {
+                    gateway    = net.gateway    || null;
+                    primaryDns = net.primaryDns || null;
+                }
+            } catch { /* non-fatal — proceed without gateway/DNS */ }
+
+            // Build deduplicated ordered target list:
+            // gateway → current DNS → Cloudflare → Google
+            const seen = new Set();
+            const isV4 = ip => /^\d{1,3}(\.\d{1,3}){3}$/.test(ip);
+            const targets = [];
+            const addTarget = (ip, label) => {
+                if (ip && isV4(ip) && !seen.has(ip)) { targets.push({ ip, label }); seen.add(ip); }
+            };
+            addTarget(gateway,    'Gateway');
+            addTarget(primaryDns, 'Your DNS');
+            addTarget('1.1.1.1',  'Cloudflare');
+            addTarget('8.8.8.8',  'Google');
+
+            const results = await Promise.all(targets.map(async ({ ip, label }) => {
+                try {
+                    const r = await window.electronAPI.runPacketTest(ip);
+                    return { label, ip, r };
+                } catch {
+                    return { label, ip, r: { success: false } };
+                }
+            }));
+
+            // Log every target for diagnostics
+            console.log('[PacketTest]', results.map(({ label, ip, r }) => ({
+                label, ip,
+                ...(r.stats || { result: r.success ? 'no stats' : 'failed' })
+            })));
+
+            // Format per-target result line
+            const fmtResult = ({ label, r }) => {
+                if (!r.success || !r.stats) return `${label}: Unavailable`;
                 const { averageMs, packetLoss, jitterMs } = r.stats;
-                showNotification('success', 'Packet Test — 1.1.1.1',
-                    `Avg: ${averageMs !== null ? averageMs + 'ms' : 'N/A'} | Loss: ${packetLoss !== null ? packetLoss + '%' : 'N/A'} | Jitter: ${jitterMs !== null ? Math.round(jitterMs) + 'ms' : 'N/A'}`
-                );
-            } else {
-                showNotification('error', 'Test Failed', r.message || 'Could not complete packet loss test.');
+                const parts = [
+                    averageMs  !== null ? `${averageMs}ms avg`           : null,
+                    packetLoss !== null ? `${packetLoss}% loss`          : null,
+                    jitterMs   !== null ? `±${Math.round(jitterMs)}ms`   : null,
+                ].filter(Boolean);
+                return `${label}: ${parts.join(' ')}`;
+            };
+            const lines = results.map(fmtResult);
+
+            // Contextual interpretation
+            const hasLoss = r => r?.success && (r.stats?.packetLoss ?? 0) > 0;
+            const gatewayR  = results.find(r => r.label === 'Gateway');
+            const dnsR      = results.find(r => r.label === 'Your DNS');
+            const publicRs  = results.filter(r => r.label === 'Cloudflare' || r.label === 'Google');
+
+            const gatewayLoss = hasLoss(gatewayR?.r);
+            const dnsLoss     = hasLoss(dnsR?.r);
+            const publicLoss  = publicRs.some(r => hasLoss(r.r));
+            const anyLoss     = gatewayLoss || dnsLoss || publicLoss;
+            const allFailed   = results.every(r => !r.r.success || !r.r.stats);
+
+            let hint = '';
+            if (gatewayLoss && !dnsLoss && !publicLoss) {
+                hint = 'Local router or Wi-Fi is likely the issue.';
+            } else if (!gatewayLoss && dnsLoss && !publicLoss) {
+                hint = 'DNS route may be unstable. Consider switching DNS servers.';
+            } else if (!gatewayLoss && !dnsLoss && publicLoss) {
+                hint = 'Possible ISP or internet routing issue.';
+            } else if (anyLoss) {
+                hint = 'Multiple hops affected — check your router and ISP.';
             }
-        } catch { showNotification('error', 'Error', 'Unexpected error during packet test.'); }
+
+            const body = hint ? `${lines.join(' | ')} — ${hint}` : lines.join(' | ');
+
+            if (allFailed) {
+                if (statusEl) statusEl.textContent = 'Unreachable';
+                showNotification('error', 'Packet Test Failed', 'No endpoints responded. Check your connection.');
+            } else if (anyLoss) {
+                if (statusEl) statusEl.textContent = 'Loss detected';
+                showNotification('warning', 'Packet Loss Detected', body);
+            } else {
+                if (statusEl) statusEl.textContent = 'Stable';
+                showNotification('success', 'Connection Looks Stable', body);
+            }
+            setTimeout(() => { if (statusEl) statusEl.textContent = 'Ready'; }, 4000);
+        } catch {
+            if (statusEl) statusEl.textContent = 'Ready';
+            showNotification('error', 'Error', 'Unexpected error during packet test.');
+        }
+        setNetworkActionRunning(btn, false);
         btn.disabled = false;
         btn.textContent = 'Run Test';
     });
@@ -4845,18 +5083,30 @@ function initializeNetworkCards() {
     // Winsock Reset
     document.getElementById('winsock-reset-btn')?.addEventListener('click', async function () {
         const btn = this;
+        const statusEl = btn.closest('[data-network-card]')?.querySelector('.pcard-status-text');
         btn.disabled = true;
+        setNetworkActionRunning(btn, true);
         btn.textContent = 'Resetting...';
+        if (statusEl) statusEl.textContent = 'Resetting catalog...';
         try {
             const r = await window.electronAPI.resetWinsock();
             if (r.success) {
-                showNotification('warning', 'Winsock Reset', 'Winsock reset completed. A restart is required to take full effect.');
+                if (statusEl) statusEl.textContent = 'Restart needed';
+                showNotification('warning', 'Winsock Reset', 'Catalog reset complete. Restart your PC for changes to take effect.');
             } else if (r.message && (r.message.toLowerCase().includes('access') || r.message.toLowerCase().includes('denied') || r.message.toLowerCase().includes('admin'))) {
+                if (statusEl) statusEl.textContent = 'Admin required';
                 showNotification('error', 'Admin Required', 'Run this app as Administrator to reset Winsock.');
+                setTimeout(() => { if (statusEl) statusEl.textContent = 'Ready'; }, 4000);
             } else {
+                if (statusEl) statusEl.textContent = 'Failed';
                 showNotification('error', 'Reset Failed', r.message || 'Could not reset Winsock.');
+                setTimeout(() => { if (statusEl) statusEl.textContent = 'Ready'; }, 3000);
             }
-        } catch { showNotification('error', 'Error', 'Unexpected error during Winsock reset.'); }
+        } catch {
+            if (statusEl) statusEl.textContent = 'Ready';
+            showNotification('error', 'Error', 'Unexpected error during Winsock reset.');
+        }
+        setNetworkActionRunning(btn, false);
         btn.disabled = false;
         btn.textContent = 'Reset Winsock';
     });

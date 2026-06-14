@@ -3472,40 +3472,74 @@ body::after {
   z-index: 1;
   width: 88px; height: 88px;
   border-radius: 22px;
-  background: linear-gradient(145deg, rgba(28,28,28,0.94), rgba(10,10,10,0.97));
-  border: 1px solid rgba(255,255,255,0.09);
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.065) 34%, rgba(255,255,255,0.014) 64%, rgba(255,255,255,0) 100%),
+    linear-gradient(145deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.028) 40%, rgba(255,255,255,0.006) 74%),
+    linear-gradient(145deg, rgba(34,34,36,0.96) 0%, rgba(10,10,11,0.98) 58%, rgba(24,24,26,0.95) 100%);
+  border: 1px solid rgba(218,218,222,0.16);
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
   box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    inset 0 -1px 0 rgba(0,0,0,0.42),
     0 0 0 1px rgba(255,255,255,0.04),
     0 24px 58px rgba(0,0,0,0.58);
   animation: gpuIconFloat 3.2s ease-in-out infinite;
 }
 
 @keyframes gpuIconFloat {
-  0%, 100% { transform: translateY(0);   box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 24px 58px rgba(0,0,0,0.58); }
-  50%       { transform: translateY(-5px); box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 32px 68px rgba(0,0,0,0.68); }
+  0%, 100% {
+    transform: translateY(0);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.10),
+      inset 0 -1px 0 rgba(0,0,0,0.42),
+      0 0 0 1px rgba(255,255,255,0.04),
+      0 24px 58px rgba(0,0,0,0.58);
+  }
+  50% {
+    transform: translateY(-5px);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.12),
+      inset 0 -1px 0 rgba(0,0,0,0.44),
+      0 0 0 1px rgba(255,255,255,0.06),
+      0 32px 68px rgba(0,0,0,0.68);
+  }
 }
 
-/* Rotating scan ring on the icon */
+/* GPU scan icon keeps a static glass face; no rotating ring on the rounded square. */
 .gpu-scan-icon::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.24) 15%, transparent 30%);
-  animation: gpuScanRing 2.4s linear infinite;
-  z-index: 2;
+  content: none;
+  display: none;
 }
 
-@keyframes gpuScanRing {
+.gpu-chip-loader-svg {
+  width: 58px;
+  height: 58px;
+  color: rgba(238,238,240,0.74);
+  position: relative;
+  z-index: 2;
+  overflow: visible;
+  filter: drop-shadow(0 0 10px rgba(255,255,255,0.08));
+}
+
+.gpu-loader-lines {
+  color: rgba(255,255,255,0.72);
+  transform-origin: 32px 32px;
+  animation: gpu-loader-lines-spin 1.35s linear infinite;
+}
+
+.gpu-loader-chip {
+  color: rgba(255,255,255,0.70);
+}
+
+@keyframes gpu-loader-lines-spin {
   to { transform: rotate(360deg); }
 }
 
-.gpu-scan-icon svg {
-  width: 44px; height: 44px;
-  color: rgba(255,255,255,0.50);
-  position: relative; z-index: 3;
+@media (prefers-reduced-motion: reduce) {
+  .gpu-loader-lines {
+    animation: none !important;
+  }
 }
 
 .gpu-scan-text { text-align: center; }
@@ -3990,6 +4024,16 @@ body::after {
 .tc-tooltip[data-cat="gpu-amd"]     { --cat-color: 248, 113, 113; }
 .tc-tooltip[data-cat="gpu-intel"]   { --cat-color: 96, 165, 250; }
 .tc-tooltip[data-cat="gpu-unknown"] { --cat-color: 180, 180, 190; }
+
+/* -- Network featured pcard tooltip: silver/neutral (no blue tint) -- */
+.tc-tooltip[data-cat="network-tool"] { --cat-color: 218, 218, 220; }
+
+/* -- Ready state dot: green pulse (used by functional Network pcards) -- */
+.tc-tooltip.is-ready .tt-state-dot {
+  background: #4ade80;
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.75);
+}
+.tc-tooltip.is-ready .tt-state-text { color: #4ade80; }
 
 /* -- Badge animated status dot ------------------------------- */
 .gpu-badge-dot {
@@ -6791,10 +6835,11 @@ ol.ai-msg-list li {
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    122deg,
-    rgba(255,255,255,0.07) 0%,
-    rgba(255,255,255,0.038) 22%,
-    transparent 48%
+    128deg,
+    rgba(255,255,255,0.065) 0%,
+    rgba(255,255,255,0.030) 28%,
+    rgba(255,255,255,0.010) 52%,
+    transparent 72%
   );
   pointer-events: none;
   z-index: 0;
@@ -6860,7 +6905,7 @@ ol.ai-msg-list li {
   font-weight: 700;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.32);
+  color: rgba(255,255,255,0.52);
   margin-bottom: 12px;
 }
 #page-network .net-hero-title {
@@ -6874,7 +6919,7 @@ ol.ai-msg-list li {
 }
 #page-network .net-hero-sub {
   font-size: 13px;
-  color: rgba(255,255,255,0.36);
+  color: rgba(255,255,255,0.66);
   margin: 0;
   max-width: 420px;
   line-height: 1.7;
@@ -6882,15 +6927,16 @@ ol.ai-msg-list li {
 #page-network .net-hero-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 14px;
+  gap: 8px;
+  padding: 9px 18px;
   border-radius: 20px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.12);
-  font-size: 11.5px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.5);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.18);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.76);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.10) inset, 0 4px 14px rgba(0,0,0,0.35);
+  letter-spacing: 0.1px;
 }
 #page-network .net-pill-dot {
   width: 7px; height: 7px;
@@ -6923,7 +6969,7 @@ ol.ai-msg-list li {
   border-radius: 10px;
   border: 1px solid transparent;
   background: rgba(255,255,255,0);  /* rgba(0→0) allows box-shadow to animate; `transparent` does not */
-  color: rgba(255,255,255,0.36);
+  color: rgba(255,255,255,0.50);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -6935,7 +6981,7 @@ ol.ai-msg-list li {
 }
 #page-network .net-filter-tab:hover {
   background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,0.65);
+  color: rgba(255,255,255,0.80);
 }
 
 /* Press feedback — mirrors .nav-item:active */
@@ -6956,11 +7002,27 @@ ol.ai-msg-list li {
 
 #page-network .net-sort-label {
   font-size: 11.5px;
-  color: rgba(255,255,255,0.28);
+  color: rgba(255,255,255,0.46);
   padding-right: 6px;
   white-space: nowrap;
 }
-#page-network .net-sort-label b { color: rgba(255,255,255,0.58); font-weight: 600; }
+#page-network .net-sort-label b { color: rgba(255,255,255,0.74); font-weight: 600; }
+
+#page-network .net-replay-btn {
+  font-size: 13px;
+  color: rgba(255,255,255,0.11);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 3px 5px;
+  font-family: inherit;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+#page-network .net-replay-btn:hover { color: rgba(255,255,255,0.42); }
 
 /* ── Section structure ─────────────────────────────────────────── */
 #page-network .net-section { margin-bottom: 32px; }
@@ -6982,19 +7044,19 @@ ol.ai-msg-list li {
   font-weight: 700;
   letter-spacing: 2.5px;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.48);
   margin-bottom: 6px;
 }
 #page-network .net-section-h2 {
   font-size: 20px;
   font-weight: 700;
-  color: rgba(255,255,255,0.92);
+  color: #ffffff;
   margin: 0 0 5px;
   letter-spacing: -0.3px;
 }
 #page-network .net-section-desc {
   font-size: 12.5px;
-  color: rgba(255,255,255,0.32);
+  color: rgba(255,255,255,0.54);
   margin: 0;
 }
 #page-network .net-section-head-right {
@@ -7008,9 +7070,9 @@ ol.ai-msg-list li {
   font-weight: 600;
   padding: 4px 11px;
   border-radius: 20px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.09);
-  color: rgba(255,255,255,0.38);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.54);
   white-space: nowrap;
 }
 #page-network .net-section-label-sm {
@@ -7018,7 +7080,7 @@ ol.ai-msg-list li {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.8px;
-  color: rgba(255,255,255,0.78);
+  color: rgba(255,255,255,0.86);
 }
 
 /* ── Premium card grid ─────────────────────────────────────────── */
@@ -7035,6 +7097,7 @@ ol.ai-msg-list li {
   padding: 20px 20px 16px;       /* slightly more padding than toggle-card */
   gap: 0;                        /* override toggle-card gap; use margins below */
   font-family: inherit;
+  border-color: rgba(210,210,214,0.18);
 }
 
 /* pcard-top — matches tc-head style */
@@ -7051,17 +7114,36 @@ ol.ai-msg-list li {
 #page-network .pcard-icon-wrap {
   width: 46px; height: 46px;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
   border-radius: 13px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
-  border: 1px solid rgba(255,255,255,0.08);
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.055) 33%, rgba(255,255,255,0.012) 62%, rgba(255,255,255,0) 100%),
+    linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.025) 38%, rgba(255,255,255,0.006) 72%),
+    linear-gradient(145deg, rgba(34,34,36,0.96) 0%, rgba(14,14,15,0.98) 58%, rgba(26,26,28,0.94) 100%);
+  border: 1px solid rgba(218,218,222,0.18);
   color: rgba(255,255,255,0.55);
   display: flex; align-items: center; justify-content: center;
   transition: all 0.3s ease;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    inset 0 -1px 0 rgba(0,0,0,0.42),
+    0 8px 18px rgba(0,0,0,0.22);
 }
-#page-network .pcard-icon-wrap svg {
+#page-network .pcard-icon-wrap::before {
+  content: none;
+  display: none;
+}
+#page-network .pcard-icon-wrap::after {
+  content: none;
+  display: none;
+}
+#page-network .pcard-icon-wrap > svg {
   width: 20px; height: 20px;
   stroke: currentColor;
+  position: relative;
+  z-index: 1;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
 /* pcard-cat-pill — subtle label, matches tc-titles p tone */
@@ -7070,9 +7152,10 @@ ol.ai-msg-list li {
   font-weight: 600;
   padding: 3px 10px;
   border-radius: 20px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.54);
+  transition: color 0.25s ease, border-color 0.25s ease;
 }
 
 /* pcard-body — matches tc-titles layout */
@@ -7096,9 +7179,10 @@ ol.ai-msg-list li {
 /* pcard-desc — matches tc-titles p */
 #page-network .pcard-desc {
   font-size: 11.5px;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.58);
   line-height: 1.5;
   margin: 0;
+  transition: color 0.28s ease, transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* pcard-tags — compact, de-emphasised */
@@ -7115,9 +7199,9 @@ ol.ai-msg-list li {
   font-weight: 500;
   padding: 2px 7px;
   border-radius: 5px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.07);
-  color: rgba(255,255,255,0.32);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.09);
+  color: rgba(255,255,255,0.44);
 }
 
 /* pcard-foot — matches tc-foot */
@@ -7144,7 +7228,28 @@ ol.ai-msg-list li {
   font-weight: 800;
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.58);
+}
+
+/* ── Featured pcard hover: description reveal ──────────────────────
+   The card already lifts via .toggle-card:hover (translateY -4px).
+   These rules add description brightening + a 2px desc-relative rise
+   so the description "comes forward" more visibly than System cards.  */
+#page-network .net-pcard:hover .pcard-desc {
+  color: rgba(255,255,255,0.90);
+  transform: translateY(-2px);
+}
+#page-network .net-pcard:hover .pcard-icon-wrap {
+  color: rgba(255,255,255,0.85);
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.065) 33%, rgba(255,255,255,0.014) 62%, rgba(255,255,255,0) 100%),
+    linear-gradient(145deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 38%, rgba(255,255,255,0.008) 72%),
+    linear-gradient(145deg, rgba(42,42,44,0.98) 0%, rgba(16,16,17,0.98) 58%, rgba(30,30,32,0.96) 100%);
+  border-color: rgba(235,235,238,0.24);
+}
+#page-network .net-pcard:hover .pcard-cat-pill {
+  color: rgba(255,255,255,0.72);
+  border-color: rgba(255,255,255,0.16);
 }
 
 /* Network card buttons — dark glass, consistent with app button language */
@@ -7209,6 +7314,7 @@ ol.ai-msg-list li {
   padding: 16px 18px 14px;
   gap: 0;
   font-family: inherit;
+  border-color: rgba(205,205,210,0.16);
 }
 
 #page-network .adv-card-head {
@@ -7224,17 +7330,92 @@ ol.ai-msg-list li {
 #page-network .adv-card-icon {
   width: 40px; height: 40px;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
   border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
-  border: 1px solid rgba(255,255,255,0.08);
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 33%, rgba(255,255,255,0.012) 62%, rgba(255,255,255,0) 100%),
+    linear-gradient(145deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.022) 38%, rgba(255,255,255,0.006) 72%),
+    linear-gradient(145deg, rgba(32,32,34,0.96) 0%, rgba(13,13,14,0.98) 58%, rgba(24,24,26,0.94) 100%);
+  border: 1px solid rgba(218,218,222,0.17);
   color: rgba(255,255,255,0.55);
   transition: all 0.3s ease;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    inset 0 -1px 0 rgba(0,0,0,0.42),
+    0 7px 16px rgba(0,0,0,0.20);
 }
-#page-network .adv-card-icon svg {
+#page-network .adv-card-icon::before {
+  content: none;
+  display: none;
+}
+#page-network .adv-card-icon::after {
+  content: none;
+  display: none;
+}
+#page-network .adv-card-icon > svg {
   width: 18px; height: 18px;
   stroke: currentColor;
+  position: relative;
+  z-index: 1;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+#page-network .net-action-loader {
+  width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%) scale(0.92);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+#page-network .net-loader-svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  overflow: visible;
+  transform-origin: center;
+  animation: net-loader-spin 0.9s linear infinite;
+}
+
+#page-network .net-loader-track {
+  fill: none;
+  stroke: rgba(255,255,255,0.14);
+  stroke-width: 2;
+}
+
+#page-network .net-loader-arc {
+  fill: none;
+  stroke: rgba(255,255,255,0.86);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+#page-network .net-loader-dot {
+  fill: rgba(255,255,255,0.92);
+  filter: drop-shadow(0 0 5px rgba(255,255,255,0.35));
+}
+
+#page-network .net-action-running .pcard-icon-wrap > svg,
+#page-network .net-action-running .adv-card-icon > svg {
+  opacity: 0;
+  transform: scale(0.88);
+}
+
+#page-network .net-action-running .net-action-loader {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+@keyframes net-loader-spin {
+  to { transform: rotate(360deg); }
 }
 
 #page-network .adv-card-titles {
@@ -7252,7 +7433,7 @@ ol.ai-msg-list li {
 }
 #page-network .adv-card-titles p {
   font-size: 11.5px;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.56);
   margin: 0;
 }
 
@@ -7282,6 +7463,70 @@ ol.ai-msg-list li {
   display: none;
 }
 
+/* ── Network card rotating border shine ──────────────────────── */
+
+/* Animatable CSS custom property for the conic-gradient start angle.
+   @property is required so the browser can interpolate an <angle>
+   between keyframe values; without it the spin is not animatable. */
+@property --net-border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* Suppress the default diagonal-sweep .tc-shine on Network cards —
+   the ::before border-rotation below replaces it cleanly. */
+#page-network .net-pcard .tc-shine,
+#page-network .net-adv-card .tc-shine {
+  display: none;
+}
+
+/* Rotating border highlight.
+   Technique: conic-gradient sized to the card (inset: 0), with the
+   border-strip mask trick (content-box destination-out) to reveal only
+   a thin ring at the card edge. The gradient angle advances via
+   @keyframes, so the arc sweeps the full perimeter continuously. */
+#page-network .net-pcard::before,
+#page-network .net-adv-card::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--net-border-angle) at 50% 50%,
+    rgba(255,255,255,0.018) 0deg,
+    rgba(255,255,255,0.035) 14deg,
+    rgba(255,255,255,0.16)  31deg,
+    rgba(255,255,255,0.30)  43deg,
+    rgba(255,255,255,0.14)  57deg,
+    rgba(255,255,255,0.04)  78deg,
+    rgba(255,255,255,0.018) 118deg,
+    rgba(255,255,255,0.018) 360deg
+  );
+  /* Punch out everything inside the 1px padding band so only
+     the border-strip remains visible — no fill inside the card. */
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  padding: 1px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.74;
+  transition: opacity 0.35s ease;
+  animation: net-border-spin 9s linear infinite;
+}
+
+#page-network .net-pcard:hover::before,
+#page-network .net-adv-card:hover::before {
+  opacity: 1;
+}
+
+@keyframes net-border-spin {
+  to { --net-border-angle: 360deg; }
+}
+
 /* ── Reduced motion ────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   #page-network .is-entering,
@@ -7292,6 +7537,20 @@ ol.ai-msg-list li {
     transition: none !important;
     opacity: 1 !important;
     transform: none !important;
+  }
+  #page-network .net-pcard .pcard-desc,
+  #page-network .net-pcard .pcard-cat-pill {
+    transition: none !important;
+  }
+  #page-network .net-pcard:hover .pcard-desc {
+    transform: none !important;
+  }
+  #page-network .net-pcard::before,
+  #page-network .net-adv-card::before {
+    animation: none !important;
+  }
+  #page-network .net-loader-svg {
+    animation: none !important;
   }
 }
 
