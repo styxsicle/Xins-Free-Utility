@@ -146,9 +146,10 @@ function initializeInputTab() {
     const profileStatus = document.getElementById('input-profile-status');
     const profileKey = 'xtweaks-input-remap-profile';
     const modelPaths = {
-        xbox: 'assets/models/controllers/xbox/xbox-controller.glb',
-        ps5: 'assets/models/controllers/ps5/ps5-controller.glb',
-        playstation: 'assets/models/controllers/ps5/ps5-controller.glb'
+        xbox: 'assets/models/controllers/xbox-controller-black/source/xbox.glb',
+        // Temporary PS5 asset: keep original materials/textures and replace with a higher-quality GLB later.
+        ps5: 'assets/models/controllers/white_ps5_controller.glb',
+        playstation: 'assets/models/controllers/white_ps5_controller.glb'
     };
     const INPUT_MODEL_FRAMING = {
         xbox: {
@@ -164,16 +165,24 @@ function initializeInputTab() {
             rotation: { x: 0.24, y: -1.95, z: 0.04 }
         },
         ps5: {
-            distanceMultiplier: 1.02,
-            scaleMultiplier: 3.04,
-            positionOffset: { x: 0, y: 0.07, z: 0 },
-            targetOffset: { x: 0, y: 0.025, z: 0 },
-            cameraOffset: { x: 0, y: 0.1, z: 0 },
-            rotation: { x: -0.08, y: -0.18, z: 0.015 }
+            distanceMultiplier: 0.74,
+            scaleMultiplier: 3.25,
+            positionOffset: { x: 0, y: 0.04, z: 0 },
+            targetOffset: { x: 0, y: 0.035, z: 0 },
+            cameraOffset: { x: 0.03, y: 0.14, z: 0.02 },
+            rotation: { x: -0.14, y: -0.12, z: 0.01 }
+        },
+        playstation: {
+            distanceMultiplier: 0.74,
+            scaleMultiplier: 3.25,
+            positionOffset: { x: 0, y: 0.04, z: 0 },
+            targetOffset: { x: 0, y: 0.035, z: 0 },
+            cameraOffset: { x: 0.03, y: 0.14, z: 0.02 },
+            rotation: { x: -0.14, y: -0.12, z: 0.01 }
         }
     };
-    // These are temporary overlay decals because the Xbox GLB is one mesh/material.
-    // For production quality, use a model with separated button meshes or painted textures.
+    // Xbox decals are disabled because fake overlay dots were not good enough.
+    // Keep this code dormant until using a model with separated button meshes or painted textures.
     const XBOX_BUTTON_DECALS = {
         enabled: false,
         radius: 0.035,
@@ -186,6 +195,11 @@ function initializeInputTab() {
             x: { x: 0, y: 0, z: 0 },
             y: { x: 0, y: 0, z: 0 }
         }
+    };
+    const INPUT_MODEL_MATERIAL_MODE = {
+        xbox: 'darkTintPreserveMaps',
+        ps5: 'preserveOriginal',
+        playstation: 'preserveOriginal'
     };
     const defaultXboxFraming = JSON.parse(JSON.stringify(INPUT_MODEL_FRAMING.xbox));
     const xboxTuneFields = [
@@ -377,7 +391,8 @@ function initializeInputTab() {
         };
 
         const applyFramingToObject = (framedObject, modelKey) => {
-            const preset = INPUT_MODEL_FRAMING[modelKey] || INPUT_MODEL_FRAMING.xbox;
+            const framingKey = modelKey === 'ps5' ? 'playstation' : modelKey;
+            const preset = INPUT_MODEL_FRAMING[framingKey] || INPUT_MODEL_FRAMING.xbox;
             const maxDim = framedObject.userData.xtweaksMaxDim || 1;
             const scale = preset.scaleMultiplier / maxDim;
             const rotation = new THREE.Euler(preset.rotation.x, preset.rotation.y, preset.rotation.z);
@@ -485,7 +500,8 @@ function initializeInputTab() {
         };
 
         const frameModel = (model, modelKey) => {
-            const preset = INPUT_MODEL_FRAMING[modelKey] || INPUT_MODEL_FRAMING.xbox;
+            const framingKey = modelKey === 'ps5' ? 'playstation' : modelKey;
+            const preset = INPUT_MODEL_FRAMING[framingKey] || INPUT_MODEL_FRAMING.xbox;
             model.updateMatrixWorld(true);
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
@@ -528,7 +544,7 @@ function initializeInputTab() {
             if (/\b(b|button_b|b_button|face_b)\b/.test(name)) return 'button-b';
             if (/\b(x|button_x|x_button|face_x)\b/.test(name)) return 'button-x';
             if (/\b(y|button_y|y_button|face_y)\b/.test(name)) return 'button-y';
-            if (/button|face|dpad|d-pad|stick|thumb|trigger|bumper|logo|label/.test(name)) return 'detail';
+            if (/button|face|dpad|d-pad|stick|thumb|trigger|bumper|logo|label|cross|circle|square|triangle|vraymtl/.test(name)) return 'detail';
             if (/shell|body|case|housing|controller/.test(name)) return 'shell';
             return 'unknown';
         };
@@ -542,6 +558,53 @@ function initializeInputTab() {
                 'button-y': 0xa88b32
             };
             return accents[role] || null;
+        };
+
+        const isNewControllerAsset = (path = '') => {
+            return path.includes('xbox-controller-black/source/xbox.glb')
+                || path.includes('white_ps5_controller.glb');
+        };
+
+        const getMaterialColorHex = (material) => {
+            return material?.color?.getHexString ? `#${material.color.getHexString()}` : 'none';
+        };
+
+        const getTextureSourceName = (texture) => {
+            const image = texture?.image;
+            return texture?.name || image?.src || image?.currentSrc || image?.uuid || 'embedded/unknown';
+        };
+
+        const createFallbackInputMaterial = (THREE) => new THREE.MeshPhysicalMaterial({
+            name: 'xtweaks_missing_material_fallback',
+            color: new THREE.Color(0x111214),
+            roughness: 0.42,
+            metalness: 0.08,
+            clearcoat: 0.2,
+            clearcoatRoughness: 0.5
+        });
+
+        const applyXboxDarkTintPreserveMaps = (material) => {
+            const beforeColor = getMaterialColorHex(material);
+            material.color?.set?.('#111314');
+            if ('roughness' in material) material.roughness = 0.42;
+            if ('metalness' in material) material.metalness = 0.08;
+            if ('clearcoat' in material) material.clearcoat = 0.18;
+            if ('clearcoatRoughness' in material) material.clearcoatRoughness = 0.45;
+            if ('envMapIntensity' in material) material.envMapIntensity = 0.85;
+            material.needsUpdate = true;
+            return {
+                beforeColor,
+                afterColor: getMaterialColorHex(material),
+                mapsPreserved: {
+                    map: Boolean(material.map),
+                    normalMap: Boolean(material.normalMap),
+                    roughnessMap: Boolean(material.roughnessMap),
+                    metalnessMap: Boolean(material.metalnessMap),
+                    aoMap: Boolean(material.aoMap),
+                    emissiveMap: Boolean(material.emissiveMap),
+                    alphaMap: Boolean(material.alphaMap)
+                }
+            };
         };
 
         const logInputMaterialInventory = (model, modelKey, path) => {
@@ -562,11 +625,16 @@ function initializeInputTab() {
                         mesh: child.name || '(unnamed mesh)',
                         material: material.name || '(unnamed material)',
                         role,
+                        colorHex: getMaterialColorHex(material),
                         hasMap: Boolean(material.map),
+                        mapSource: getTextureSourceName(material.map),
                         hasNormalMap: Boolean(material.normalMap),
+                        normalMapSource: getTextureSourceName(material.normalMap),
                         hasRoughnessMap: Boolean(material.roughnessMap),
                         hasMetalnessMap: Boolean(material.metalnessMap),
-                        hasAlphaMap: Boolean(material.alphaMap)
+                        hasAlphaMap: Boolean(material.alphaMap),
+                        alphaMapSource: getTextureSourceName(material.alphaMap),
+                        action: isNewControllerAsset(path) ? 'preserved' : 'legacy material pass'
                     };
                     rows.push(row);
                     if (role !== 'unknown' && role !== 'shell') detailRows.push(row);
@@ -586,6 +654,64 @@ function initializeInputTab() {
         };
 
         const applyPremiumMaterialPass = (model, modelKey, path) => {
+            if (isNewControllerAsset(path)) {
+                const materialMode = modelKey === 'xbox'
+                    ? INPUT_MODEL_MATERIAL_MODE.xbox
+                    : INPUT_MODEL_MATERIAL_MODE.playstation;
+                console.info('[Input Model] preserving original materials for new controller asset', { modelKey, path, materialMode });
+                logInputMaterialInventory(model, modelKey, path);
+                model.traverse((child) => {
+                    if (!child.isMesh) return;
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    const materials = Array.isArray(child.material) ? child.material : [child.material];
+                    const repaired = materials.map((material) => {
+                        if (material) {
+                            if (materialMode === 'darkTintPreserveMaps') {
+                                const result = applyXboxDarkTintPreserveMaps(material);
+                                console.info('[Input Model] Xbox material dark-tinted with maps preserved', {
+                                    path,
+                                    mesh: child.name || '(unnamed mesh)',
+                                    material: material.name || '(unnamed material)',
+                                    colorBefore: result.beforeColor,
+                                    colorAfter: result.afterColor,
+                                    hasMap: result.mapsPreserved.map,
+                                    mapSource: getTextureSourceName(material.map),
+                                    mapsPreserved: result.mapsPreserved,
+                                    action: 'darkTintPreserveMaps'
+                                });
+                                return material;
+                            }
+
+                            console.info('[Input Model] PS5 material preserved', {
+                                path,
+                                mesh: child.name || '(unnamed mesh)',
+                                material: material.name || '(unnamed material)',
+                                colorHex: getMaterialColorHex(material),
+                                hasMap: Boolean(material.map),
+                                mapSource: getTextureSourceName(material.map),
+                                hasNormalMap: Boolean(material.normalMap),
+                                normalMapSource: getTextureSourceName(material.normalMap),
+                                hasRoughnessMap: Boolean(material.roughnessMap),
+                                hasMetalnessMap: Boolean(material.metalnessMap),
+                                hasAlphaMap: Boolean(material.alphaMap),
+                                alphaMapSource: getTextureSourceName(material.alphaMap),
+                                action: 'preserved'
+                            });
+                            return material;
+                        }
+
+                        console.warn('[Input Model] missing material replaced with fallback', {
+                            path,
+                            mesh: child.name || '(unnamed mesh)'
+                        });
+                        return createFallbackInputMaterial(THREE);
+                    });
+                    child.material = Array.isArray(child.material) ? repaired : repaired[0];
+                });
+                return;
+            }
+
             const isXboxModel = modelKey === 'xbox';
             logInputMaterialInventory(model, modelKey, path);
 
@@ -603,7 +729,7 @@ function initializeInputTab() {
                     // Textured materials are preserved first so baked labels/colors/details remain readable.
                     const forceDark = !preserveOriginalMaps && !accentColor && isBrightMaterial(material);
                     // Button/detail preservation: named buttons get muted accents; named details stay graphite.
-                    const detailColor = role === 'detail' ? new THREE.Color(0x141618) : null;
+                    const detailColor = role === 'detail' && !preserveOriginalMaps ? new THREE.Color(0x141618) : null;
                     const premium = new THREE.MeshPhysicalMaterial({
                         name: material?.name ? `${material.name}_xtweaks_dark` : 'xtweaks_premium_graphite',
                         color: accentColor ? new THREE.Color(accentColor)
