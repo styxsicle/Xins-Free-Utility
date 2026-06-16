@@ -11,6 +11,13 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Montserrat:wght@800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "../../node_modules/three/build/three.module.js"
+            }
+        }
+    </script>
 </head>
 
 <body>
@@ -102,6 +109,15 @@
                         <line x1="20" y1="12" x2="23" y2="12"/>
                     </svg>
                     <span class="nav-text">GPU</span>
+                </button>
+
+                <button class="nav-item" data-page="input">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6.4 9.2h11.2a4.4 4.4 0 0 1 4.28 3.38l.76 3.2a2.75 2.75 0 0 1-4.55 2.61l-1.76-1.57a2.2 2.2 0 0 0-1.47-.56H9.14a2.2 2.2 0 0 0-1.47.56L5.9 18.39a2.75 2.75 0 0 1-4.55-2.61l.76-3.2A4.4 4.4 0 0 1 6.4 9.2Z"/>
+                        <path d="M7.5 12.2v3M6 13.7h3"/>
+                        <path d="M16.4 13.2h.01M18.8 15h.01"/>
+                    </svg>
+                    <span class="nav-text">Input</span>
                 </button>
 
                 <button class="nav-item" data-page="system">
@@ -1255,6 +1271,209 @@
                             <button class="hero-cta-ghost" id="gpu-retry-btn">Try Again</button>
                         </div>
                     </div>
+                </div>
+
+                <div id="page-input" class="page">
+                    <section class="input-hero glass">
+                        <div class="input-hero-copy">
+                            <span class="input-kicker">Competitive controller suite</span>
+                            <h1>Input</h1>
+                            <p>Controller tuning, remapping, and latency tools for competitive play.</p>
+                            <div class="input-hero-actions">
+                                <button class="input-primary-btn" id="input-apply-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M13 2 4 14h7l-1 8 10-12h-7l1-8Z"/>
+                                    </svg>
+                                    Apply Input Tweaks
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="input-main-grid">
+                        <div class="input-viewer-card glass">
+                            <div class="input-card-head">
+                                <div>
+                                    <span class="input-section-label">Controller visualizer</span>
+                                    <h2>Model Viewer</h2>
+                                </div>
+                                <div class="input-model-controls" role="group" aria-label="Controller model">
+                                    <button class="input-segment active" data-input-model="xbox">Xbox</button>
+                                    <button class="input-segment" data-input-model="ps5">PlayStation</button>
+                                    <button class="input-reset-btn" id="input-reset-view">Reset View</button>
+                                    <button class="input-reset-btn input-tune-toggle" id="input-xbox-tune-toggle" type="button">Tune Xbox</button>
+                                </div>
+                            </div>
+                            <div class="input-xbox-tuner" id="input-xbox-tuner" hidden>
+                                <div class="input-tuner-head">
+                                    <span>Temporary Xbox Framing Tuner</span>
+                                    <div>
+                                        <button class="input-tuner-action" id="input-xbox-copy-values" type="button">Copy Values</button>
+                                        <button class="input-tuner-action" id="input-xbox-reset-sliders" type="button">Reset Sliders</button>
+                                        <button class="input-tuner-close" id="input-xbox-tuner-close" type="button" aria-label="Close Xbox tuner">&times;</button>
+                                    </div>
+                                </div>
+                                <div class="input-tuner-grid">
+                                    <label><span>distanceMultiplier</span><input type="range" min="0.25" max="1.2" step="0.01" data-xbox-tune="distanceMultiplier"><input type="number" min="0.25" max="1.2" step="0.01" data-xbox-tune-number="distanceMultiplier"></label>
+                                    <label><span>scaleMultiplier</span><input type="range" min="1" max="5" step="0.05" data-xbox-tune="scaleMultiplier"><input type="number" min="1" max="5" step="0.05" data-xbox-tune-number="scaleMultiplier"></label>
+                                    <label><span>positionOffset.x</span><input type="range" min="-2" max="2" step="0.01" data-xbox-tune="positionOffset.x"><input type="number" min="-2" max="2" step="0.01" data-xbox-tune-number="positionOffset.x"></label>
+                                    <label><span>positionOffset.y</span><input type="range" min="-2" max="2" step="0.01" data-xbox-tune="positionOffset.y"><input type="number" min="-2" max="2" step="0.01" data-xbox-tune-number="positionOffset.y"></label>
+                                    <label><span>positionOffset.z</span><input type="range" min="-2" max="2" step="0.01" data-xbox-tune="positionOffset.z"><input type="number" min="-2" max="2" step="0.01" data-xbox-tune-number="positionOffset.z"></label>
+                                    <label><span>rotation.x</span><input type="range" min="-3.14" max="3.14" step="0.01" data-xbox-tune="rotation.x"><input type="number" min="-3.14" max="3.14" step="0.01" data-xbox-tune-number="rotation.x"></label>
+                                    <label><span>rotation.y</span><input type="range" min="-3.14" max="3.14" step="0.01" data-xbox-tune="rotation.y"><input type="number" min="-3.14" max="3.14" step="0.01" data-xbox-tune-number="rotation.y"></label>
+                                    <label><span>rotation.z</span><input type="range" min="-3.14" max="3.14" step="0.01" data-xbox-tune="rotation.z"><input type="number" min="-3.14" max="3.14" step="0.01" data-xbox-tune-number="rotation.z"></label>
+                                    <label><span>cameraOffset.x</span><input type="range" min="-2" max="2" step="0.01" data-xbox-tune="cameraOffset.x"><input type="number" min="-2" max="2" step="0.01" data-xbox-tune-number="cameraOffset.x"></label>
+                                    <label><span>cameraOffset.y</span><input type="range" min="-2" max="2" step="0.01" data-xbox-tune="cameraOffset.y"><input type="number" min="-2" max="2" step="0.01" data-xbox-tune-number="cameraOffset.y"></label>
+                                    <label><span>cameraOffset.z</span><input type="range" min="-2" max="2" step="0.01" data-xbox-tune="cameraOffset.z"><input type="number" min="-2" max="2" step="0.01" data-xbox-tune-number="cameraOffset.z"></label>
+                                </div>
+                                <div class="input-decal-tuner">
+                                    <div class="input-tuner-subhead">
+                                        <span>Button Decals</span>
+                                        <label class="input-decal-toggle">
+                                            <input type="checkbox" id="input-decal-visible">
+                                            <span>Show Button Decals</span>
+                                        </label>
+                                    </div>
+                                    <div class="input-tuner-grid">
+                                        <label><span>Button</span><select id="input-decal-selected"><option value="a">A</option><option value="b">B</option><option value="x">X</option><option value="y">Y</option></select></label>
+                                        <label><span>x</span><input type="range" min="-2" max="2" step="0.005" data-xbox-decal="x"><input type="number" min="-2" max="2" step="0.005" data-xbox-decal-number="x"></label>
+                                        <label><span>y</span><input type="range" min="-2" max="2" step="0.005" data-xbox-decal="y"><input type="number" min="-2" max="2" step="0.005" data-xbox-decal-number="y"></label>
+                                        <label><span>z</span><input type="range" min="-2" max="2" step="0.005" data-xbox-decal="z"><input type="number" min="-2" max="2" step="0.005" data-xbox-decal-number="z"></label>
+                                        <label><span>radius</span><input type="range" min="0.005" max="0.12" step="0.001" data-xbox-decal-global="radius"><input type="number" min="0.005" max="0.12" step="0.001" data-xbox-decal-global-number="radius"></label>
+                                        <label><span>lift</span><input type="range" min="0" max="0.08" step="0.001" data-xbox-decal-global="lift"><input type="number" min="0" max="0.08" step="0.001" data-xbox-decal-global-number="lift"></label>
+                                    </div>
+                                    <button class="input-tuner-action input-decal-copy" id="input-copy-decal-values" type="button">Copy Decal Values</button>
+                                </div>
+                            </div>
+                            <div class="input-viewer-stage" id="input-viewer-stage">
+                                <canvas id="input-model-canvas" aria-label="Controller model viewer"></canvas>
+                                <div class="input-model-fallback" id="input-model-fallback">
+                                    <div class="input-fallback-controller" aria-hidden="true">
+                                        <span class="ifc-body"></span>
+                                        <span class="ifc-left"></span>
+                                        <span class="ifc-right"></span>
+                                        <span class="ifc-dpad"></span>
+                                        <span class="ifc-stick ifc-stick-a"></span>
+                                        <span class="ifc-stick ifc-stick-b"></span>
+                                        <span class="ifc-button ifc-button-a"></span>
+                                        <span class="ifc-button ifc-button-b"></span>
+                                    </div>
+                                    <p>Controller model missing - add xbox-controller.glb or ps5-controller.glb</p>
+                                </div>
+                            </div>
+                            <div class="input-viewer-foot">
+                                <span>Drag to rotate</span>
+                                <span id="input-viewer-note">Three.js unavailable - fallback preview active</span>
+                            </div>
+
+                            <details class="input-live-drawer">
+                                <summary>
+                                    <span>
+                                        <span class="input-section-label">Live Input Details</span>
+                                        <b>Gamepad API</b>
+                                    </span>
+                                    <span class="input-api-pill" id="input-api-status">Checking</span>
+                                </summary>
+                                <div class="input-live-grid">
+                                    <div class="input-live-stat"><span>Left Stick X</span><b id="input-left-x">0.00</b></div>
+                                    <div class="input-live-stat"><span>Left Stick Y</span><b id="input-left-y">0.00</b></div>
+                                    <div class="input-live-stat"><span>Right Stick X</span><b id="input-right-x">0.00</b></div>
+                                    <div class="input-live-stat"><span>Right Stick Y</span><b id="input-right-y">0.00</b></div>
+                                    <div class="input-live-stat"><span>Left Trigger</span><b id="input-left-trigger">0.00</b></div>
+                                    <div class="input-live-stat"><span>Right Trigger</span><b id="input-right-trigger">0.00</b></div>
+                                    <div class="input-live-stat"><span>Polling Estimate</span><b id="input-polling">Unavailable</b></div>
+                                    <div class="input-buttons-panel">
+                                        <span>Active Buttons</span>
+                                        <div id="input-active-buttons" class="input-active-buttons">None</div>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
+                    </section>
+
+                    <section class="input-tools-section">
+                        <div class="input-section-head">
+                            <span class="input-section-label">Featured Input Tools</span>
+                        </div>
+                        <div class="input-feature-grid">
+                            <article class="input-tool-card glass" data-input-tool="polling">
+                                <span class="input-tool-icon">Hz</span>
+                                <h3>Polling Rate Check</h3>
+                                <p>Measure controller update cadence when the browser exposes reliable samples.</p>
+                            </article>
+                            <article class="input-tool-card glass" data-input-tool="deadzone">
+                                <span class="input-tool-icon">DZ</span>
+                                <h3>Deadzone Tuner</h3>
+                                <p>Inspect stick drift and build tighter center-zone preferences.</p>
+                            </article>
+                            <article class="input-tool-card glass" data-input-tool="curve">
+                                <span class="input-tool-icon">CV</span>
+                                <h3>Stick Curve Presets</h3>
+                                <p>Preview response curves for linear, precision, and aggressive aim styles.</p>
+                            </article>
+                            <article class="input-tool-card glass" data-input-tool="trigger">
+                                <span class="input-tool-icon">TR</span>
+                                <h3>Trigger Response</h3>
+                                <p>Visualize analog trigger travel and tune future response profiles.</p>
+                            </article>
+                        </div>
+                    </section>
+
+                    <section class="input-tools-section">
+                        <div class="input-section-head">
+                            <span class="input-section-label">Advanced Input Tools</span>
+                        </div>
+                        <div class="input-advanced-grid">
+                            <article class="input-advanced-card">Button Remapper</article>
+                            <article class="input-advanced-card">Vibration Tuning</article>
+                            <article class="input-advanced-card">Controller Diagnostics</article>
+                            <article class="input-advanced-card">Profile Manager</article>
+                            <article class="input-advanced-card">Bluetooth Latency Check</article>
+                            <article class="input-advanced-card">Firmware / Driver Status</article>
+                        </div>
+                    </section>
+
+                    <section class="input-remap-card glass">
+                        <div class="input-card-head">
+                            <div>
+                                <span class="input-section-label">Remapping UI</span>
+                                <h2>Local Profile Builder</h2>
+                            </div>
+                            <button class="input-primary-btn compact" id="input-save-profile">Save Profile</button>
+                        </div>
+                        <div class="input-remap-layout">
+                            <div class="input-button-list" id="input-button-list" role="listbox" aria-label="Controller buttons">
+                                <button class="active" data-button="A / Cross">A / Cross</button>
+                                <button data-button="B / Circle">B / Circle</button>
+                                <button data-button="X / Square">X / Square</button>
+                                <button data-button="Y / Triangle">Y / Triangle</button>
+                                <button data-button="Left Bumper">Left Bumper</button>
+                                <button data-button="Right Bumper">Right Bumper</button>
+                                <button data-button="Left Stick Click">Left Stick Click</button>
+                                <button data-button="Right Stick Click">Right Stick Click</button>
+                                <button data-button="View / Create">View / Create</button>
+                                <button data-button="Menu / Options">Menu / Options</button>
+                            </div>
+                            <div class="input-assignment-panel">
+                                <label for="input-assignment-select">Assignment for <span id="input-selected-button">A / Cross</span></label>
+                                <select id="input-assignment-select">
+                                    <option>A / Cross</option>
+                                    <option>B / Circle</option>
+                                    <option>X / Square</option>
+                                    <option>Y / Triangle</option>
+                                    <option>Left Bumper</option>
+                                    <option>Right Bumper</option>
+                                    <option>Left Trigger</option>
+                                    <option>Right Trigger</option>
+                                    <option>Jump</option>
+                                    <option>Crouch</option>
+                                    <option>Sprint</option>
+                                    <option>Disabled</option>
+                                </select>
+                                <p id="input-profile-status">Profile saved in XTweaks - system-wide remap not active yet.</p>
+                            </div>
+                        </div>
+                    </section>
                 </div>
 
                 <div id="page-system" class="page">

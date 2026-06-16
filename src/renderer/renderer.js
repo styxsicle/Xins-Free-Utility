@@ -21,6 +21,7 @@ function initializeApp() {
     loadSystemInfo();
     startLiveMonitoring();
     initializeGpuPage();
+    initializeInputTab();
     initializeAiTweaker();
     initializeNetworkCards();
     initializeDnsOptimizer();
@@ -120,6 +121,1060 @@ function initializeNavigation() {
             }
         });
     });
+}
+
+function initializeInputTab() {
+    const page = document.getElementById('page-input');
+    if (!page) return;
+
+    const apiPill = document.getElementById('input-api-status');
+    const activeButtonsEl = document.getElementById('input-active-buttons');
+    const viewerNote = document.getElementById('input-viewer-note');
+    const fallback = document.getElementById('input-model-fallback');
+    const stage = document.getElementById('input-viewer-stage');
+    const canvas = document.getElementById('input-model-canvas');
+    const xboxTuneToggle = document.getElementById('input-xbox-tune-toggle');
+    const xboxTuner = document.getElementById('input-xbox-tuner');
+    const xboxCopyValuesBtn = document.getElementById('input-xbox-copy-values');
+    const xboxResetSlidersBtn = document.getElementById('input-xbox-reset-sliders');
+    const xboxTunerCloseBtn = document.getElementById('input-xbox-tuner-close');
+    const decalVisibleToggle = document.getElementById('input-decal-visible');
+    const decalSelectedEl = document.getElementById('input-decal-selected');
+    const decalCopyValuesBtn = document.getElementById('input-copy-decal-values');
+    const selectedButtonEl = document.getElementById('input-selected-button');
+    const assignmentSelect = document.getElementById('input-assignment-select');
+    const profileStatus = document.getElementById('input-profile-status');
+    const profileKey = 'xtweaks-input-remap-profile';
+    const modelPaths = {
+        xbox: 'assets/models/controllers/xbox/xbox-controller.glb',
+        ps5: 'assets/models/controllers/ps5/ps5-controller.glb',
+        playstation: 'assets/models/controllers/ps5/ps5-controller.glb'
+    };
+    const INPUT_MODEL_FRAMING = {
+        xbox: {
+            // distanceMultiplier controls zoom: lower is closer.
+            distanceMultiplier: 0.35,
+            // scaleMultiplier controls model size inside its centered pivot.
+            scaleMultiplier: 2.45,
+            // positionOffset controls where the whole pivot group sits.
+            positionOffset: { x: -0.10, y: 0, z: 0 },
+            targetOffset: { x: -0.02, y: 0.04, z: 0 },
+            cameraOffset: { x: 0.15, y: 0.18, z: 0.03 },
+            // rotation controls the starting pose restored by Reset View.
+            rotation: { x: 0.24, y: -1.95, z: 0.04 }
+        },
+        ps5: {
+            distanceMultiplier: 1.02,
+            scaleMultiplier: 3.04,
+            positionOffset: { x: 0, y: 0.07, z: 0 },
+            targetOffset: { x: 0, y: 0.025, z: 0 },
+            cameraOffset: { x: 0, y: 0.1, z: 0 },
+            rotation: { x: -0.08, y: -0.18, z: 0.015 }
+        }
+    };
+    // These are temporary overlay decals because the Xbox GLB is one mesh/material.
+    // For production quality, use a model with separated button meshes or painted textures.
+    const XBOX_BUTTON_DECALS = {
+        enabled: false,
+        radius: 0.035,
+        lift: 0.012,
+        normal: { x: 0, y: 0, z: 1 },
+        rotation: { x: 0, y: 0, z: 0 },
+        buttons: {
+            a: { x: 0, y: 0, z: 0 },
+            b: { x: 0, y: 0, z: 0 },
+            x: { x: 0, y: 0, z: 0 },
+            y: { x: 0, y: 0, z: 0 }
+        }
+    };
+    const defaultXboxFraming = JSON.parse(JSON.stringify(INPUT_MODEL_FRAMING.xbox));
+    const xboxTuneFields = [
+        'distanceMultiplier',
+        'scaleMultiplier',
+        'positionOffset.x',
+        'positionOffset.y',
+        'positionOffset.z',
+        'rotation.x',
+        'rotation.y',
+        'rotation.z',
+        'cameraOffset.x',
+        'cameraOffset.y',
+        'cameraOffset.z'
+    ];
+    const buttonNames = [
+        'A', 'B', 'X', 'Y', 'Left Bumper', 'Right Bumper', 'Left Trigger', 'Right Trigger',
+        'View', 'Menu', 'Left Stick', 'Right Stick', 'D-Pad Up', 'D-Pad Down', 'D-Pad Left',
+        'D-Pad Right', 'Home'
+    ];
+
+    let activeModel = 'xbox';
+    let selectedButton = 'A / Cross';
+    let profile = {};
+    let threeViewer = null;
+    let rotationX = -8;
+    let rotationY = 0;
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0, rx: rotationX, ry: rotationY };
+    let isTunerDragging = false;
+    let tunerDragStart = { x: 0, y: 0, left: 0, top: 0 };
+    let selectedDecalButton = 'a';
+    let lastTimestamp = null;
+    let pollingSamples = [];
+
+    if (xboxTuner && xboxTuner.parentElement !== document.body) {
+        document.body.appendChild(xboxTuner);
+    }
+
+    try {
+        profile = JSON.parse(localStorage.getItem(profileKey) || '{}') || {};
+    } catch {
+        profile = {};
+    }
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    const formatAxis = (value) => {
+        const number = Number(value);
+        return Number.isFinite(number) ? number.toFixed(2) : '0.00';
+    };
+
+    const updateFallbackTransform = () => {
+        const controller = fallback?.querySelector('.input-fallback-controller');
+        if (!controller) return;
+        controller.style.transform = `rotateX(${rotationX}deg) rotateY(${rotationY}deg)`;
+    };
+
+    const setViewerFallback = (message) => {
+        if (canvas) canvas.hidden = true;
+        if (fallback) fallback.hidden = false;
+        if (viewerNote) {
+            viewerNote.textContent = message || `Could not load ${modelPaths[activeModel]}`;
+        }
+        const fallbackText = fallback?.querySelector('p');
+        if (fallbackText) {
+            fallbackText.textContent = message || 'Controller model missing - add xbox-controller.glb or ps5-controller.glb';
+        }
+        updateFallbackTransform();
+    };
+
+    const setViewerLoading = () => {
+        if (canvas) canvas.hidden = false;
+        if (fallback) fallback.hidden = true;
+        if (viewerNote) viewerNote.textContent = `Loading ${modelPaths[activeModel]}`;
+    };
+
+    const disposeObject3D = (THREE, object) => {
+        if (!object) return;
+        object.traverse((child) => {
+            if (child.geometry) child.geometry.dispose();
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            materials.filter(Boolean).forEach((material) => {
+                Object.keys(material).forEach((key) => {
+                    const value = material[key];
+                    if (value && typeof value.dispose === 'function' && value.isTexture) value.dispose();
+                });
+                material.dispose?.();
+            });
+        });
+        THREE.Cache?.clear?.();
+    };
+
+    const createThreeViewer = async () => {
+        if (!canvas || !stage) throw new Error('Viewer canvas is unavailable.');
+
+        const [THREE, { GLTFLoader }, { OrbitControls }] = await Promise.all([
+            import('../../node_modules/three/build/three.module.js'),
+            import('../../node_modules/three/examples/jsm/loaders/GLTFLoader.js'),
+            import('../../node_modules/three/examples/jsm/controls/OrbitControls.js')
+        ]);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
+        const renderer = new THREE.WebGLRenderer({
+            canvas,
+            antialias: true,
+            alpha: true,
+            powerPreference: 'high-performance'
+        });
+        const loader = new GLTFLoader();
+        const controls = new OrbitControls(camera, renderer.domElement);
+        const root = new THREE.Group();
+        let currentModel = null;
+        let animationFrame = 0;
+        let disposed = false;
+        let resizeObserver = null;
+        let loadSerial = 0;
+        let isOrbiting = false;
+        let lastFrame = null;
+        const loggedInputMaterialInventory = new Set();
+        const INPUT_SCENE_LIGHTING = {
+            ambientIntensity: 0.88,
+            keyIntensity: 2.05,
+            fillIntensity: 1.45,
+            rimIntensity: 2.65,
+            topHighlightIntensity: 1.15,
+            lowerFillIntensity: 0.9,
+            exposure: 1.03
+        };
+
+        scene.add(root);
+        scene.add(new THREE.AmbientLight(0xb8b8b8, INPUT_SCENE_LIGHTING.ambientIntensity));
+
+        // Soft key light keeps the graphite shell visible without washing it gray.
+        const keyLight = new THREE.DirectionalLight(0xffffff, INPUT_SCENE_LIGHTING.keyIntensity);
+        keyLight.position.set(3.1, 4.2, 4.4);
+        scene.add(keyLight);
+
+        // Front fill controls button/stick readability from the camera side.
+        const frontFillLight = new THREE.DirectionalLight(0xe8e8e8, INPUT_SCENE_LIGHTING.fillIntensity);
+        frontFillLight.position.set(-1.8, 1.4, 5.2);
+        scene.add(frontFillLight);
+
+        // Rim light separates the black controller edges from the dark stage.
+        const rimLight = new THREE.DirectionalLight(0xd9d9d9, INPUT_SCENE_LIGHTING.rimIntensity);
+        rimLight.position.set(-4.4, 2.7, -4.9);
+        scene.add(rimLight);
+
+        // Small top highlight adds glossy product-render catches on sticks/buttons.
+        const topHighlight = new THREE.PointLight(0xffffff, INPUT_SCENE_LIGHTING.topHighlightIntensity, 7);
+        topHighlight.position.set(0.4, 3.1, 2.4);
+        scene.add(topHighlight);
+
+        const lowerFill = new THREE.PointLight(0xb0b0b0, INPUT_SCENE_LIGHTING.lowerFillIntensity, 9);
+        lowerFill.position.set(0, -1.5, 2.2);
+        scene.add(lowerFill);
+
+        camera.position.set(0, 0.55, 5);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.075;
+        controls.enablePan = false;
+        controls.minDistance = 2.2;
+        controls.maxDistance = 7;
+        controls.minPolarAngle = Math.PI * 0.22;
+        controls.maxPolarAngle = Math.PI * 0.78;
+        controls.target.set(0, 0, 0);
+        controls.update();
+        controls.addEventListener('start', () => { isOrbiting = true; });
+        controls.addEventListener('end', () => { isOrbiting = false; });
+
+        renderer.setClearColor(0x000000, 0);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = INPUT_SCENE_LIGHTING.exposure;
+
+        const resize = () => {
+            if (disposed) return;
+            const rect = stage.getBoundingClientRect();
+            const width = Math.max(1, Math.floor(rect.width));
+            const height = Math.max(1, Math.floor(rect.height));
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height, false);
+        };
+
+        const applyFramingToObject = (framedObject, modelKey) => {
+            const preset = INPUT_MODEL_FRAMING[modelKey] || INPUT_MODEL_FRAMING.xbox;
+            const maxDim = framedObject.userData.xtweaksMaxDim || 1;
+            const scale = preset.scaleMultiplier / maxDim;
+            const rotation = new THREE.Euler(preset.rotation.x, preset.rotation.y, preset.rotation.z);
+            const isXbox = modelKey === 'xbox';
+
+            const centerPosition = framedObject.userData.xtweaksCenterPosition || new THREE.Vector3(0, 0, 0);
+            framedObject.position.copy(centerPosition);
+            framedObject.scale.setScalar(scale);
+            framedObject.rotation.copy(rotation);
+            const decalGroup = framedObject.getObjectByName?.('xtweaks_xbox_button_decals');
+            const decalsWereVisible = decalGroup?.visible;
+            if (decalGroup) decalGroup.visible = false;
+            framedObject.updateMatrixWorld(true);
+
+            const framedBox = new THREE.Box3().setFromObject(framedObject);
+            if (decalGroup) decalGroup.visible = decalsWereVisible;
+            const sphere = framedBox.getBoundingSphere(new THREE.Sphere());
+            const radius = Math.max(sphere.radius, 0.75);
+            const positionOffset = new THREE.Vector3(preset.positionOffset.x, preset.positionOffset.y, preset.positionOffset.z);
+            framedObject.position.copy(centerPosition).add(positionOffset.multiplyScalar(radius));
+            framedObject.userData.xtweaksBasePosition = framedObject.position.clone();
+            framedObject.userData.xtweaksBaseRotation = rotation.clone();
+            const fov = THREE.MathUtils.degToRad(camera.fov);
+            const distance = Math.max(1.75, (radius / Math.sin(fov / 2)) * preset.distanceMultiplier);
+            const targetOffset = new THREE.Vector3(preset.targetOffset.x, preset.targetOffset.y, preset.targetOffset.z).multiplyScalar(radius);
+            const target = isXbox ? centerPosition.clone().add(targetOffset) : targetOffset;
+            const cameraOffset = new THREE.Vector3(preset.cameraOffset.x, preset.cameraOffset.y, preset.cameraOffset.z);
+
+            controls.target.copy(target);
+            camera.position.set(
+                target.x + radius * cameraOffset.x,
+                target.y + radius * cameraOffset.y,
+                distance + radius * cameraOffset.z
+            );
+            camera.near = Math.max(0.01, distance / 100);
+            camera.far = Math.max(distance * 100, camera.position.length() * 12);
+            camera.updateProjectionMatrix();
+            controls.minDistance = Math.max(1.05, distance * 0.62);
+            controls.maxDistance = distance * 1.65;
+            controls.update();
+            lastFrame = { distance, radius, target, cameraOffset, rotation };
+        };
+
+        const createXboxButtonDecals = () => {
+            const group = new THREE.Group();
+            group.name = 'xtweaks_xbox_button_decals';
+            group.visible = XBOX_BUTTON_DECALS.enabled;
+            const colors = {
+                a: '#4ade80',
+                b: '#ef4444',
+                x: '#60a5fa',
+                y: '#facc15'
+            };
+
+            Object.keys(XBOX_BUTTON_DECALS.buttons).forEach((button) => {
+                const geometry = new THREE.CircleGeometry(1, 28);
+                const color = new THREE.Color(colors[button]);
+                const material = new THREE.MeshPhysicalMaterial({
+                    name: `xtweaks_xbox_${button}_decal`,
+                    color,
+                    emissive: color.clone().multiplyScalar(0.18),
+                    roughness: 0.34,
+                    metalness: 0.05,
+                    clearcoat: 0.32,
+                    clearcoatRoughness: 0.42,
+                    transparent: true,
+                    opacity: 0.82,
+                    depthWrite: false,
+                    side: THREE.DoubleSide
+                });
+                const decal = new THREE.Mesh(geometry, material);
+                decal.name = `xtweaks_xbox_${button}_button_decal`;
+                decal.userData.xtweaksDecalButton = button;
+                group.add(decal);
+            });
+
+            updateXboxButtonDecals(group);
+            return group;
+        };
+
+        const updateXboxButtonDecals = (group = currentModel?.getObjectByName?.('xtweaks_xbox_button_decals')) => {
+            if (!group) return;
+            const normal = new THREE.Vector3(
+                XBOX_BUTTON_DECALS.normal.x,
+                XBOX_BUTTON_DECALS.normal.y,
+                XBOX_BUTTON_DECALS.normal.z
+            ).normalize();
+            group.visible = Boolean(XBOX_BUTTON_DECALS.enabled);
+            group.children.forEach((decal) => {
+                const button = decal.userData.xtweaksDecalButton;
+                const position = XBOX_BUTTON_DECALS.buttons[button];
+                if (!position) return;
+                decal.position.set(
+                    position.x + normal.x * XBOX_BUTTON_DECALS.lift,
+                    position.y + normal.y * XBOX_BUTTON_DECALS.lift,
+                    position.z + normal.z * XBOX_BUTTON_DECALS.lift
+                );
+                decal.rotation.set(
+                    XBOX_BUTTON_DECALS.rotation.x,
+                    XBOX_BUTTON_DECALS.rotation.y,
+                    XBOX_BUTTON_DECALS.rotation.z
+                );
+                decal.scale.setScalar(XBOX_BUTTON_DECALS.radius);
+            });
+        };
+
+        const frameModel = (model, modelKey) => {
+            const preset = INPUT_MODEL_FRAMING[modelKey] || INPUT_MODEL_FRAMING.xbox;
+            model.updateMatrixWorld(true);
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z) || 1;
+            const scale = preset.scaleMultiplier / maxDim;
+            const isXbox = modelKey === 'xbox';
+            const framedObject = isXbox ? new THREE.Group() : model;
+
+            if (isXbox) {
+                // Xbox source origin is off-center. Center the GLB inside a pivot so drag rotation
+                // and Reset View orbit around the middle of the controller.
+                model.position.sub(center);
+                framedObject.add(model);
+                const decals = createXboxButtonDecals();
+                if (decals) framedObject.add(decals);
+            } else {
+                model.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+            }
+
+            framedObject.userData.xtweaksModelKey = modelKey;
+            framedObject.userData.xtweaksMaxDim = maxDim;
+            framedObject.userData.xtweaksCenterPosition = framedObject.position.clone();
+            applyFramingToObject(framedObject, modelKey);
+            return framedObject;
+        };
+
+        const isBrightMaterial = (material) => {
+            if (!material) return true;
+            const color = material.color;
+            if (color && ((color.r + color.g + color.b) / 3) > 0.58) return true;
+            const factor = material.userData?.gltfExtensions?.KHR_materials_pbrSpecularGlossiness?.diffuseFactor;
+            if (Array.isArray(factor) && ((factor[0] + factor[1] + factor[2]) / 3) > 0.58) return true;
+            return !material.map && !material.normalMap && !material.roughnessMap && !material.metalnessMap;
+        };
+
+        const getInputMaterialRole = (mesh, material) => {
+            const name = `${mesh?.name || ''} ${material?.name || ''}`.toLowerCase();
+            if (/\b(a|button_a|a_button|face_a)\b/.test(name)) return 'button-a';
+            if (/\b(b|button_b|b_button|face_b)\b/.test(name)) return 'button-b';
+            if (/\b(x|button_x|x_button|face_x)\b/.test(name)) return 'button-x';
+            if (/\b(y|button_y|y_button|face_y)\b/.test(name)) return 'button-y';
+            if (/button|face|dpad|d-pad|stick|thumb|trigger|bumper|logo|label/.test(name)) return 'detail';
+            if (/shell|body|case|housing|controller/.test(name)) return 'shell';
+            return 'unknown';
+        };
+
+        const getButtonAccentColor = (role) => {
+            // Disable button accents by returning null here if a future model's named buttons look too loud.
+            const accents = {
+                'button-a': 0x2f8f57,
+                'button-b': 0x9c3535,
+                'button-x': 0x356b9f,
+                'button-y': 0xa88b32
+            };
+            return accents[role] || null;
+        };
+
+        const logInputMaterialInventory = (model, modelKey, path) => {
+            if (loggedInputMaterialInventory.has(modelKey)) return;
+            loggedInputMaterialInventory.add(modelKey);
+            const rows = [];
+            const detailRows = [];
+            const meshNames = new Set();
+            const materialNames = new Set();
+            model.traverse((child) => {
+                if (!child.isMesh) return;
+                meshNames.add(child.name || '(unnamed mesh)');
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+                materials.filter(Boolean).forEach((material) => {
+                    materialNames.add(material.name || '(unnamed material)');
+                    const role = getInputMaterialRole(child, material);
+                    const row = {
+                        mesh: child.name || '(unnamed mesh)',
+                        material: material.name || '(unnamed material)',
+                        role,
+                        hasMap: Boolean(material.map),
+                        hasNormalMap: Boolean(material.normalMap),
+                        hasRoughnessMap: Boolean(material.roughnessMap),
+                        hasMetalnessMap: Boolean(material.metalnessMap),
+                        hasAlphaMap: Boolean(material.alphaMap)
+                    };
+                    rows.push(row);
+                    if (role !== 'unknown' && role !== 'shell') detailRows.push(row);
+                });
+            });
+            console.info(`[INPUT 3D] ${modelKey} model inventory`, {
+                path,
+                meshCount: meshNames.size,
+                materialCount: materialNames.size,
+                meshNames: Array.from(meshNames),
+                materialNames: Array.from(materialNames),
+                materials: rows
+            });
+            if (modelKey === 'xbox' && !detailRows.length) {
+                console.info('[INPUT 3D] Xbox GLB does not expose separate named button/detail meshes; preserving its texture maps instead of applying per-button colors.');
+            }
+        };
+
+        const applyPremiumMaterialPass = (model, modelKey, path) => {
+            const isXboxModel = modelKey === 'xbox';
+            logInputMaterialInventory(model, modelKey, path);
+
+            model.traverse((child) => {
+                if (!child.isMesh) return;
+                child.castShadow = true;
+                child.receiveShadow = true;
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+                const upgraded = materials.map((material) => {
+                    const role = getInputMaterialRole(child, material);
+                    const accentColor = isXboxModel ? getButtonAccentColor(role) : null;
+                    const hasTextureMaps = Boolean(material?.map || material?.normalMap || material?.roughnessMap || material?.metalnessMap || material?.alphaMap || material?.aoMap);
+                    const preserveOriginalMaps = hasTextureMaps && !accentColor;
+                    // Shell fallback: only darken missing/broken clay-white materials.
+                    // Textured materials are preserved first so baked labels/colors/details remain readable.
+                    const forceDark = !preserveOriginalMaps && !accentColor && isBrightMaterial(material);
+                    // Button/detail preservation: named buttons get muted accents; named details stay graphite.
+                    const detailColor = role === 'detail' ? new THREE.Color(0x141618) : null;
+                    const premium = new THREE.MeshPhysicalMaterial({
+                        name: material?.name ? `${material.name}_xtweaks_dark` : 'xtweaks_premium_graphite',
+                        color: accentColor ? new THREE.Color(accentColor)
+                            : detailColor || (forceDark ? new THREE.Color(0x08090a)
+                            : (preserveOriginalMaps ? (material.color?.clone?.() || new THREE.Color(0xffffff)) : (material.color?.clone?.() || new THREE.Color(0x0b0c0d)))),
+                        map: material?.map || null,
+                        normalMap: material?.normalMap || null,
+                        roughnessMap: material?.roughnessMap || null,
+                        metalnessMap: material?.metalnessMap || null,
+                        aoMap: material?.aoMap || null,
+                        emissiveMap: material?.emissiveMap || null,
+                        alphaMap: material?.alphaMap || null,
+                        transparent: material?.transparent || false,
+                        opacity: material?.opacity ?? 1,
+                        alphaTest: material?.alphaTest ?? 0,
+                        side: material?.side ?? THREE.FrontSide,
+                        roughness: forceDark || accentColor ? 0.38 : Math.min(Math.max(material?.roughness ?? 0.44, 0.35), 0.5),
+                        metalness: forceDark || accentColor ? 0.1 : Math.min(Math.max(material?.metalness ?? 0.08, 0.05), 0.15),
+                        clearcoat: 0.24,
+                        clearcoatRoughness: 0.46
+                    });
+                    premium.envMapIntensity = preserveOriginalMaps ? 0.82 : 0.72;
+                    premium.needsUpdate = true;
+                    material?.dispose?.();
+                    return premium;
+                });
+                child.material = Array.isArray(child.material) ? upgraded : upgraded[0];
+            });
+        };
+
+        const loadModel = async (modelKey) => {
+            if (disposed) return;
+            const path = modelPaths[modelKey];
+            const serial = ++loadSerial;
+            setViewerLoading();
+            console.info(`[INPUT 3D] Loading ${modelKey} controller model: ${path}`);
+
+            try {
+                const gltf = await loader.loadAsync(path);
+                if (disposed || serial !== loadSerial) {
+                    disposeObject3D(THREE, gltf.scene);
+                    return;
+                }
+
+                if (currentModel) {
+                    root.remove(currentModel);
+                    disposeObject3D(THREE, currentModel);
+                    currentModel = null;
+                }
+
+                applyPremiumMaterialPass(gltf.scene, modelKey, path);
+                currentModel = frameModel(gltf.scene, modelKey);
+                root.add(currentModel);
+
+                if (canvas) canvas.hidden = false;
+                if (fallback) fallback.hidden = true;
+                if (viewerNote) viewerNote.textContent = `${modelKey === 'ps5' ? 'PlayStation' : 'Xbox'} controller model loaded`;
+                console.info(`[INPUT 3D] Loaded ${modelKey} controller model successfully.`);
+            } catch (error) {
+                console.error(`[INPUT 3D] Failed to load ${modelKey} controller model from ${path}:`, error);
+                if (currentModel) {
+                    root.remove(currentModel);
+                    disposeObject3D(THREE, currentModel);
+                    currentModel = null;
+                }
+                setViewerFallback(`Could not load ${path} - ${error.message || 'model unavailable'}`);
+            }
+        };
+
+        const animate = () => {
+            if (disposed) return;
+            animationFrame = requestAnimationFrame(animate);
+            controls.update();
+            if (currentModel && !isOrbiting) {
+                const base = currentModel.userData.xtweaksBasePosition || currentModel.position;
+                currentModel.position.y = base.y + Math.sin(performance.now() * 0.0012) * 0.035;
+            }
+            renderer.render(scene, camera);
+        };
+
+        resize();
+        resizeObserver = new ResizeObserver(resize);
+        resizeObserver.observe(stage);
+        animate();
+
+        return {
+            loadModel,
+            updateXboxFraming() {
+                if (!currentModel || currentModel.userData.xtweaksModelKey !== 'xbox') return;
+                applyFramingToObject(currentModel, 'xbox');
+            },
+            updateXboxDecals() {
+                if (!currentModel || currentModel.userData.xtweaksModelKey !== 'xbox') return;
+                updateXboxButtonDecals();
+            },
+            resetView() {
+                const distance = lastFrame?.distance || 5;
+                const radius = lastFrame?.radius || 1.2;
+                const target = lastFrame?.target || { x: 0, y: 0, z: 0 };
+                const cameraOffset = lastFrame?.cameraOffset || { x: 0, y: 0.08, z: 0 };
+                camera.position.set(
+                    target.x + radius * cameraOffset.x,
+                    target.y + radius * cameraOffset.y,
+                    distance + radius * (cameraOffset.z || 0)
+                );
+                controls.target.copy(target);
+                if (currentModel) {
+                    const rotation = currentModel.userData.xtweaksBaseRotation || lastFrame?.rotation;
+                    if (rotation) currentModel.rotation.copy(rotation);
+                    const base = currentModel.userData.xtweaksBasePosition;
+                    if (base) currentModel.position.copy(base);
+                }
+                controls.update();
+            },
+            isActive() {
+                return !disposed && Boolean(currentModel);
+            },
+            dispose() {
+                disposed = true;
+                cancelAnimationFrame(animationFrame);
+                resizeObserver?.disconnect();
+                if (currentModel) disposeObject3D(THREE, currentModel);
+                controls.dispose();
+                renderer.dispose();
+                renderer.forceContextLoss?.();
+            }
+        };
+    };
+
+    const ensureThreeViewer = async () => {
+        if (threeViewer) return threeViewer;
+        try {
+            threeViewer = await createThreeViewer();
+            return threeViewer;
+        } catch (error) {
+            setViewerFallback(`Three.js viewer failed to initialize - ${error.message || 'unavailable'}`);
+            return null;
+        }
+    };
+
+    const loadActiveModel = async () => {
+        const viewer = await ensureThreeViewer();
+        if (!viewer) return;
+        await viewer.loadModel(activeModel);
+    };
+
+    const resetView = () => {
+        if (threeViewer?.isActive()) {
+            threeViewer.resetView();
+            return;
+        }
+        rotationX = -8;
+        rotationY = 0;
+        updateFallbackTransform();
+    };
+
+    const getXboxTuneValue = (path) => {
+        return path.split('.').reduce((value, key) => value?.[key], INPUT_MODEL_FRAMING.xbox);
+    };
+
+    const setXboxTuneValue = (path, value) => {
+        const keys = path.split('.');
+        const lastKey = keys.pop();
+        const target = keys.reduce((object, key) => object[key], INPUT_MODEL_FRAMING.xbox);
+        target[lastKey] = Number(value);
+    };
+
+    const syncXboxTunerField = (path) => {
+        const value = getXboxTuneValue(path);
+        xboxTuner?.querySelectorAll(`[data-xbox-tune="${path}"], [data-xbox-tune-number="${path}"]`).forEach((input) => {
+            input.value = value;
+        });
+    };
+
+    const syncXboxTuner = () => {
+        xboxTuneFields.forEach(syncXboxTunerField);
+    };
+
+    const applyXboxTunerValue = (path, value) => {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return;
+        setXboxTuneValue(path, number);
+        syncXboxTunerField(path);
+        if (activeModel === 'xbox') {
+            threeViewer?.updateXboxFraming?.();
+        }
+    };
+
+    const setXboxTunerVisibleForModel = () => {
+        const isXbox = activeModel === 'xbox';
+        if (xboxTuneToggle) xboxTuneToggle.hidden = !isXbox;
+        if (!isXbox && xboxTuner) xboxTuner.hidden = true;
+    };
+
+    const clampTunerToViewport = (left, top) => {
+        if (!xboxTuner) return { left, top };
+        const rect = xboxTuner.getBoundingClientRect();
+        const padding = 10;
+        const maxLeft = Math.max(padding, window.innerWidth - rect.width - padding);
+        const maxTop = Math.max(padding, window.innerHeight - rect.height - padding);
+        return {
+            left: Math.min(Math.max(padding, left), maxLeft),
+            top: Math.min(Math.max(padding, top), maxTop)
+        };
+    };
+
+    const setTunerPosition = (left, top) => {
+        if (!xboxTuner) return;
+        const next = clampTunerToViewport(left, top);
+        xboxTuner.style.left = `${next.left}px`;
+        xboxTuner.style.top = `${next.top}px`;
+        xboxTuner.style.right = 'auto';
+    };
+
+    const copyTextWithFallback = async (text) => {
+        try {
+            if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            const copied = document.execCommand?.('copy') || false;
+            textarea.remove();
+            return copied;
+        }
+    };
+
+    const formatXboxPresetForCopy = () => {
+        const xbox = INPUT_MODEL_FRAMING.xbox;
+        const value = (number) => Number(number).toFixed(2).replace(/\.00$/, '');
+        return `const xbox = {
+    distanceMultiplier: ${value(xbox.distanceMultiplier)},
+    scaleMultiplier: ${value(xbox.scaleMultiplier)},
+    positionOffset: { x: ${value(xbox.positionOffset.x)}, y: ${value(xbox.positionOffset.y)}, z: ${value(xbox.positionOffset.z)} },
+    targetOffset: { x: ${value(xbox.targetOffset.x)}, y: ${value(xbox.targetOffset.y)}, z: ${value(xbox.targetOffset.z)} },
+    cameraOffset: { x: ${value(xbox.cameraOffset.x)}, y: ${value(xbox.cameraOffset.y)}, z: ${value(xbox.cameraOffset.z)} },
+    rotation: { x: ${value(xbox.rotation.x)}, y: ${value(xbox.rotation.y)}, z: ${value(xbox.rotation.z)} }
+};`;
+    };
+
+    const formatDecalValuesForCopy = () => {
+        const value = (number) => Number(number).toFixed(3).replace(/\.?0+$/, '') || '0';
+        const decals = XBOX_BUTTON_DECALS;
+        return `const XBOX_BUTTON_DECALS = {
+    enabled: ${decals.enabled},
+    radius: ${value(decals.radius)},
+    lift: ${value(decals.lift)},
+    normal: { x: ${value(decals.normal.x)}, y: ${value(decals.normal.y)}, z: ${value(decals.normal.z)} },
+    rotation: { x: ${value(decals.rotation.x)}, y: ${value(decals.rotation.y)}, z: ${value(decals.rotation.z)} },
+    buttons: {
+        a: { x: ${value(decals.buttons.a.x)}, y: ${value(decals.buttons.a.y)}, z: ${value(decals.buttons.a.z)} },
+        b: { x: ${value(decals.buttons.b.x)}, y: ${value(decals.buttons.b.y)}, z: ${value(decals.buttons.b.z)} },
+        x: { x: ${value(decals.buttons.x.x)}, y: ${value(decals.buttons.x.y)}, z: ${value(decals.buttons.x.z)} },
+        y: { x: ${value(decals.buttons.y.x)}, y: ${value(decals.buttons.y.y)}, z: ${value(decals.buttons.y.z)} }
+    }
+};`;
+    };
+
+    const syncDecalField = (axis) => {
+        const value = XBOX_BUTTON_DECALS.buttons[selectedDecalButton][axis];
+        xboxTuner?.querySelectorAll(`[data-xbox-decal="${axis}"], [data-xbox-decal-number="${axis}"]`).forEach((input) => {
+            input.value = value;
+        });
+    };
+
+    const syncDecalGlobalField = (field) => {
+        const value = XBOX_BUTTON_DECALS[field];
+        xboxTuner?.querySelectorAll(`[data-xbox-decal-global="${field}"], [data-xbox-decal-global-number="${field}"]`).forEach((input) => {
+            input.value = value;
+        });
+    };
+
+    const syncDecalTuner = () => {
+        if (decalSelectedEl) decalSelectedEl.value = selectedDecalButton;
+        if (decalVisibleToggle) decalVisibleToggle.checked = Boolean(XBOX_BUTTON_DECALS.enabled);
+        ['x', 'y', 'z'].forEach(syncDecalField);
+        ['radius', 'lift'].forEach(syncDecalGlobalField);
+    };
+
+    const applyDecalPositionValue = (axis, value) => {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return;
+        XBOX_BUTTON_DECALS.buttons[selectedDecalButton][axis] = number;
+        syncDecalField(axis);
+        if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
+    };
+
+    const applyDecalGlobalValue = (field, value) => {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return;
+        XBOX_BUTTON_DECALS[field] = number;
+        syncDecalGlobalField(field);
+        if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
+    };
+
+    const setActiveModel = (model) => {
+        activeModel = model === 'ps5' ? 'ps5' : 'xbox';
+        page.querySelectorAll('[data-input-model]').forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.inputModel === activeModel);
+        });
+        setXboxTunerVisibleForModel();
+        loadActiveModel();
+    };
+
+    page.querySelectorAll('[data-input-model]').forEach((btn) => {
+        btn.addEventListener('click', () => setActiveModel(btn.dataset.inputModel));
+    });
+
+    document.querySelectorAll('.nav-item').forEach((item) => {
+        item.addEventListener('click', () => {
+            if (item.dataset.page !== 'input' && xboxTuner) xboxTuner.hidden = true;
+        });
+    });
+
+    document.getElementById('input-reset-view')?.addEventListener('click', resetView);
+
+    xboxTuneToggle?.addEventListener('click', () => {
+        if (activeModel !== 'xbox' || !xboxTuner) return;
+        xboxTuner.hidden = !xboxTuner.hidden;
+        if (!xboxTuner.hidden) {
+            syncXboxTuner();
+            syncDecalTuner();
+        }
+    });
+
+    xboxTunerCloseBtn?.addEventListener('click', () => {
+        if (xboxTuner) xboxTuner.hidden = true;
+    });
+
+    xboxTuner?.querySelector('.input-tuner-head')?.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('button')) return;
+        const rect = xboxTuner.getBoundingClientRect();
+        isTunerDragging = true;
+        tunerDragStart = {
+            x: event.clientX,
+            y: event.clientY,
+            left: rect.left,
+            top: rect.top
+        };
+        xboxTuner.classList.add('is-dragging');
+        xboxTuner.setPointerCapture?.(event.pointerId);
+    });
+
+    xboxTuner?.addEventListener('pointermove', (event) => {
+        if (!isTunerDragging) return;
+        setTunerPosition(
+            tunerDragStart.left + event.clientX - tunerDragStart.x,
+            tunerDragStart.top + event.clientY - tunerDragStart.y
+        );
+    });
+
+    const endTunerDrag = (event) => {
+        if (!isTunerDragging) return;
+        isTunerDragging = false;
+        xboxTuner?.classList.remove('is-dragging');
+        xboxTuner?.releasePointerCapture?.(event.pointerId);
+    };
+    xboxTuner?.addEventListener('pointerup', endTunerDrag);
+    xboxTuner?.addEventListener('pointercancel', endTunerDrag);
+    window.addEventListener('resize', () => {
+        if (!xboxTuner || xboxTuner.hidden || !xboxTuner.style.left) return;
+        const rect = xboxTuner.getBoundingClientRect();
+        setTunerPosition(rect.left, rect.top);
+    });
+
+    xboxTuner?.querySelectorAll('[data-xbox-tune], [data-xbox-tune-number]').forEach((input) => {
+        const path = input.dataset.xboxTune || input.dataset.xboxTuneNumber;
+        input.addEventListener('input', () => applyXboxTunerValue(path, input.value));
+        input.addEventListener('change', () => applyXboxTunerValue(path, input.value));
+    });
+
+    decalSelectedEl?.addEventListener('change', () => {
+        selectedDecalButton = decalSelectedEl.value || 'a';
+        syncDecalTuner();
+    });
+
+    decalVisibleToggle?.addEventListener('change', () => {
+        XBOX_BUTTON_DECALS.enabled = Boolean(decalVisibleToggle.checked);
+        if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
+    });
+
+    xboxTuner?.querySelectorAll('[data-xbox-decal], [data-xbox-decal-number]').forEach((input) => {
+        const axis = input.dataset.xboxDecal || input.dataset.xboxDecalNumber;
+        input.addEventListener('input', () => applyDecalPositionValue(axis, input.value));
+        input.addEventListener('change', () => applyDecalPositionValue(axis, input.value));
+    });
+
+    xboxTuner?.querySelectorAll('[data-xbox-decal-global], [data-xbox-decal-global-number]').forEach((input) => {
+        const field = input.dataset.xboxDecalGlobal || input.dataset.xboxDecalGlobalNumber;
+        input.addEventListener('input', () => applyDecalGlobalValue(field, input.value));
+        input.addEventListener('change', () => applyDecalGlobalValue(field, input.value));
+    });
+
+    xboxResetSlidersBtn?.addEventListener('click', () => {
+        INPUT_MODEL_FRAMING.xbox = JSON.parse(JSON.stringify(defaultXboxFraming));
+        syncXboxTuner();
+        if (activeModel === 'xbox') threeViewer?.updateXboxFraming?.();
+    });
+
+    xboxCopyValuesBtn?.addEventListener('click', async () => {
+        const text = formatXboxPresetForCopy();
+        const copied = await copyTextWithFallback(text);
+
+        if (copied) {
+            xboxCopyValuesBtn.textContent = 'Copied';
+        } else {
+            console.info('[INPUT 3D] Xbox framing values:', text);
+            xboxCopyValuesBtn.textContent = 'Logged';
+        }
+        window.setTimeout(() => {
+            xboxCopyValuesBtn.textContent = 'Copy Values';
+        }, 1200);
+    });
+
+    decalCopyValuesBtn?.addEventListener('click', async () => {
+        const text = formatDecalValuesForCopy();
+        const copied = await copyTextWithFallback(text);
+
+        if (copied) {
+            decalCopyValuesBtn.textContent = 'Copied';
+        } else {
+            console.info('[INPUT 3D] Xbox decal values:', text);
+            decalCopyValuesBtn.textContent = 'Logged';
+        }
+        window.setTimeout(() => {
+            decalCopyValuesBtn.textContent = 'Copy Decal Values';
+        }, 1200);
+    });
+
+    stage?.addEventListener('pointerdown', (event) => {
+        if (threeViewer?.isActive()) return;
+        isDragging = true;
+        dragStart = { x: event.clientX, y: event.clientY, rx: rotationX, ry: rotationY };
+        stage.setPointerCapture?.(event.pointerId);
+        stage.classList.add('is-dragging');
+    });
+
+    stage?.addEventListener('pointermove', (event) => {
+        if (threeViewer?.isActive()) return;
+        if (!isDragging) return;
+        rotationY = dragStart.ry + (event.clientX - dragStart.x) * 0.35;
+        rotationX = Math.max(-28, Math.min(18, dragStart.rx - (event.clientY - dragStart.y) * 0.25));
+        updateFallbackTransform();
+    });
+
+    const endDrag = (event) => {
+        isDragging = false;
+        stage?.releasePointerCapture?.(event.pointerId);
+        stage?.classList.remove('is-dragging');
+    };
+    stage?.addEventListener('pointerup', endDrag);
+    stage?.addEventListener('pointercancel', endDrag);
+    stage?.addEventListener('pointerleave', () => {
+        isDragging = false;
+        stage.classList.remove('is-dragging');
+    });
+
+    document.getElementById('input-apply-btn')?.addEventListener('click', () => {
+        showNotification('warning', 'Input Tweaks UI Ready', 'No system-wide input tweaks were applied yet.');
+    });
+
+    const refreshAssignment = () => {
+        if (selectedButtonEl) selectedButtonEl.textContent = selectedButton;
+        if (assignmentSelect) assignmentSelect.value = profile[selectedButton] || selectedButton;
+    };
+
+    document.querySelectorAll('#input-button-list button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            selectedButton = btn.dataset.button || btn.textContent.trim();
+            document.querySelectorAll('#input-button-list button').forEach((item) => item.classList.remove('active'));
+            btn.classList.add('active');
+            refreshAssignment();
+        });
+    });
+
+    assignmentSelect?.addEventListener('change', () => {
+        profile[selectedButton] = assignmentSelect.value;
+        if (profileStatus) profileStatus.textContent = 'Unsaved local profile changes.';
+    });
+
+    document.getElementById('input-save-profile')?.addEventListener('click', () => {
+        if (assignmentSelect) profile[selectedButton] = assignmentSelect.value;
+        localStorage.setItem(profileKey, JSON.stringify(profile));
+        if (profileStatus) profileStatus.textContent = 'Profile saved in XTweaks - system-wide remap not active yet.';
+        showNotification('success', 'Input Profile Saved', 'Profile saved in XTweaks - system-wide remap not active yet.');
+    });
+
+    const resetLiveReadout = () => {
+        setText('input-left-x', '0.00');
+        setText('input-left-y', '0.00');
+        setText('input-right-x', '0.00');
+        setText('input-right-y', '0.00');
+        setText('input-left-trigger', '0.00');
+        setText('input-right-trigger', '0.00');
+        setText('input-polling', 'Unavailable');
+        if (activeButtonsEl) activeButtonsEl.textContent = 'None';
+        lastTimestamp = null;
+        pollingSamples = [];
+    };
+
+    const updateGamepadState = () => {
+        const supported = 'getGamepads' in navigator;
+        if (!supported) {
+            if (apiPill) apiPill.textContent = 'Unavailable';
+            resetLiveReadout();
+            requestAnimationFrame(updateGamepadState);
+            return;
+        }
+
+        if (apiPill) apiPill.textContent = 'Available';
+        const pads = Array.from(navigator.getGamepads ? navigator.getGamepads() : []).filter(Boolean);
+        const pad = pads[0];
+
+        if (!pad) {
+            resetLiveReadout();
+            requestAnimationFrame(updateGamepadState);
+            return;
+        }
+
+        const axes = pad.axes || [];
+        setText('input-left-x', formatAxis(axes[0]));
+        setText('input-left-y', formatAxis(axes[1]));
+        setText('input-right-x', formatAxis(axes[2]));
+        setText('input-right-y', formatAxis(axes[3]));
+        setText('input-left-trigger', formatAxis(pad.buttons?.[6]?.value));
+        setText('input-right-trigger', formatAxis(pad.buttons?.[7]?.value));
+
+        const active = (pad.buttons || [])
+            .map((button, index) => button?.pressed ? (buttonNames[index] || `Button ${index}`) : null)
+            .filter(Boolean);
+        if (activeButtonsEl) activeButtonsEl.textContent = active.length ? active.join(', ') : 'None';
+
+        if (Number.isFinite(pad.timestamp) && pad.timestamp > 0 && lastTimestamp !== null && pad.timestamp !== lastTimestamp) {
+            const delta = pad.timestamp - lastTimestamp;
+            if (delta > 0 && delta < 100) {
+                pollingSamples.push(delta);
+                if (pollingSamples.length > 36) pollingSamples.shift();
+            }
+        }
+        lastTimestamp = Number.isFinite(pad.timestamp) ? pad.timestamp : null;
+
+        if (pollingSamples.length >= 12) {
+            const avg = pollingSamples.reduce((sum, value) => sum + value, 0) / pollingSamples.length;
+            const hz = Math.round(1000 / avg);
+            setText('input-polling', Number.isFinite(hz) ? `${hz} Hz` : 'Unavailable');
+        } else {
+            setText('input-polling', 'Unavailable');
+        }
+
+        requestAnimationFrame(updateGamepadState);
+    };
+
+    window.addEventListener('gamepadconnected', () => {
+        lastTimestamp = null;
+        pollingSamples = [];
+    });
+    window.addEventListener('gamepaddisconnected', resetLiveReadout);
+    window.addEventListener('beforeunload', () => threeViewer?.dispose(), { once: true });
+
+    refreshAssignment();
+    syncXboxTuner();
+    syncDecalTuner();
+    setXboxTunerVisibleForModel();
+    setActiveModel(activeModel);
+    updateGamepadState();
 }
 
 function initializeTweaks() {
