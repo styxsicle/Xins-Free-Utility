@@ -2,29 +2,46 @@
 svg { max-width: 100%; max-height: 100%; }
 
 :root {
-  --bg-0: #050505;
-  --bg-1: #0c0c0c;
-  --bg-2: #161616;
-  --glass: rgba(28, 28, 28, 0.55);
-  --glass-strong: rgba(40, 40, 40, 0.72);
-  --glass-soft: rgba(255, 255, 255, 0.03);
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --border-accent: rgba(255, 255, 255, 0.32);
-
-  --text: #ffffff;
-  --text-dim: #c8c8c8;
+  --app-bg: #070708;
+  --app-bg-soft: #111216;
+  --panel-bg: rgba(34, 35, 38, 0.54);
+  --panel-bg-strong: rgba(46, 48, 52, 0.70);
+  --panel-border: rgba(255, 255, 255, 0.085);
+  --panel-border-hover: rgba(255, 255, 255, 0.20);
+  --text-primary: #ffffff;
+  --text-secondary: #c8c8c8;
   --text-muted: #757575;
+  --button-bg: linear-gradient(135deg, #202126 0%, #62666e 100%);
+  --button-border: rgba(255, 255, 255, 0.24);
+  --shadow-soft: 0 12px 40px rgba(0, 0, 0, 0.58);
+  --accent-primary: #d4d4d4;
+  --accent-rgb: 212, 212, 212;
+  --accent-glow: rgba(255, 255, 255, 0.10);
+  --accent-border: rgba(255, 255, 255, 0.32);
+  --accent-gradient: linear-gradient(135deg, #d8d8d8 0%, #ffffff 48%, #8d8d8d 100%);
 
-  --accent: #d4d4d4;
-  --accent-2: #ffffff;
-  --accent-pink: #b8b8b8;        /* legacy var â€” collapsed to grey */
-  --accent-cyan: #a8a8a8;        /* legacy var â€” collapsed to grey */
-  --accent-soft: #909090;
+  --bg-0: var(--app-bg);
+  --bg-1: var(--app-bg-soft);
+  --bg-2: color-mix(in srgb, var(--app-bg-soft) 72%, #ffffff 28%);
+  --glass: var(--panel-bg);
+  --glass-strong: var(--panel-bg-strong);
+  --glass-soft: color-mix(in srgb, var(--panel-bg) 18%, transparent);
+  --border: var(--panel-border);
+  --border-strong: var(--panel-border-hover);
+  --border-accent: var(--accent-border);
 
-  --gradient-primary: linear-gradient(135deg, #0a0a0a 0%, #4a4a4a 50%, #ffffff 100%);
-  --gradient-accent:  linear-gradient(135deg, #050505 0%, #1f1f1f 50%, #b0b0b0 100%);
-  --gradient-cta:     linear-gradient(135deg, #1a1a1a 0%, #555555 100%);
+  --text: var(--text-primary);
+  --text-dim: var(--text-secondary);
+
+  --accent: var(--accent-primary);
+  --accent-2: color-mix(in srgb, var(--accent-primary) 70%, #ffffff);
+  --accent-pink: var(--accent-primary);        /* legacy var, now routed through finish */
+  --accent-cyan: color-mix(in srgb, var(--accent-primary) 80%, #ffffff);        /* legacy var, now routed through finish */
+  --accent-soft: color-mix(in srgb, var(--accent-primary) 58%, var(--app-bg));
+
+  --gradient-primary: var(--accent-gradient);
+  --gradient-accent:  linear-gradient(135deg, var(--app-bg) 0%, var(--app-bg-soft) 48%, var(--accent-primary) 100%);
+  --gradient-cta:     var(--button-bg);
   --gradient-cta-light: linear-gradient(135deg, #ffffff 0%, #d4d4d4 100%);
   --gradient-text-shimmer: linear-gradient(90deg, #ffffff 0%, #909090 50%, #ffffff 100%);
 
@@ -34,9 +51,84 @@ svg { max-width: 100%; max-height: 100%; }
 
   --radius: 18px;
   --radius-sm: 12px;
-  --shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-  --shadow-glow: 0 0 60px rgba(255, 255, 255, 0.10);
+  --shadow: var(--shadow-soft);
+  --shadow-glow: 0 0 60px var(--accent-glow);
 }
+
+:root[data-theme="xins-premium"] {
+  --app-bg: #070708;
+  --app-bg-soft: #111216;
+  --panel-bg: rgba(34, 35, 38, 0.54);
+  --panel-bg-strong: rgba(46, 48, 52, 0.70);
+  --panel-border: rgba(255, 255, 255, 0.085);
+  --panel-border-hover: rgba(255, 255, 255, 0.20);
+  --text-primary: #ffffff;
+  --text-secondary: #c9cbd0;
+  --button-bg: linear-gradient(135deg, #202126 0%, #62666e 100%);
+  --shadow-soft: 0 12px 40px rgba(0, 0, 0, 0.58);
+}
+
+:root[data-theme="obsidian"] {
+  --app-bg: #010101;
+  --app-bg-soft: #050506;
+  --panel-bg: rgba(10, 10, 11, 0.58);
+  --panel-bg-strong: rgba(14, 14, 16, 0.78);
+  --panel-border: rgba(255, 255, 255, 0.045);
+  --panel-border-hover: rgba(255, 255, 255, 0.115);
+  --text-primary: #f2f2f2;
+  --text-secondary: #a8aaaf;
+  --button-bg: linear-gradient(135deg, #060607 0%, #24262b 100%);
+  --button-border: rgba(255, 255, 255, 0.16);
+  --shadow-soft: 0 16px 50px rgba(0, 0, 0, 0.82);
+}
+
+:root[data-theme="silver-mist"] {
+  --app-bg: #0b0c0e;
+  --app-bg-soft: #1a1c20;
+  --panel-bg: rgba(74, 76, 82, 0.42);
+  --panel-bg-strong: rgba(92, 96, 104, 0.60);
+  --panel-border: rgba(255, 255, 255, 0.13);
+  --panel-border-hover: rgba(255, 255, 255, 0.29);
+  --text-primary: #ffffff;
+  --text-secondary: #d3d5d9;
+  --button-bg: linear-gradient(135deg, #30333a 0%, #858b96 100%);
+  --button-border: rgba(255, 255, 255, 0.30);
+  --shadow-soft: 0 12px 38px rgba(0, 0, 0, 0.50);
+}
+
+:root[data-theme="frost-glass"] {
+  --app-bg: #101114;
+  --app-bg-soft: #20232a;
+  --panel-bg: rgba(112, 116, 126, 0.32);
+  --panel-bg-strong: rgba(132, 138, 148, 0.46);
+  --panel-border: rgba(255, 255, 255, 0.16);
+  --panel-border-hover: rgba(255, 255, 255, 0.31);
+  --text-primary: #ffffff;
+  --text-secondary: #e1e4ea;
+  --button-bg: linear-gradient(135deg, #3d4149 0%, #aeb4bf 100%);
+  --button-border: rgba(255, 255, 255, 0.32);
+  --shadow-soft: 0 12px 34px rgba(0, 0, 0, 0.44);
+}
+
+:root[data-accent-finish="graphite"] {
+  --accent-primary: #8b9098;
+  --accent-rgb: 139, 144, 152;
+  --accent-glow: rgba(139, 144, 152, 0.13);
+  --accent-border: rgba(160, 166, 176, 0.28);
+  --accent-gradient: linear-gradient(135deg, #3b3f46 0%, #9ba0a8 52%, #1f2227 100%);
+  --button-border: rgba(160, 166, 176, 0.18);
+}
+
+:root[data-accent-finish="chrome"] {
+  --accent-primary: #f3f4f6;
+  --accent-rgb: 243, 244, 246;
+  --accent-glow: rgba(255, 255, 255, 0.18);
+  --accent-border: rgba(255, 255, 255, 0.42);
+  --accent-gradient: linear-gradient(115deg, #f6f7f8 0%, #8f949c 24%, #ffffff 48%, #747982 68%, #f1f2f4 100%);
+  --button-border: rgba(255, 255, 255, 0.34);
+}
+
+/* Phase 3 TODO: Per-tab theme tuning: audit each page and replace remaining hardcoded colors with theme variables. */
 
 html, body { height: 100%; }
 
@@ -55,11 +147,11 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(60% 50% at 12% 10%, rgba(255, 255, 255, 0.06) 0%, transparent 60%),
-    radial-gradient(50% 45% at 90% 8%, rgba(255, 255, 255, 0.04) 0%, transparent 65%),
-    radial-gradient(55% 50% at 80% 100%, rgba(255, 255, 255, 0.05) 0%, transparent 65%),
+    radial-gradient(60% 50% at 12% 10%, var(--accent-glow) 0%, transparent 60%),
+    radial-gradient(50% 45% at 90% 8%, color-mix(in srgb, var(--accent-glow) 62%, transparent) 0%, transparent 65%),
+    radial-gradient(55% 50% at 80% 100%, color-mix(in srgb, var(--panel-bg-strong) 26%, transparent) 0%, transparent 65%),
     radial-gradient(45% 40% at 5% 95%, rgba(255, 255, 255, 0.03) 0%, transparent 70%),
-    linear-gradient(180deg, #0a0a0a 0%, #0c0c0c 50%, #050505 100%);
+    linear-gradient(180deg, var(--app-bg-soft) 0%, var(--app-bg) 100%);
   z-index: -2;
   pointer-events: none;
 }
@@ -68,7 +160,7 @@ body::after {
   content: '';
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.04) 0%, transparent 60%);
+  background: radial-gradient(ellipse at 50% 0%, var(--accent-glow) 0%, transparent 60%);
   z-index: -1;
   pointer-events: none;
 }
@@ -90,7 +182,7 @@ body::after {
   justify-content: space-between;
   padding: 0 14px;
   -webkit-app-region: drag;
-  background: rgba(10, 10, 10, 0.5);
+  background: color-mix(in srgb, var(--panel-bg-strong) 58%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
@@ -130,7 +222,7 @@ body::after {
   width: 240px;
   flex-shrink: 0;
   height: 100%;
-  background: rgba(12, 12, 12, 0.6);
+  background: color-mix(in srgb, var(--panel-bg-strong) 72%, transparent);
   backdrop-filter: blur(24px) saturate(150%);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   border-right: 1px solid var(--border);
@@ -151,7 +243,9 @@ body::after {
   gap: 12px;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.04));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 14%, transparent), transparent),
+    color-mix(in srgb, var(--panel-bg) 74%, transparent);
   border: 1px solid var(--border);
   margin-bottom: 18px;
 }
@@ -211,14 +305,16 @@ body::after {
 }
 
 .nav-item:hover {
-  background: rgba(255,255,255,0.04);
+  background: color-mix(in srgb, var(--panel-bg-strong) 44%, transparent);
   color: var(--text);
 }
 
 .nav-item.active {
-  background: linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 26%, transparent), transparent),
+    color-mix(in srgb, var(--panel-bg-strong) 58%, transparent);
   color: var(--text);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35), 0 4px 18px rgba(255,255,255,0.18);
+  box-shadow: inset 0 0 0 1px var(--accent-border), 0 4px 18px var(--accent-glow);
 }
 .nav-item.active::before {
   content: '';
@@ -230,7 +326,7 @@ body::after {
   height: 60%;
   background: var(--gradient-primary);
   border-radius: 0 3px 3px 0;
-  box-shadow: 0 0 12px rgba(255,255,255,0.6);
+  box-shadow: 0 0 12px var(--accent-glow);
 }
 
 .nav-item svg {
@@ -307,8 +403,8 @@ body::after {
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 .top-bar-search:focus-within {
-  border-color: var(--border-accent);
-  background: rgba(255,255,255,0.06);
+  border-color: var(--accent-border);
+  background: color-mix(in srgb, var(--panel-bg-strong) 46%, transparent);
 }
 .top-bar-search svg { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
 .top-bar-search input {
@@ -327,7 +423,7 @@ body::after {
   width: 38px; height: 38px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: rgba(255,255,255,0.03);
+  background: color-mix(in srgb, var(--panel-bg) 54%, transparent);
   color: var(--text-dim);
   cursor: pointer;
   display: flex;
@@ -336,9 +432,9 @@ body::after {
   transition: all 0.2s ease;
 }
 .icon-btn:hover {
-  border-color: var(--border-strong);
+  border-color: var(--panel-border-hover);
   color: var(--text);
-  background: rgba(255,255,255,0.06);
+  background: color-mix(in srgb, var(--panel-bg-strong) 54%, transparent);
 }
 .icon-btn svg { width: 16px; height: 16px; }
 
@@ -349,23 +445,23 @@ body::after {
   padding: 10px 16px;
   background: var(--gradient-cta);
   color: #fff;
-  border: 1px solid rgba(255,255,255,0.4);
+  border: 1px solid var(--button-border);
   border-radius: 10px;
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 6px 20px rgba(255,255,255,0.45), inset 0 1px 0 rgba(255,255,255,0.12);
+  box-shadow: 0 6px 20px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.12);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .top-bar-cta svg { width: 14px; height: 14px; }
 .top-bar-cta:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 32px rgba(255,255,255,0.55), inset 0 1px 0 rgba(255,255,255,0.2);
+  box-shadow: 0 12px 32px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 .top-bar-cta:active {
   transform: scale(0.97) translateY(0) !important;
-  box-shadow: 0 3px 10px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+  box-shadow: 0 3px 10px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.12) !important;
   transition-duration: 0.08s !important;
 }
 
@@ -418,7 +514,7 @@ body::after {
 
 .glass {
   background:
-    linear-gradient(160deg, rgba(40, 40, 40,0.35) 0%, rgba(12, 12, 12,0.55) 100%),
+    linear-gradient(160deg, color-mix(in srgb, var(--panel-bg-strong) 48%, transparent) 0%, color-mix(in srgb, var(--app-bg) 52%, transparent) 100%),
     var(--glass);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -439,7 +535,7 @@ body::after {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.05) 40%, rgba(255,255,255,0));
+  background: linear-gradient(135deg, var(--panel-border-hover), rgba(255,255,255,0.05) 40%, rgba(255,255,255,0));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
@@ -533,7 +629,7 @@ body::after {
   color: #fff;
 }
 .hero-title-grad {
-  background: linear-gradient(90deg, #ffffff 0%, #ffffff 50%, #b8b8b8 100%);
+  background: var(--accent-gradient);
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -560,7 +656,7 @@ body::after {
   align-items: center;
   gap: 8px;
   padding: 12px 22px;
-  background: linear-gradient(135deg, #ffffff 0%, #e9def7 100%);
+  background: var(--accent-gradient);
   color: #0a0a0a;
   border: none;
   border-radius: 12px;
@@ -568,11 +664,11 @@ body::after {
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 10px 30px rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.08);
+  box-shadow: 0 10px 30px var(--accent-glow), inset 0 -2px 0 rgba(0,0,0,0.08);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.hero-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 40px rgba(255,255,255,0.22); }
-.hero-cta:active { transform: scale(0.97) translateY(0) !important; box-shadow: 0 4px 14px rgba(255,255,255,0.12) !important; transition-duration: 0.08s !important; }
+.hero-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 40px var(--accent-glow); }
+.hero-cta:active { transform: scale(0.97) translateY(0) !important; box-shadow: 0 4px 14px var(--accent-glow) !important; transition-duration: 0.08s !important; }
 .hero-cta:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 .hero-cta svg { width: 14px; height: 14px; }
 
@@ -1496,7 +1592,7 @@ body::after {
 .toggle-card {
   --mx: 50%;
   --my: 0%;
-  --cat-color: 255, 255, 255;
+  --cat-color: var(--accent-rgb, 255, 255, 255);
   position: relative;
   padding: 18px 18px 16px;
   display: flex;
@@ -1504,7 +1600,7 @@ body::after {
   gap: 14px;
   min-height: 168px;
   background:
-    linear-gradient(160deg, rgba(22, 22, 22,0.7) 0%, rgba(8, 8, 8,0.55) 60%, rgba(40, 40, 40,0.4) 100%);
+    linear-gradient(160deg, color-mix(in srgb, var(--panel-bg-strong) 62%, transparent) 0%, color-mix(in srgb, var(--app-bg) 54%, transparent) 60%, color-mix(in srgb, var(--panel-bg) 52%, transparent) 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   backdrop-filter: blur(24px) saturate(160%);
@@ -1521,7 +1617,7 @@ body::after {
     box-shadow 0.3s ease;
 }
 
-.toggle-card[data-cat="gaming"]   { --cat-color: 230, 230, 230; }
+.toggle-card[data-cat="gaming"]   { --cat-color: var(--accent-rgb, 230, 230, 230); }
 .toggle-card[data-cat="fortnite"] { --cat-color: 255, 217, 102; }
 .toggle-card[data-cat="system"]   { --cat-color: 200, 200, 200; }
 .toggle-card[data-cat="memory"]   { --cat-color: 255, 159, 207; }
@@ -1594,7 +1690,7 @@ body::after {
   border-color: rgba(var(--cat-color), 0.45);
   background:
     radial-gradient(120% 70% at 0% 0%, rgba(var(--cat-color), 0.18), transparent 55%),
-    linear-gradient(160deg, rgba(22, 22, 22,0.7) 0%, rgba(8, 8, 8,0.55) 60%, rgba(40, 40, 40,0.4) 100%);
+    linear-gradient(160deg, color-mix(in srgb, var(--panel-bg-strong) 62%, transparent) 0%, color-mix(in srgb, var(--app-bg) 54%, transparent) 60%, color-mix(in srgb, var(--panel-bg) 52%, transparent) 100%);
 }
 .toggle-card.on .tc-accent { width: 100%; }
 .toggle-card.on .tc-icon {
@@ -2207,11 +2303,11 @@ body::after {
   min-width: 300px; max-width: 400px;
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
-  box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.5), 0 0 22px color-mix(in srgb, var(--accent-glow) 34%, transparent);
   animation: slideIn 0.3s ease-out;
   pointer-events: auto;
 }
-.notification.success { border-left: 3px solid var(--success); }
+.notification.success { border-left: 3px solid var(--accent-border); }
 .notification.error { border-left: 3px solid var(--error); }
 .notification.warning { border-left: 3px solid var(--warning); }
 .notification-icon { width: 22px; height: 22px; flex-shrink: 0; }
@@ -2263,12 +2359,14 @@ body::after {
     display: flex;
     align-items: center;
     gap: 9px;
-    background: linear-gradient(160deg, rgba(35,35,35,0.65) 0%, rgba(15,15,15,0.75) 100%);
-    border: 1px solid var(--border);
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 12%, transparent), transparent),
+        color-mix(in srgb, var(--panel-bg-strong) 72%, transparent);
+    border: 1px solid var(--accent-border);
     border-radius: var(--radius-sm);
     backdrop-filter: blur(24px) saturate(150%);
     -webkit-backdrop-filter: blur(24px) saturate(150%);
-    box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.06);
+    box-shadow: var(--shadow), 0 0 22px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.06);
     position: relative;
     overflow: hidden;
 }
@@ -2277,14 +2375,14 @@ body::after {
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+    background: linear-gradient(90deg, transparent, var(--accent-border), transparent);
 }
 .nav-upgrade-crown-icon {
     width: 20px;
     height: 20px;
     flex-shrink: 0;
-    color: #e0ad2a;
-    filter: drop-shadow(0 0 4px rgba(224,173,42,0.96)) drop-shadow(0 0 14px rgba(208,150,20,0.52));
+    color: var(--accent-primary);
+    filter: drop-shadow(0 0 10px var(--accent-glow));
 }
 .nav-upgrade-label {
     font-size: 11.5px;
@@ -2303,27 +2401,28 @@ body::after {
     margin-bottom: 16px;
     border-radius: 20px;
     background:
-        radial-gradient(ellipse 120% 90% at 50% 35%, rgba(50, 50, 50, 0.55) 0%, transparent 55%),
-        linear-gradient(165deg, rgba(22, 22, 22, 0.92) 0%, rgba(8, 8, 8, 0.88) 50%, rgba(14, 14, 14, 0.95) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+        radial-gradient(ellipse 120% 90% at 50% 35%, color-mix(in srgb, var(--accent-primary) 16%, transparent) 0%, transparent 55%),
+        linear-gradient(165deg, color-mix(in srgb, var(--panel-bg-strong) 82%, transparent) 0%, color-mix(in srgb, var(--app-bg) 88%, transparent) 55%, color-mix(in srgb, var(--panel-bg) 72%, transparent) 100%);
+    border: 1px solid var(--panel-border-hover);
     box-shadow:
         0 12px 36px rgba(0, 0, 0, 0.45),
+        0 0 22px var(--accent-glow),
         inset 0 1px 0 rgba(255, 255, 255, 0.06);
     backdrop-filter: blur(20px) saturate(150%);
     -webkit-backdrop-filter: blur(20px) saturate(150%);
 }
 .nav-branding.nav-branding-profile:hover {
     background:
-        radial-gradient(ellipse 120% 90% at 50% 35%, rgba(70, 70, 70, 0.55) 0%, transparent 55%),
-        linear-gradient(165deg, rgba(28, 28, 28, 0.95) 0%, rgba(10, 10, 10, 0.9) 50%, rgba(16, 16, 16, 0.98) 100%);
-    border-color: rgba(255, 255, 255, 0.20);
+        radial-gradient(ellipse 120% 90% at 50% 35%, color-mix(in srgb, var(--accent-primary) 22%, transparent) 0%, transparent 55%),
+        linear-gradient(165deg, color-mix(in srgb, var(--panel-bg-strong) 94%, transparent) 0%, color-mix(in srgb, var(--app-bg) 82%, transparent) 55%, color-mix(in srgb, var(--panel-bg) 86%, transparent) 100%);
+    border-color: var(--accent-border);
 }
 
 .branding-avatar-ring {
     padding: 3px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #ffffff 0%, #888888 50%, #ffffff 100%);
-    box-shadow: 0 0 24px rgba(255, 255, 255, 0.18), 0 0 12px rgba(255, 255, 255, 0.10);
+    background: var(--accent-gradient);
+    box-shadow: 0 0 24px var(--accent-glow), 0 0 12px var(--accent-glow);
     margin-bottom: 12px;
 }
 .branding-avatar-inner {
@@ -4299,6 +4398,9 @@ body::after {
 body.ai-tweaker-active .top-bar {
   display: none;
 }
+body.game-tune-active .top-bar {
+  display: none;
+}
 
 /* Network page — top-bar moves inside the page, gets restyled */
 .top-bar.net-integrated {
@@ -4354,17 +4456,15 @@ body.ai-tweaker-active .top-bar {
 /* Apply All Tweaks — dark glass with silver rim (network integrated mode) */
 .top-bar.net-integrated .top-bar-cta {
   position: relative;
-  background: linear-gradient(
-    180deg,
-    rgba(255,255,255,0.11) 0%,
-    rgba(255,255,255,0.05) 100%
-  );
-  border: 1px solid rgba(255,255,255,0.22);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-primary) 12%, transparent) 0%, color-mix(in srgb, var(--panel-bg) 54%, transparent) 100%);
+  border: 1px solid var(--button-border);
   color: rgba(255,255,255,0.92);
   box-shadow:
     0 1px 0 rgba(255,255,255,0.15) inset,
     0 -1px 0 rgba(0,0,0,0.45) inset,
-    0 4px 18px rgba(0,0,0,0.5);
+    0 4px 18px rgba(0,0,0,0.5),
+    0 0 18px var(--accent-glow);
   overflow: hidden;
 }
 .top-bar.net-integrated .top-bar-cta::before {
@@ -4372,16 +4472,13 @@ body.ai-tweaker-active .top-bar {
   position: absolute;
   top: 0; left: 12%; right: 12%;
   height: 1px;
-  background: rgba(255,255,255,0.3);
+  background: var(--accent-border);
   pointer-events: none;
 }
 .top-bar.net-integrated .top-bar-cta:hover {
-  background: linear-gradient(
-    180deg,
-    rgba(255,255,255,0.17) 0%,
-    rgba(255,255,255,0.08) 100%
-  );
-  border-color: rgba(255,255,255,0.32);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-primary) 18%, transparent) 0%, color-mix(in srgb, var(--panel-bg-strong) 62%, transparent) 100%);
+  border-color: var(--accent-border);
   box-shadow:
     0 1px 0 rgba(255,255,255,0.18) inset,
     0 -1px 0 rgba(0,0,0,0.45) inset,
@@ -6931,7 +7028,7 @@ ol.ai-msg-list li {
 #page-network .net-filter-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   margin-bottom: 26px;
   padding: 5px 10px 5px 5px;
   background: linear-gradient(165deg, rgba(14,14,18,0.96) 0%, rgba(8,8,10,1) 100%);
@@ -6981,6 +7078,7 @@ ol.ai-msg-list li {
 
 
 #page-network .net-sort-label {
+  margin-left: auto;
   font-size: 11.5px;
   color: rgba(255,255,255,0.46);
   padding-right: 6px;
@@ -7531,6 +7629,884 @@ ol.ai-msg-list li {
   }
   #page-network .net-loader-svg {
     animation: none !important;
+  }
+}
+
+/* ============================================================
+   Game Tune page - scoped replacement for the old Fortnite tab
+   ============================================================ */
+#page-fortnite.game-tune-page {
+  --gt-line: rgba(255,255,255,0.11);
+  --gt-line-strong: rgba(255,255,255,0.2);
+  --gt-glass: linear-gradient(165deg, rgba(17,17,20,0.96) 0%, rgba(7,7,9,1) 100%);
+}
+
+#page-fortnite .game-tune-hero {
+  position: relative;
+  z-index: 4;
+  padding: 42px 36px 40px;
+  margin-bottom: 16px;
+  border-radius: 18px;
+  background: #040406;
+  border: 1px solid rgba(255,255,255,0.11);
+  overflow: visible;
+  isolation: isolate;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.07) inset,
+    0 -1px 0 rgba(0,0,0,0.9) inset,
+    0 0 0 1px rgba(255,255,255,0.03) inset,
+    0 24px 72px rgba(0,0,0,0.8),
+    0 2px 8px rgba(0,0,0,0.6);
+}
+#page-fortnite .game-tune-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(128deg, rgba(255,255,255,0.065) 0%, rgba(255,255,255,0.026) 32%, rgba(255,255,255,0.01) 55%, transparent 74%);
+  pointer-events: none;
+  z-index: 0;
+}
+#page-fortnite .game-tune-hero::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent 3%, rgba(255,255,255,0.28) 25%, rgba(255,255,255,0.16) 58%, rgba(255,255,255,0.05) 80%, transparent 97%);
+  pointer-events: none;
+  z-index: 1;
+}
+#page-fortnite .game-tune-hero-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+}
+#page-fortnite .game-tune-hero-wave1 {
+  position: absolute;
+  right: -80px; top: -66px;
+  width: 600px; height: 410px;
+  background: radial-gradient(ellipse at 55% 45%, rgba(245,245,245,0.08) 0%, rgba(205,205,208,0.034) 42%, transparent 69%);
+  border-radius: 30% 70% 70% 30% / 40% 30% 70% 60%;
+  transform: rotate(-18deg);
+  filter: blur(52px);
+  opacity: 0.78;
+}
+#page-fortnite .game-tune-hero-wave2 {
+  position: absolute;
+  right: 60px; bottom: -80px;
+  width: 400px; height: 280px;
+  background: radial-gradient(ellipse at 50% 50%, rgba(220,220,220,0.046) 0%, transparent 58%);
+  border-radius: 60% 40% 30% 70% / 50% 60% 40% 50%;
+  transform: rotate(8deg);
+  filter: blur(60px);
+}
+#page-fortnite .game-tune-hero-body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+#page-fortnite .game-tune-hero-left { flex: 1; }
+#page-fortnite .game-tune-hero-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+#page-fortnite .game-tune-eyebrow,
+#page-fortnite .game-tune-eyebrow-sm {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+}
+#page-fortnite .game-tune-eyebrow { letter-spacing: 3px; margin-bottom: 12px; }
+#page-fortnite .game-tune-title {
+  font-size: 46px;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #fff;
+  margin: 0 0 14px;
+  line-height: 1;
+  text-shadow: 0 2px 20px rgba(255,255,255,0.08);
+}
+#page-fortnite .game-tune-sub {
+  max-width: 500px;
+  margin: 0;
+  color: rgba(255,255,255,0.66);
+  font-size: 13px;
+  line-height: 1.7;
+}
+#page-fortnite .game-tune-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--panel-bg) 58%, transparent);
+  border: 1px solid var(--panel-border-hover);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.76);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.10) inset, 0 4px 14px rgba(0,0,0,0.35);
+}
+#page-fortnite .game-tune-pill-dot,
+#page-fortnite .game-status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.28);
+  box-shadow: 0 0 8px rgba(255,255,255,0.25);
+  flex-shrink: 0;
+}
+#page-fortnite .game-tune-pill-dot,
+#page-fortnite .game-status-dot.is-wired {
+  background: #4ade80;
+  box-shadow: 0 0 8px rgba(74,222,128,0.7);
+}
+
+#page-fortnite .game-tune-dev {
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+}
+#page-fortnite .game-tune-dev-toggle {
+  padding: 7px 11px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.055);
+  color: rgba(255,255,255,0.72);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset;
+}
+#page-fortnite .game-tune-dev-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  padding: 14px;
+  border-radius: 13px;
+  border: 1px solid rgba(255,255,255,0.13);
+  background: linear-gradient(165deg, rgba(18,18,21,0.98), rgba(7,7,9,0.98));
+  box-shadow: 0 16px 42px rgba(0,0,0,0.65), 0 1px 0 rgba(255,255,255,0.08) inset;
+  backdrop-filter: blur(22px) saturate(120%);
+  -webkit-backdrop-filter: blur(22px) saturate(120%);
+  z-index: 30;
+}
+#page-fortnite .game-tune-dev-panel label {
+  display: grid;
+  grid-template-columns: 70px minmax(120px, 1fr) 46px;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255,255,255,0.58);
+  font-size: 10.5px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+#page-fortnite .game-tune-dev-panel label:last-child { margin-bottom: 0; }
+#page-fortnite .game-tune-dev-panel .game-tune-dev-select {
+  grid-template-columns: 70px minmax(0, 1fr);
+}
+#page-fortnite .game-tune-dev-panel .game-tune-dev-check {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+#page-fortnite .game-tune-dev-panel input,
+#page-fortnite .game-tune-dev-panel select {
+  min-width: 0;
+  accent-color: rgba(255,255,255,0.75);
+}
+#page-fortnite .game-tune-dev-panel .game-tune-native-select {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+#page-fortnite .game-tune-custom-select {
+  position: relative;
+  min-width: 0;
+}
+#page-fortnite .game-tune-custom-select > button {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  min-width: 0;
+  padding: 0 26px 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.13);
+  background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.035));
+  color: rgba(255,255,255,0.84);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 6px 18px rgba(0,0,0,0.28);
+}
+#page-fortnite .game-tune-custom-select > button::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-right: 1px solid rgba(255,255,255,0.58);
+  border-bottom: 1px solid rgba(255,255,255,0.58);
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+}
+#page-fortnite .game-tune-custom-select > button:hover,
+#page-fortnite .game-tune-custom-select > button[aria-expanded="true"] {
+  border-color: rgba(255,255,255,0.24);
+  background: linear-gradient(180deg, rgba(255,255,255,0.105), rgba(255,255,255,0.05));
+  color: rgba(255,255,255,0.94);
+}
+#page-fortnite .game-tune-custom-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  max-height: 174px;
+  overflow-y: auto;
+  padding: 5px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: linear-gradient(180deg, rgba(18,18,21,0.99), rgba(8,8,10,0.99));
+  box-shadow: 0 16px 34px rgba(0,0,0,0.62), 0 1px 0 rgba(255,255,255,0.08) inset;
+  z-index: 60;
+}
+#page-fortnite .game-tune-custom-menu[hidden] {
+  display: none;
+}
+#page-fortnite .game-tune-custom-menu button {
+  width: 100%;
+  min-height: 26px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255,255,255,0.68);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+#page-fortnite .game-tune-custom-menu button:hover,
+#page-fortnite .game-tune-custom-menu button[aria-selected="true"] {
+  background: rgba(255,255,255,0.09);
+  color: rgba(255,255,255,0.95);
+}
+#page-fortnite .game-tune-dev-panel span {
+  color: rgba(255,255,255,0.72);
+  font-size: 10px;
+  text-align: right;
+}
+#page-fortnite .game-tune-dev-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 7px;
+  padding-top: 9px;
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+#page-fortnite .game-tune-dev-actions button {
+  min-width: 0;
+  min-height: 30px;
+  padding: 7px 8px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.045);
+  color: rgba(255,255,255,0.7);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
+}
+#page-fortnite .game-tune-dev-actions button:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.92);
+}
+#page-fortnite .game-tune-dev-actions button:active {
+  transform: scale(0.97);
+}
+#page-fortnite .game-tune-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 26px;
+  padding: 8px 10px;
+  background: var(--gt-glass);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 13px;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 4px 16px rgba(0,0,0,0.45);
+}
+#page-fortnite .game-tune-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(340px, 100%);
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
+}
+#page-fortnite .game-tune-search:focus-within {
+  border-color: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06);
+}
+#page-fortnite .game-tune-search svg {
+  width: 17px; height: 17px;
+  color: rgba(255,255,255,0.42);
+}
+#page-fortnite .game-tune-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+}
+#page-fortnite .game-tune-chips {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#page-fortnite .game-tune-chips::-webkit-scrollbar { display: none; }
+#page-fortnite .game-tune-chip {
+  padding: 9px 15px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0);
+  color: rgba(255,255,255,0.5);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+}
+#page-fortnite .game-tune-chip:hover {
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.8);
+}
+#page-fortnite .game-tune-chip:active { transform: scale(0.97); }
+#page-fortnite .game-tune-chip.is-active {
+  background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.07));
+  color: var(--text);
+  border-color: rgba(255,255,255,0.18);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35), 0 4px 18px rgba(255,255,255,0.14);
+}
+#page-fortnite .game-tune-sort {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.46);
+  white-space: nowrap;
+}
+#page-fortnite .game-tune-sort b { color: rgba(255,255,255,0.74); font-weight: 600; }
+
+#page-fortnite .game-tune-section-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+#page-fortnite .game-tune-section-title,
+#page-fortnite .game-tune-editor-head h2 {
+  margin: 6px 0 5px;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+#page-fortnite .game-tune-section-desc,
+#page-fortnite .game-tune-editor-head p {
+  margin: 0;
+  color: rgba(255,255,255,0.54);
+  font-size: 12.5px;
+}
+#page-fortnite .game-tune-section-meta {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+#page-fortnite .game-tune-meta-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 11px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.54);
+  white-space: nowrap;
+}
+
+#page-fortnite .game-tune-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+#page-fortnite .game-card,
+#page-fortnite .game-editor-card {
+  --cat-color: 218, 218, 220;
+  --gt-enter-opacity: 0;
+  --gt-enter-transform: translate3d(0, 28px, 0) scale(0.94);
+  --gt-enter-filter: blur(14px);
+  --gt-enter-duration: 420ms;
+  --gt-enter-delay: 0ms;
+  --gt-enter-easing: cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid rgba(210,210,214,0.18);
+  background: var(--gt-glass);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.06) inset,
+    0 -1px 0 rgba(0,0,0,0.75) inset,
+    0 12px 34px rgba(0,0,0,0.48);
+  transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+}
+#page-fortnite .game-card {
+  cursor: pointer;
+}
+#page-fortnite .game-card:focus-visible {
+  outline: 1px solid rgba(255,255,255,0.46);
+  outline-offset: 3px;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.1) inset,
+    0 -1px 0 rgba(0,0,0,0.75) inset,
+    0 18px 44px rgba(0,0,0,0.58),
+    0 0 0 4px rgba(255,255,255,0.08);
+}
+#page-fortnite .game-card.game-card-enter {
+  animation: gameTuneCardEnter var(--gt-enter-duration, 520ms) var(--gt-enter-easing, cubic-bezier(0.16, 1, 0.3, 1)) var(--gt-enter-delay, 0ms) backwards;
+}
+@keyframes gameTuneCardEnter {
+  from {
+    opacity: var(--gt-enter-opacity, 0.05);
+    transform: var(--gt-enter-transform, translate3d(0, 18px, 0) scale(0.98));
+    filter: var(--gt-enter-filter, blur(2px));
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+#page-fortnite .game-card:hover,
+#page-fortnite .game-editor-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(235,235,238,0.28);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.1) inset,
+    0 -1px 0 rgba(0,0,0,0.75) inset,
+    0 18px 44px rgba(0,0,0,0.58),
+    0 0 26px rgba(255,255,255,0.05);
+}
+#page-fortnite .game-card .tc-aurora,
+#page-fortnite .game-editor-card .tc-aurora {
+  position: absolute;
+  inset: -1px;
+  opacity: 0;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 20%), rgba(255,255,255,0.14), transparent 34%);
+  transition: opacity 0.24s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+#page-fortnite .game-card:hover .tc-aurora,
+#page-fortnite .game-editor-card:hover .tc-aurora { opacity: 1; }
+#page-fortnite .game-card::before,
+#page-fortnite .game-editor-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(130deg, rgba(255,255,255,0.09), rgba(255,255,255,0.018) 42%, transparent 72%);
+  opacity: 0.72;
+  pointer-events: none;
+  z-index: 0;
+}
+#page-fortnite .game-card-media {
+  position: relative;
+  z-index: 1;
+  aspect-ratio: 16 / 9;
+  min-height: 142px;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: #08080a;
+  cursor: pointer;
+}
+#page-fortnite .game-card-media img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}
+#page-fortnite .game-card-placeholder {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255,255,255,0.13), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.012) 46%, rgba(0,0,0,0.2)),
+    #08080a;
+}
+#page-fortnite .game-card-placeholder[data-tone="teal"] { background-color: #071010; }
+#page-fortnite .game-card-placeholder[data-tone="violet"] { background-color: #0d0a12; }
+#page-fortnite .game-card-placeholder[data-tone="amber"] { background-color: #120f08; }
+#page-fortnite .game-card-placeholder[data-tone="rose"] { background-color: #12090d; }
+#page-fortnite .game-card-placeholder[data-tone="blue"] { background-color: #080d14; }
+#page-fortnite .game-card-placeholder span {
+  color: rgba(255,255,255,0.86);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-align: center;
+  text-shadow: 0 12px 28px rgba(0,0,0,0.7);
+}
+#page-fortnite .game-card-body {
+  position: relative;
+  z-index: 1;
+  padding: 14px 15px 15px;
+  cursor: pointer;
+}
+#page-fortnite .game-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+#page-fortnite .game-card h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+#page-fortnite .pcard-cat-pill {
+  display: inline-flex;
+  width: fit-content;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.56);
+}
+#page-fortnite .game-card p {
+  min-height: 38px;
+  margin: 9px 0 12px;
+  color: rgba(255,255,255,0.56);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+#page-fortnite .game-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  cursor: default;
+}
+#page-fortnite .pcard-btn-primary,
+#page-fortnite .pcard-btn-secondary {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 10px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+}
+#page-fortnite .pcard-btn-primary {
+  padding: 9px 14px;
+  border: 1px solid rgba(255,255,255,0.82);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,1), rgba(238,238,240,0.96) 52%, rgba(214,214,218,0.92)),
+    #ffffff;
+  color: #050505;
+  font-size: 12.5px;
+  font-weight: 800;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.95),
+    inset 0 -1px 0 rgba(0,0,0,0.18),
+    0 7px 22px rgba(0,0,0,0.42),
+    0 0 22px rgba(255,255,255,0.10);
+}
+#page-fortnite .pcard-btn-secondary {
+  padding: 9px 12px;
+  border: 1px solid rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.045);
+  color: rgba(255,255,255,0.66);
+  font-size: 12px;
+  font-weight: 600;
+}
+#page-fortnite .game-editor-btn {
+  color: #ffffff;
+}
+#page-fortnite .pcard-btn-primary::before,
+#page-fortnite .pcard-btn-secondary.game-tune-back::before {
+  content: '';
+  position: absolute;
+  inset: 1px 1px auto;
+  height: 45%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0));
+  opacity: 0.72;
+  pointer-events: none;
+  z-index: 0;
+}
+#page-fortnite .pcard-btn-primary::after,
+#page-fortnite .pcard-btn-secondary.game-tune-back::after {
+  content: '';
+  position: absolute;
+  top: -70%;
+  bottom: -70%;
+  left: -55%;
+  width: 42%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.72), transparent);
+  transform: translateX(-120%) rotate(18deg);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+#page-fortnite .pcard-btn-primary:hover,
+#page-fortnite .pcard-btn-secondary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,0.23);
+  background: rgba(255,255,255,0.1);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 8px 18px rgba(0,0,0,0.35);
+}
+#page-fortnite .pcard-btn-primary:hover {
+  border-color: rgba(255,255,255,0.95);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,1), rgba(248,248,249,0.98) 48%, rgba(226,226,230,0.95)),
+    #ffffff;
+  color: #030303;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(0,0,0,0.16),
+    0 10px 24px rgba(0,0,0,0.48),
+    0 0 24px rgba(255,255,255,0.16);
+}
+#page-fortnite .pcard-btn-primary:hover::after,
+#page-fortnite .pcard-btn-secondary.game-tune-back:hover::after,
+#page-fortnite .pcard-btn-primary.game-tune-btn-pulse::after,
+#page-fortnite .pcard-btn-secondary.game-tune-back.game-tune-btn-pulse::after {
+  animation: gameTuneButtonSheen 0.62s cubic-bezier(0.2, 0.8, 0.2, 1);
+  opacity: 1;
+}
+#page-fortnite .pcard-btn-primary:active,
+#page-fortnite .pcard-btn-secondary:active {
+  transform: scale(0.97);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 3px 10px rgba(0,0,0,0.38);
+}
+#page-fortnite .pcard-btn-primary:disabled,
+#page-fortnite .pcard-btn-secondary:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+#page-fortnite .game-tune-empty {
+  margin: 20px 0;
+  color: rgba(255,255,255,0.38);
+  text-align: center;
+  font-size: 13px;
+}
+
+#page-fortnite .game-tune-editor-head {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  align-items: start;
+  gap: 22px;
+  margin-bottom: 18px;
+  padding: 14px 16px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.09);
+  background: var(--gt-glass);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 4px 16px rgba(0,0,0,0.42);
+}
+#page-fortnite .game-tune-editor-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+  align-self: start;
+  padding-top: 0;
+  white-space: nowrap;
+}
+#page-fortnite .game-tune-editor-actions .pcard-btn-primary,
+#page-fortnite .game-tune-editor-actions .pcard-btn-secondary {
+  min-height: 38px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+#page-fortnite .game-tune-back {
+  min-width: 112px;
+  border-color: rgba(255,255,255,0.78);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,1), rgba(238,238,240,0.96) 52%, rgba(214,214,218,0.92)),
+    #ffffff;
+  color: #050505;
+  font-weight: 800;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.95),
+    inset 0 -1px 0 rgba(0,0,0,0.18),
+    0 5px 16px rgba(0,0,0,0.34),
+    0 0 18px rgba(255,255,255,0.08);
+}
+#page-fortnite .game-tune-back:hover {
+  border-color: rgba(255,255,255,0.95);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,1), rgba(248,248,249,0.98) 48%, rgba(226,226,230,0.95)),
+    #ffffff;
+  color: #030303;
+}
+#page-fortnite .game-tune-hero-back {
+  min-width: 104px;
+  min-height: 38px;
+  padding: 10px 18px;
+  flex-shrink: 0;
+}
+@keyframes gameTuneButtonSheen {
+  from {
+    transform: translateX(-120%) rotate(18deg);
+  }
+  to {
+    transform: translateX(430%) rotate(18deg);
+  }
+}
+#page-fortnite .game-tune-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+#page-fortnite .game-editor-card {
+  padding: 17px;
+}
+#page-fortnite .game-editor-card-head {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 12px;
+}
+#page-fortnite .game-editor-controls {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 10px;
+}
+#page-fortnite .game-editor-control {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.035);
+}
+#page-fortnite .game-editor-toggle,
+#page-fortnite .game-editor-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+#page-fortnite .game-editor-control h4 {
+  margin: 0 0 4px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+#page-fortnite .game-editor-control p {
+  margin: 0;
+  color: rgba(255,255,255,0.52);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+#page-fortnite .game-editor-slider .slider-header {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 1120px) {
+  #page-fortnite .game-tune-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  #page-fortnite .game-tune-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  #page-fortnite .game-tune-search {
+    width: 100%;
+  }
+  #page-fortnite .game-tune-sort {
+    margin-left: 0;
+    padding-left: 4px;
+  }
+  #page-fortnite .game-tune-editor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  #page-fortnite .game-tune-hero {
+    padding: 34px 22px 28px;
+  }
+  #page-fortnite .game-tune-hero-body,
+  #page-fortnite .game-tune-section-top,
+  #page-fortnite .game-tune-editor-head {
+    display: flex;
+    flex-direction: column;
+  }
+  #page-fortnite .game-tune-editor-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  #page-fortnite .game-tune-title {
+    font-size: 36px;
+  }
+  #page-fortnite .game-tune-dev {
+    margin-top: 0;
+    z-index: 6;
+  }
+  #page-fortnite .game-tune-dev-panel {
+    left: 0;
+    right: auto;
+  }
+  #page-fortnite .game-tune-grid {
+    grid-template-columns: 1fr;
+  }
+  #page-fortnite .game-card-media {
+    min-height: 150px;
   }
 }
 
@@ -9104,4 +10080,897 @@ ol.ai-msg-list li {
     animation: none !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Premium Settings page */
+.content:has(#page-settings.active) {
+  overflow: hidden;
+}
+
+.content:has(#page-settings.active) .page-body {
+  height: calc(100vh - 96px);
+  padding: 10px 20px 14px;
+  overflow: hidden;
+}
+
+#page-settings {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.settings-shell {
+  height: 100%;
+  min-height: 0;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 80% 8%, rgba(124,96,228,0.04), transparent 26%),
+    radial-gradient(circle at 16% 12%, rgba(255,255,255,0.025), transparent 25%),
+    linear-gradient(145deg, rgba(15,15,17,0.56), rgba(4,4,5,0.94));
+  box-shadow: 0 16px 48px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.025);
+}
+
+.settings-row-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.018);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+}
+
+.settings-main {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 24px 28px 26px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255,255,255,0.008), transparent 44%), rgba(3,3,4,0.12);
+}
+
+.settings-main-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.settings-main-header h1 {
+  margin: 0 0 5px;
+  color: rgba(255,255,255,0.94);
+  font-size: 30px;
+  line-height: 1.05;
+  font-weight: 680;
+  letter-spacing: 0;
+}
+
+.settings-main-header p {
+  margin: 0;
+  color: rgba(255,255,255,0.68);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.settings-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 auto;
+}
+
+.settings-search,
+.settings-reset-btn,
+.settings-select,
+.settings-segmented,
+.settings-link-btn {
+  border: 1px solid rgba(255,255,255,0.18);
+  background: linear-gradient(145deg, rgba(255,255,255,0.032), rgba(255,255,255,0.010)), rgba(9,9,10,0.40);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.settings-search {
+  width: 200px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border-radius: 10px;
+}
+
+.settings-search svg,
+.settings-reset-btn svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.75;
+  color: rgba(255,255,255,0.72);
+  flex: 0 0 auto;
+}
+
+.settings-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 400;
+}
+
+.settings-search input::placeholder {
+  color: rgba(255,255,255,0.48);
+}
+
+.settings-reset-btn {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: rgba(255,255,255,0.90);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 540;
+  cursor: pointer;
+}
+
+.settings-link-btn {
+  justify-self: end;
+  min-width: 104px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  color: rgba(255,255,255,0.92);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 540;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.settings-link-btn:hover {
+  border-color: var(--panel-border-hover);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--accent-primary) 10%, transparent), rgba(255,255,255,0.018)),
+    color-mix(in srgb, var(--panel-bg-strong) 54%, transparent);
+  color: #fff;
+}
+
+.settings-content {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-content-section h3 {
+  margin: 0 0 8px;
+  color: rgba(255,255,255,0.78);
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 620;
+  letter-spacing: 0.2px;
+  text-transform: none;
+}
+
+.settings-card {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.018), rgba(255,255,255,0.004)), rgba(10,10,11,0.24);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 28px rgba(0,0,0,0.12);
+  overflow: hidden;
+}
+
+.settings-row {
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 34px minmax(170px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.025);
+  background: rgba(255,255,255,0.004);
+}
+
+.settings-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-row-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  color: rgba(255,255,255,0.80);
+}
+
+.settings-row-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.55;
+}
+
+.settings-row strong {
+  display: block;
+  margin-bottom: 3px;
+  color: rgba(255,255,255,0.94);
+  font-size: 13.5px;
+  font-weight: 560;
+  line-height: 1.25;
+}
+
+.settings-row span:not(.settings-row-icon) {
+  display: block;
+  color: rgba(255,255,255,0.64);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.settings-toggle {
+  justify-self: end;
+  width: 44px;
+  height: 24px;
+  padding: 2px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 999px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.024), rgba(0,0,0,0.22));
+  cursor: pointer;
+  box-shadow: inset 0 1px 5px rgba(0,0,0,0.48);
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settings-toggle span {
+  width: 19px;
+  height: 19px;
+  display: block;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #9a9ca1, #e1e2e5);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.55);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.settings-toggle.is-on {
+  border-color: var(--accent-border);
+  background:
+    radial-gradient(circle at 28% 20%, rgba(255,255,255,0.95), transparent 42%),
+    var(--accent-gradient);
+  box-shadow: 0 0 16px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.72), inset 0 -1px 0 rgba(0,0,0,0.16);
+}
+
+.settings-toggle.is-on span {
+  transform: translateX(20px);
+  background: linear-gradient(145deg, #050506, #26282d);
+  box-shadow: 0 2px 7px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+.settings-select {
+  justify-self: end;
+  width: 176px;
+  height: 36px;
+  padding: 0 34px 0 12px;
+  border-radius: 10px;
+  color: rgba(255,255,255,0.90);
+  background:
+    linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.82) 50%) right 14px center / 6px 6px no-repeat,
+    linear-gradient(135deg, rgba(255,255,255,0.030), rgba(255,255,255,0.008)),
+    #0a0a0b;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 430;
+  appearance: none;
+  outline: none;
+}
+
+.settings-theme-row {
+  min-height: 116px;
+  grid-template-columns: 34px minmax(150px, 0.38fr) minmax(520px, 1.62fr);
+  align-items: center;
+}
+
+.settings-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  gap: 12px;
+}
+
+.settings-theme-card {
+  position: relative;
+  min-height: 82px;
+  display: grid;
+  align-content: end;
+  justify-items: center;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 11px;
+  color: rgba(255,255,255,0.84);
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  background: rgba(8,8,9,0.72);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.settings-theme-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.92;
+}
+
+.settings-theme-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.settings-theme-card b {
+  font-size: 11px;
+  font-weight: 540;
+}
+
+.settings-theme-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--panel-border-hover);
+}
+
+.settings-theme-card.is-selected {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 0 16px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+.settings-theme-premium::before {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255,255,255,0.11), transparent 32%),
+    linear-gradient(145deg, rgba(36,38,43,0.82), rgba(5,5,6,0.94) 68%);
+}
+
+.settings-theme-midnight::before {
+  background: linear-gradient(145deg, rgba(18,20,25,0.78), rgba(2,2,3,0.96) 70%);
+}
+
+.settings-theme-silver::before {
+  background: linear-gradient(135deg, rgba(243,244,247,0.86) 0%, rgba(117,122,130,0.72) 46%, rgba(47,50,56,0.82) 100%);
+}
+
+.settings-theme-light::before {
+  background: linear-gradient(135deg, rgba(255,255,255,0.88), rgba(222,224,229,0.78) 56%, rgba(248,249,251,0.86));
+}
+
+.settings-theme-logo {
+  position: absolute;
+  inset: 8px 10px 23px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  overflow: hidden;
+  opacity: 0.46;
+  mix-blend-mode: screen;
+}
+
+.settings-theme-logo img {
+  width: min(62px, 72%);
+  height: min(62px, 72%);
+  object-fit: contain;
+  filter: grayscale(1) contrast(1.08) brightness(1.25) drop-shadow(0 8px 22px rgba(255,255,255,0.13));
+}
+
+.settings-accent-dots {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.settings-accent-dots button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 50%;
+  background: var(--dot);
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 3px 9px rgba(0,0,0,0.20);
+}
+
+.settings-accent-dots button.is-selected {
+  box-shadow: 0 0 0 3px #09090a, 0 0 0 5px rgba(255,255,255,0.7), 0 0 18px rgba(255,255,255,0.14);
+}
+
+.settings-segmented {
+  justify-self: end;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 150px;
+  height: 36px;
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.settings-segmented button {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 520;
+  cursor: pointer;
+}
+
+.settings-segmented button.is-selected {
+  color: #fff;
+  background: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(255,255,255,0.055));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 0 16px rgba(255,255,255,0.08);
+}
+
+@media (max-height: 760px) {
+  .settings-main { padding: 18px 20px 20px; }
+  .settings-main-header { margin-bottom: 10px; }
+  .settings-main-header h1 { font-size: 28px; }
+  .settings-content { gap: 10px; }
+  .settings-row { min-height: 48px; padding-block: 7px; }
+  .settings-theme-row { min-height: 98px; }
+  .settings-theme-card { min-height: 70px; }
+  .settings-theme-logo { inset: 7px 9px 20px; }
+}
+
+@media (max-width: 1240px) {
+  .settings-main { padding-inline: 18px; }
+  .settings-search { width: 170px; }
+  .settings-theme-row { grid-template-columns: 34px minmax(130px, 0.42fr) minmax(420px, 1.58fr); }
+  .settings-theme-grid { gap: 8px; }
+}
+
+/* XTweaks Settings experience layout */
+#page-settings .settings-main {
+  padding: 20px 26px 22px;
+}
+
+#page-settings .settings-content {
+  gap: 10px;
+}
+
+.settings-experience-card,
+.settings-control-card,
+.settings-studio-card,
+.settings-hub-card {
+  border: 1px solid var(--panel-border-hover);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent-primary) 8%, transparent), transparent 34%),
+    linear-gradient(145deg, color-mix(in srgb, var(--panel-bg-strong) 42%, transparent), color-mix(in srgb, var(--panel-bg) 18%, transparent)),
+    color-mix(in srgb, var(--panel-bg) 72%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.055), 0 12px 28px rgba(0,0,0,0.14), 0 0 22px color-mix(in srgb, var(--accent-glow) 28%, transparent);
+}
+
+.settings-experience-card {
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(390px, 0.85fr);
+  align-items: center;
+  gap: 18px;
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.settings-experience-card::after {
+  content: '';
+  position: absolute;
+  inset: auto 18px -34px auto;
+  width: 220px;
+  height: 95px;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--accent-glow), transparent 68%);
+  pointer-events: none;
+}
+
+.settings-experience-kicker,
+.settings-section-heading span,
+.settings-hub-copy span {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(255,255,255,0.62);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+
+.settings-experience-main h2,
+.settings-section-heading h3,
+.settings-hub-copy h3 {
+  margin: 0;
+  color: rgba(255,255,255,0.94);
+  font-size: 20px;
+  line-height: 1.1;
+  font-weight: 640;
+  letter-spacing: 0;
+}
+
+.settings-experience-main p,
+.settings-hub-copy p {
+  max-width: 520px;
+  margin: 6px 0 0;
+  color: rgba(255,255,255,0.66);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.settings-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.settings-status-grid span {
+  min-height: 45px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.018);
+  color: rgba(255,255,255,0.86);
+  font-size: 12px;
+}
+
+.settings-status-grid b {
+  color: rgba(255,255,255,0.56);
+  font-size: 9.5px;
+  font-weight: 620;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.settings-status-grid em {
+  color: rgba(255,255,255,0.86);
+  font-style: normal;
+}
+
+.settings-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.settings-control-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-control-card {
+  min-height: 92px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 13px;
+}
+
+.settings-control-card strong,
+.settings-studio-intro strong,
+.settings-finish-panel strong {
+  display: block;
+  margin-bottom: 3px;
+  color: rgba(255,255,255,0.94);
+  font-size: 13.5px;
+  font-weight: 560;
+  line-height: 1.25;
+}
+
+.settings-control-card span:not(.settings-row-icon),
+.settings-studio-intro span:not(.settings-row-icon),
+.settings-finish-panel span {
+  color: rgba(255,255,255,0.64);
+  font-size: 12px;
+  line-height: 1.34;
+}
+
+.settings-studio-card {
+  padding: 13px;
+}
+
+.settings-studio-intro {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 10px;
+}
+
+#page-settings .settings-theme-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+#page-settings .settings-theme-card {
+  min-height: 86px;
+  align-content: stretch;
+  justify-items: stretch;
+  gap: 0;
+  padding: 9px;
+}
+
+.settings-theme-preview {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 0.42fr 1fr;
+  grid-template-rows: repeat(2, 1fr);
+  gap: 5px;
+  min-height: 52px;
+  margin-bottom: 6px;
+}
+
+.settings-theme-preview i {
+  display: block;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 7px;
+  background: rgba(255,255,255,0.055);
+}
+
+.settings-theme-preview i:first-child {
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 34% 22%, rgba(255,255,255,0.16), transparent 42%),
+    linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.024));
+  overflow: hidden;
+}
+
+.settings-theme-preview i:nth-child(2) {
+  background: linear-gradient(90deg, rgba(255,255,255,0.12), rgba(255,255,255,0.035));
+}
+
+.settings-theme-card b {
+  align-self: end;
+  justify-self: start;
+  color: rgba(255,255,255,0.84);
+  font-size: 11px;
+  font-weight: 560;
+}
+
+#page-settings .settings-theme-logo {
+  inset: 10px 12px 28px 34%;
+  opacity: 0.34;
+}
+
+.settings-studio-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.settings-finish-panel {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.45fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 11px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 13px;
+  background: rgba(255,255,255,0.012);
+}
+
+.settings-accent-finishes,
+.settings-nav-style {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.settings-nav-style button {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--finish, #d7d8db) 16%, transparent), transparent),
+    rgba(255,255,255,0.014);
+  color: rgba(255,255,255,0.74);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 520;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.settings-nav-style button:hover {
+  border-color: var(--panel-border-hover);
+  color: rgba(255,255,255,0.92);
+}
+
+.settings-nav-style button.is-selected {
+  border-color: var(--accent-border);
+  color: #fff;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 22%, transparent), transparent),
+    rgba(255,255,255,0.04);
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.settings-accent-finishes {
+  gap: 10px;
+}
+
+.settings-accent-finishes button {
+  position: relative;
+  min-width: 104px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 12px 6px 8px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.032), rgba(255,255,255,0.008)),
+    rgba(255,255,255,0.012);
+  color: rgba(255,255,255,0.78);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 520;
+  letter-spacing: 0;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.settings-accent-finishes button span:not(.settings-finish-swatch) {
+  color: inherit;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.settings-accent-finishes button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), transparent 32%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.settings-accent-finishes button:hover {
+  transform: translateY(-1px);
+  border-color: var(--panel-border-hover);
+  color: rgba(255,255,255,0.92);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.046), rgba(255,255,255,0.014)),
+    rgba(255,255,255,0.016);
+}
+
+.settings-accent-finishes button:hover::before,
+.settings-accent-finishes button.is-selected::before {
+  opacity: 1;
+}
+
+.settings-accent-finishes button.is-selected {
+  border-color: var(--accent-border);
+  color: #fff;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 12%, transparent), rgba(255,255,255,0.014)),
+    rgba(255,255,255,0.018);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.035),
+    0 0 18px var(--accent-glow),
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    inset 0 -10px 20px rgba(255,255,255,0.025);
+}
+
+.settings-finish-swatch {
+  width: 30px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    inset 0 -8px 12px rgba(0,0,0,0.16);
+}
+
+.settings-finish-pearl .settings-finish-swatch {
+  background:
+    radial-gradient(circle at 28% 22%, rgba(255,255,255,0.92), transparent 30%),
+    linear-gradient(135deg, #f8f8f8 0%, #cbcdd2 45%, #ffffff 58%, #a8abb2 100%);
+}
+
+.settings-finish-graphite .settings-finish-swatch {
+  background:
+    radial-gradient(circle at 70% 18%, rgba(255,255,255,0.20), transparent 32%),
+    linear-gradient(135deg, #3c4048 0%, #15171c 52%, #07080b 100%);
+}
+
+.settings-finish-chrome .settings-finish-swatch {
+  background:
+    linear-gradient(115deg, #e9eaec 0%, #8a8d93 22%, #ffffff 43%, #777b83 62%, #d9dbdf 100%);
+}
+
+.settings-hub-card {
+  min-height: 84px;
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+}
+
+.settings-hub-actions {
+  display: flex;
+  gap: 10px;
+}
+
+#page-settings .settings-link-btn {
+  min-width: 128px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.settings-link-btn svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.7;
+}
+
+@media (max-height: 860px) {
+  #page-settings .settings-main { padding: 16px 20px 18px; }
+  .settings-experience-card { min-height: 74px; padding: 12px 14px; }
+  .settings-control-card { min-height: 78px; padding: 10px; }
+  #page-settings .settings-theme-card { min-height: 74px; }
+  .settings-theme-preview { min-height: 42px; }
+  .settings-studio-card { padding: 10px; }
+  .settings-hub-card { min-height: 72px; padding: 12px; }
+}
+
+body.settings-nav-compact .sidebar {
+  width: 78px;
+  padding: 14px 10px;
+}
+
+body.settings-nav-compact .nav-branding.nav-branding-profile {
+  padding: 12px 8px;
+  border-radius: 16px;
+}
+
+body.settings-nav-compact .branding-avatar-inner {
+  width: 38px;
+  height: 38px;
+}
+
+body.settings-nav-compact .branding-profile-text,
+body.settings-nav-compact .branding-profile-divider,
+body.settings-nav-compact .nav-category,
+body.settings-nav-compact .nav-text,
+body.settings-nav-compact .nav-upgrade-label {
+  display: none;
+}
+
+body.settings-nav-compact .nav-item,
+body.settings-nav-compact .nav-upgrade {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+body.settings-nav-hidden .sidebar {
+  display: none;
 }

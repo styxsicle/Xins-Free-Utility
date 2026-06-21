@@ -23,8 +23,10 @@ function initializeApp() {
     initializeGpuPage();
     initializeInputTab();
     initializeAiTweaker();
+    initializeGameTunePage();
     initializeNetworkCards();
     initializeDnsOptimizer();
+    initializeSettingsPage();
 }
 
 function initializeExternalLinks() {
@@ -78,49 +80,296 @@ function initializeNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     const pages = document.querySelectorAll('.page');
 
+    function activatePage(targetPage, activeItem = null) {
+        navItems.forEach(nav => nav.classList.remove('active'));
+        if (activeItem) activeItem.classList.add('active');
+
+        pages.forEach(page => {
+            page.classList.remove('active');
+            if (page.id === `page-${targetPage}`) {
+                page.classList.add('active');
+            }
+        });
+
+        if (targetPage === 'ai-tweaker') {
+            document.body.classList.add('ai-tweaker-active');
+            document.body.classList.remove('net-page-active');
+            document.body.classList.remove('game-tune-active');
+            _restoreNetTopBar();
+            const aiPage = document.getElementById('page-ai-tweaker');
+            if (aiPage) {
+                aiPage.classList.remove('ai-entered');
+                void aiPage.offsetWidth;
+                aiPage.classList.add('ai-entered');
+            }
+            if (!aiWelcomeShownThisSession && !localStorage.getItem('xtweaks-ai-welcome-seen')) {
+                aiWelcomeShownThisSession = true;
+                setTimeout(() => {
+                    const ov = document.getElementById('ai-welcome-overlay');
+                    if (ov) { ov.classList.remove('is-closing'); ov.classList.add('is-open'); }
+                }, 60);
+            }
+        } else if (targetPage === 'network') {
+            document.body.classList.remove('ai-tweaker-active');
+            document.body.classList.remove('game-tune-active');
+            document.body.classList.add('net-page-active');
+            _integrateNetTopBar();
+        } else if (targetPage === 'fortnite') {
+            document.body.classList.remove('ai-tweaker-active');
+            document.body.classList.remove('net-page-active');
+            document.body.classList.add('game-tune-active');
+            _restoreNetTopBar();
+            window.replayGameTuneCards?.();
+        } else {
+            document.body.classList.remove('ai-tweaker-active');
+            document.body.classList.remove('net-page-active');
+            document.body.classList.remove('game-tune-active');
+            _restoreNetTopBar();
+        }
+    }
+
+    window.activateRendererPage = activatePage;
+
     navItems.forEach(item => {
         item.addEventListener('click', () => {
             const targetPage = item.dataset.page;
+            activatePage(targetPage, item);
+        });
+    });
+}
 
-            navItems.forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
+function initializeSettingsPage() {
+    const page = document.getElementById('page-settings');
+    if (!page) return;
+    if (page.dataset.settingsInitialized === 'true') return;
+    page.dataset.settingsInitialized = 'true';
 
-            pages.forEach(page => {
-                page.classList.remove('active');
-                if (page.id === `page-${targetPage}`) {
-                    page.classList.add('active');
-                }
+    const storageKey = 'xtweaks-settings-v1';
+    const defaults = {
+        launchOnStartup: true,
+        minimizeToTray: false,
+        language: 'English',
+        theme: 'xins-premium',
+        accentFinish: 'pearl',
+        navigationStyle: 'full'
+    };
+    const themeLabels = {
+        'xins-premium': 'Xins Premium',
+        obsidian: 'Obsidian',
+        'silver-mist': 'Silver Mist',
+        'frost-glass': 'Frost Glass'
+    };
+    const navigationLabels = {
+        full: 'Full',
+        compact: 'Compact',
+        hidden: 'Hidden'
+    };
+    const validOptions = {
+        language: ['English'],
+        theme: Object.keys(themeLabels),
+        accentFinish: ['pearl', 'graphite', 'chrome'],
+        navigationStyle: Object.keys(navigationLabels)
+    };
+
+    function normalizeSettings(input = {}) {
+        const next = { ...defaults, ...input };
+        next.launchOnStartup = Boolean(next.launchOnStartup);
+        next.minimizeToTray = Boolean(next.minimizeToTray);
+        if (!validOptions.language.includes(next.language)) next.language = defaults.language;
+        if (!validOptions.theme.includes(next.theme)) next.theme = defaults.theme;
+        if (!validOptions.accentFinish.includes(next.accentFinish)) next.accentFinish = defaults.accentFinish;
+        if (!validOptions.navigationStyle.includes(next.navigationStyle)) next.navigationStyle = defaults.navigationStyle;
+        return next;
+    }
+
+    function loadSettings() {
+        try {
+            return normalizeSettings(JSON.parse(localStorage.getItem(storageKey) || '{}'));
+        } catch {
+            return { ...defaults };
+        }
+    }
+
+    function saveSettings(nextSettings) {
+        const normalized = normalizeSettings(nextSettings);
+        localStorage.setItem(storageKey, JSON.stringify(normalized));
+        return normalized;
+    }
+
+    let settings = loadSettings();
+
+    function setToggleState(toggle, isOn) {
+        toggle.classList.toggle('is-on', isOn);
+        toggle.setAttribute('aria-pressed', String(isOn));
+    }
+
+    function setChoiceState(group, value) {
+        page.querySelectorAll(`[data-settings-choice-group="${group}"]`).forEach((item) => {
+            const isSelected = item.dataset.settingsValue === value;
+            item.classList.toggle('is-selected', isSelected);
+            item.setAttribute('aria-pressed', String(isSelected));
+        });
+    }
+
+    function applyTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+    }
+
+    function applyAccentFinish(accentFinish) {
+        document.documentElement.dataset.accentFinish = accentFinish;
+    }
+
+    function applyNavigationStyle(navigationStyle) {
+        document.body.classList.toggle('settings-nav-compact', navigationStyle === 'compact');
+        document.body.classList.toggle('settings-nav-hidden', navigationStyle === 'hidden');
+        document.body.classList.toggle('settings-nav-full', navigationStyle === 'full');
+    }
+
+    function updateStatusChips() {
+        const themeStatus = page.querySelector('[data-settings-status="theme"]');
+        const startupStatus = page.querySelector('[data-settings-status="startup"]');
+        const navigationStatus = page.querySelector('[data-settings-status="navigation"]');
+        if (themeStatus) themeStatus.textContent = themeLabels[settings.theme] || themeLabels[defaults.theme];
+        if (startupStatus) startupStatus.textContent = settings.launchOnStartup ? 'Enabled' : 'Off';
+        if (navigationStatus) navigationStatus.textContent = navigationLabels[settings.navigationStyle] || navigationLabels[defaults.navigationStyle];
+    }
+
+    function applySettingsToUI() {
+        page.querySelectorAll('[data-settings-key]').forEach((control) => {
+            const key = control.dataset.settingsKey;
+            if (control.classList.contains('settings-toggle')) {
+                setToggleState(control, Boolean(settings[key]));
+            } else if (control.matches('select')) {
+                control.value = settings[key] || defaults[key];
+            }
+        });
+
+        setChoiceState('theme', settings.theme);
+        setChoiceState('accent', settings.accentFinish);
+        setChoiceState('navigationStyle', settings.navigationStyle);
+        applyTheme(settings.theme);
+        applyAccentFinish(settings.accentFinish);
+        applyNavigationStyle(settings.navigationStyle);
+        updateStatusChips();
+    }
+
+    function updateSettings(patch, notification) {
+        settings = saveSettings({ ...settings, ...patch });
+        applySettingsToUI();
+        if (notification) {
+            showNotification(notification.type || 'success', notification.title, notification.message, {
+                key: 'settings-preference',
+                duration: 2400
             });
+        }
+    }
 
-            if (targetPage === 'ai-tweaker') {
-                document.body.classList.add('ai-tweaker-active');
-                document.body.classList.remove('net-page-active');
-                _restoreNetTopBar();
-                // Re-run entrance animation on every visit
-                const aiPage = document.getElementById('page-ai-tweaker');
-                if (aiPage) {
-                    aiPage.classList.remove('ai-entered');
-                    void aiPage.offsetWidth;
-                    aiPage.classList.add('ai-entered');
-                }
-                if (!aiWelcomeShownThisSession && !localStorage.getItem('xtweaks-ai-welcome-seen')) {
-                    aiWelcomeShownThisSession = true;
-                    setTimeout(() => {
-                        const ov = document.getElementById('ai-welcome-overlay');
-                        if (ov) { ov.classList.remove('is-closing'); ov.classList.add('is-open'); }
-                    }, 60);
-                }
-            } else if (targetPage === 'network') {
-                document.body.classList.remove('ai-tweaker-active');
-                document.body.classList.add('net-page-active');
-                _integrateNetTopBar();
+    function resetSettings() {
+        settings = saveSettings(defaults);
+        applySettingsToUI();
+        showNotification('success', 'Settings Reset', 'Settings restored to defaults.', {
+            key: 'settings-preference',
+            duration: 2600
+        });
+    }
+
+    function openSettingsUrl(url) {
+        if (!url) return;
+        try {
+            if (window.electronAPI?.openExternal) {
+                window.electronAPI.openExternal(url);
             } else {
-                document.body.classList.remove('ai-tweaker-active');
-                document.body.classList.remove('net-page-active');
-                _restoreNetTopBar();
+                window.open(url, '_blank', 'noopener');
+            }
+        } catch {
+            window.open(url, '_blank', 'noopener');
+        }
+    }
+
+    const settingsBtn = document.getElementById('settings-btn');
+    settingsBtn?.addEventListener('click', () => {
+        if (typeof window.activateRendererPage === 'function') {
+            window.activateRendererPage('settings');
+        }
+    });
+
+    page.querySelectorAll('.settings-toggle').forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+            const key = toggle.dataset.settingsKey;
+            if (!key) return;
+            const isOn = !toggle.classList.contains('is-on');
+            const messages = {
+                launchOnStartup: {
+                    title: 'Startup Preference Saved',
+                    message: 'Startup preference saved.'
+                },
+                minimizeToTray: {
+                    title: 'Tray Preference Saved',
+                    message: 'Tray preference saved.'
+                }
+            };
+            updateSettings({ [key]: isOn }, messages[key]);
+        });
+    });
+
+    page.querySelectorAll('[data-settings-choice-group]').forEach((choice) => {
+        choice.addEventListener('click', () => {
+            const group = choice.dataset.settingsChoiceGroup;
+            const value = choice.dataset.settingsValue;
+            if (!group || !value) return;
+            if (group === 'theme') {
+                updateSettings({ theme: value }, {
+                    title: 'Theme Saved',
+                    message: `${themeLabels[value] || 'Theme'} selected.`
+                });
+            } else if (group === 'accent') {
+                updateSettings({ accentFinish: value }, {
+                    title: 'Accent Finish Saved',
+                    message: `${choice.textContent.trim()} selected.`
+                });
+            } else if (group === 'navigationStyle') {
+                updateSettings({ navigationStyle: value }, {
+                    title: 'Navigation Style Saved',
+                    message: `${choice.textContent.trim()} selected.`
+                });
             }
         });
     });
+
+    page.querySelectorAll('.settings-select[data-settings-key]').forEach((select) => {
+        select.addEventListener('change', () => {
+            const key = select.dataset.settingsKey;
+            updateSettings({ [key]: select.value }, {
+                title: 'Language Saved',
+                message: 'Language saved.'
+            });
+        });
+    });
+
+    const resetBtn = page.querySelector('.settings-reset-btn');
+    resetBtn?.addEventListener('click', resetSettings);
+
+    page.querySelectorAll('[data-settings-open-url]').forEach((button) => {
+        button.addEventListener('click', () => {
+            openSettingsUrl(button.dataset.settingsOpenUrl);
+        });
+    });
+
+    const search = document.getElementById('settings-search');
+    search?.addEventListener('input', () => {
+        const query = search.value.trim().toLowerCase();
+        page.querySelectorAll('.settings-content-section').forEach((section) => {
+            const searchableText = [
+                section.textContent,
+                ...Array.from(section.querySelectorAll('[data-settings-value], [data-settings-key], [data-settings-open-url]')).map((item) =>
+                    `${item.dataset.settingsValue || ''} ${item.dataset.settingsKey || ''} ${item.dataset.settingsOpenUrl || ''}`
+                )
+            ].join(' ').toLowerCase();
+            section.hidden = Boolean(query) && !searchableText.includes(query);
+        });
+    });
+
+    applySettingsToUI();
 }
 
 function initializeInputTab() {
@@ -135,12 +384,14 @@ function initializeInputTab() {
     const canvas = document.getElementById('input-model-canvas');
     const xboxTuneToggle = document.getElementById('input-xbox-tune-toggle');
     const xboxTuner = document.getElementById('input-xbox-tuner');
+    const inputTunerTitle = document.getElementById('input-tuner-title');
     const xboxCopyValuesBtn = document.getElementById('input-xbox-copy-values');
     const xboxResetSlidersBtn = document.getElementById('input-xbox-reset-sliders');
     const xboxTunerCloseBtn = document.getElementById('input-xbox-tuner-close');
     const decalVisibleToggle = document.getElementById('input-decal-visible');
     const decalSelectedEl = document.getElementById('input-decal-selected');
     const decalCopyValuesBtn = document.getElementById('input-copy-decal-values');
+    const decalTunerPanel = xboxTuner?.querySelector('.input-decal-tuner');
     const selectedButtonEl = document.getElementById('input-selected-button');
     const assignmentSelect = document.getElementById('input-assignment-select');
     const profileStatus = document.getElementById('input-profile-status');
@@ -165,36 +416,64 @@ function initializeInputTab() {
             rotation: { x: 0.24, y: -1.95, z: 0.04 }
         },
         ps5: {
-            distanceMultiplier: 0.74,
+            distanceMultiplier: 0.46,
             scaleMultiplier: 3.25,
-            positionOffset: { x: 0, y: 0.04, z: 0 },
-            targetOffset: { x: 0, y: 0.035, z: 0 },
-            cameraOffset: { x: 0.03, y: 0.14, z: 0.02 },
-            rotation: { x: -0.14, y: -0.12, z: 0.01 }
+            positionOffset: { x: -0.04, y: -0.04, z: 0 },
+            targetOffset: { x: -0.02, y: 0.03, z: 0 },
+            cameraOffset: { x: 0.12, y: 0.16, z: 0.03 },
+            rotation: { x: 0.16, y: -0.55, z: 0.03 }
         },
         playstation: {
-            distanceMultiplier: 0.74,
+            distanceMultiplier: 0.46,
             scaleMultiplier: 3.25,
-            positionOffset: { x: 0, y: 0.04, z: 0 },
-            targetOffset: { x: 0, y: 0.035, z: 0 },
-            cameraOffset: { x: 0.03, y: 0.14, z: 0.02 },
-            rotation: { x: -0.14, y: -0.12, z: 0.01 }
+            positionOffset: { x: -0.04, y: -0.04, z: 0 },
+            targetOffset: { x: -0.02, y: 0.03, z: 0 },
+            cameraOffset: { x: 0.12, y: 0.16, z: 0.03 },
+            rotation: { x: 0.16, y: -0.55, z: 0.03 }
         }
     };
-    // Xbox decals are disabled because fake overlay dots were not good enough.
-    // Keep this code dormant until using a model with separated button meshes or painted textures.
-    const XBOX_BUTTON_DECALS = {
-        enabled: false,
-        radius: 0.035,
-        lift: 0.012,
-        normal: { x: 0, y: 0, z: 1 },
-        rotation: { x: 0, y: 0, z: 0 },
-        buttons: {
+    const INPUT_XBOX_DECAL_TUNER_ENABLED = false;
+    // The Xbox GLB exposes one shared mesh/material, so ABXY letters are a tunable model-space helper.
+    // Keep the helper out of camera bounds and disable this flag when final values are no longer needed.
+    const XBOX_BUTTON_DECAL_VISIBLE_DEFAULTS = {
+        position: { x: 1.2, y: 5.35, z: 3.95 },
+        rotation: { x: -Math.PI / 2, y: 0, z: 0 },
+        scale: 1,
+        letterSpacing: 0.16,
+        letterSize: 0.11,
+        surfaceOffset: 0.035,
+        offsets: {
             a: { x: 0, y: 0, z: 0 },
             b: { x: 0, y: 0, z: 0 },
             x: { x: 0, y: 0, z: 0 },
             y: { x: 0, y: 0, z: 0 }
         }
+    };
+    const XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS = {
+        position: { x: 0.10, y: 0.18, z: -0.24 },
+        rotation: { x: -1.56, y: 0.67, z: -4.77 },
+        scale: 1,
+        letterSpacing: 0.045,
+        letterSize: 0.08,
+        surfaceOffset: -0.04,
+        offsets: {
+            a: { x: 0, y: 0, z: 0 },
+            b: { x: 0, y: 0, z: 0 },
+            x: { x: 0, y: 0, z: 0 },
+            y: { x: 0, y: 0, z: 0 }
+        }
+    };
+    const XBOX_BUTTON_DECALS = {
+        enabled: true,
+        showDebugAnchor: false,
+        xray: false,
+        position: { ...XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.position },
+        rotation: { ...XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.rotation },
+        scale: XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.scale,
+        letterSpacing: XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.letterSpacing,
+        letterSize: XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.letterSize,
+        surfaceOffset: XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.surfaceOffset,
+        offsets: JSON.parse(JSON.stringify(XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.offsets))
     };
     const INPUT_MODEL_MATERIAL_MODE = {
         xbox: 'darkTintPreserveMaps',
@@ -202,6 +481,7 @@ function initializeInputTab() {
         playstation: 'preserveOriginal'
     };
     const defaultXboxFraming = JSON.parse(JSON.stringify(INPUT_MODEL_FRAMING.xbox));
+    const defaultPlayStationFraming = JSON.parse(JSON.stringify(INPUT_MODEL_FRAMING.playstation));
     const xboxTuneFields = [
         'distanceMultiplier',
         'scaleMultiplier',
@@ -232,6 +512,8 @@ function initializeInputTab() {
     let isTunerDragging = false;
     let tunerDragStart = { x: 0, y: 0, left: 0, top: 0 };
     let selectedDecalButton = 'a';
+    let decalGroupReadoutEl = null;
+    let decalReadoutEl = null;
     let lastTimestamp = null;
     let pollingSamples = [];
 
@@ -324,6 +606,7 @@ function initializeInputTab() {
         let isOrbiting = false;
         let lastFrame = null;
         const loggedInputMaterialInventory = new Set();
+        const INPUT_MODEL_DEBUG_MATERIALS = false;
         const INPUT_SCENE_LIGHTING = {
             ambientIntensity: 0.88,
             keyIntensity: 2.05,
@@ -390,6 +673,23 @@ function initializeInputTab() {
             renderer.setSize(width, height, false);
         };
 
+        const getBoundsWithoutHelpers = (object) => {
+            object.updateMatrixWorld(true);
+            const box = new THREE.Box3();
+            object.traverse((child) => {
+                if (!child.isMesh || !child.geometry) return;
+                let cursor = child;
+                while (cursor) {
+                    if (cursor.userData?.xtweaksExcludeFromBounds) return;
+                    cursor = cursor.parent;
+                }
+                if (!child.geometry.boundingBox) child.geometry.computeBoundingBox();
+                box.union(child.geometry.boundingBox.clone().applyMatrix4(child.matrixWorld));
+            });
+            if (box.isEmpty()) return new THREE.Box3().setFromObject(object);
+            return box;
+        };
+
         const applyFramingToObject = (framedObject, modelKey) => {
             const framingKey = modelKey === 'ps5' ? 'playstation' : modelKey;
             const preset = INPUT_MODEL_FRAMING[framingKey] || INPUT_MODEL_FRAMING.xbox;
@@ -402,13 +702,8 @@ function initializeInputTab() {
             framedObject.position.copy(centerPosition);
             framedObject.scale.setScalar(scale);
             framedObject.rotation.copy(rotation);
-            const decalGroup = framedObject.getObjectByName?.('xtweaks_xbox_button_decals');
-            const decalsWereVisible = decalGroup?.visible;
-            if (decalGroup) decalGroup.visible = false;
-            framedObject.updateMatrixWorld(true);
 
-            const framedBox = new THREE.Box3().setFromObject(framedObject);
-            if (decalGroup) decalGroup.visible = decalsWereVisible;
+            const framedBox = getBoundsWithoutHelpers(framedObject);
             const sphere = framedBox.getBoundingSphere(new THREE.Sphere());
             const radius = Math.max(sphere.radius, 0.75);
             const positionOffset = new THREE.Vector3(preset.positionOffset.x, preset.positionOffset.y, preset.positionOffset.z);
@@ -436,10 +731,33 @@ function initializeInputTab() {
             lastFrame = { distance, radius, target, cameraOffset, rotation };
         };
 
+        const createXboxButtonLabelTexture = (label, color) => {
+            const size = 128;
+            const labelCanvas = document.createElement('canvas');
+            labelCanvas.width = size;
+            labelCanvas.height = size;
+            const context = labelCanvas.getContext('2d');
+            if (!context) return null;
+            context.clearRect(0, 0, size, size);
+            context.font = '700 74px Arial, sans-serif';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.shadowColor = 'rgba(255, 255, 255, 0.18)';
+            context.shadowBlur = 6;
+            context.fillStyle = color;
+            context.fillText(label, size / 2, size / 2 + 3);
+            const texture = new THREE.CanvasTexture(labelCanvas);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.needsUpdate = true;
+            return texture;
+        };
+
         const createXboxButtonDecals = () => {
+            if (!XBOX_BUTTON_DECALS.enabled) return null;
             const group = new THREE.Group();
             group.name = 'xtweaks_xbox_button_decals';
             group.visible = XBOX_BUTTON_DECALS.enabled;
+            group.userData.xtweaksExcludeFromBounds = true;
             const colors = {
                 a: '#4ade80',
                 b: '#ef4444',
@@ -447,27 +765,40 @@ function initializeInputTab() {
                 y: '#facc15'
             };
 
-            Object.keys(XBOX_BUTTON_DECALS.buttons).forEach((button) => {
-                const geometry = new THREE.CircleGeometry(1, 28);
-                const color = new THREE.Color(colors[button]);
-                const material = new THREE.MeshPhysicalMaterial({
+            ['a', 'b', 'x', 'y'].forEach((button) => {
+                const geometry = new THREE.PlaneGeometry(1, 1);
+                const texture = createXboxButtonLabelTexture(button.toUpperCase(), colors[button]);
+                const material = new THREE.MeshBasicMaterial({
                     name: `xtweaks_xbox_${button}_decal`,
-                    color,
-                    emissive: color.clone().multiplyScalar(0.18),
-                    roughness: 0.34,
-                    metalness: 0.05,
-                    clearcoat: 0.32,
-                    clearcoatRoughness: 0.42,
+                    map: texture,
                     transparent: true,
-                    opacity: 0.82,
+                    opacity: 0.92,
+                    depthTest: false,
                     depthWrite: false,
                     side: THREE.DoubleSide
                 });
                 const decal = new THREE.Mesh(geometry, material);
                 decal.name = `xtweaks_xbox_${button}_button_decal`;
                 decal.userData.xtweaksDecalButton = button;
+                decal.userData.xtweaksExcludeFromBounds = true;
+                decal.renderOrder = 999;
                 group.add(decal);
             });
+
+            const anchorMaterial = new THREE.MeshBasicMaterial({
+                name: 'xtweaks_xbox_decal_anchor_material',
+                color: 0xff4fd8,
+                depthTest: false,
+                depthWrite: false,
+                transparent: true,
+                opacity: 0.95
+            });
+            const anchor = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8), anchorMaterial);
+            anchor.name = 'xtweaks_xbox_decal_anchor';
+            anchor.userData.xtweaksExcludeFromBounds = true;
+            anchor.renderOrder = 1000;
+            anchor.visible = Boolean(XBOX_BUTTON_DECALS.showDebugAnchor);
+            group.add(anchor);
 
             updateXboxButtonDecals(group);
             return group;
@@ -475,27 +806,57 @@ function initializeInputTab() {
 
         const updateXboxButtonDecals = (group = currentModel?.getObjectByName?.('xtweaks_xbox_button_decals')) => {
             if (!group) return;
-            const normal = new THREE.Vector3(
-                XBOX_BUTTON_DECALS.normal.x,
-                XBOX_BUTTON_DECALS.normal.y,
-                XBOX_BUTTON_DECALS.normal.z
-            ).normalize();
             group.visible = Boolean(XBOX_BUTTON_DECALS.enabled);
+            const xray = Boolean(XBOX_BUTTON_DECALS.xray);
+            group.position.set(
+                XBOX_BUTTON_DECALS.position.x,
+                XBOX_BUTTON_DECALS.position.y,
+                XBOX_BUTTON_DECALS.position.z
+            );
+            group.rotation.set(
+                XBOX_BUTTON_DECALS.rotation.x,
+                XBOX_BUTTON_DECALS.rotation.y,
+                XBOX_BUTTON_DECALS.rotation.z
+            );
+            group.scale.setScalar(XBOX_BUTTON_DECALS.scale);
+            const spacing = XBOX_BUTTON_DECALS.letterSpacing;
+            const positions = {
+                a: { x: 0, y: -spacing, z: XBOX_BUTTON_DECALS.surfaceOffset },
+                b: { x: spacing, y: 0, z: XBOX_BUTTON_DECALS.surfaceOffset },
+                x: { x: -spacing, y: 0, z: XBOX_BUTTON_DECALS.surfaceOffset },
+                y: { x: 0, y: spacing, z: XBOX_BUTTON_DECALS.surfaceOffset }
+            };
             group.children.forEach((decal) => {
                 const button = decal.userData.xtweaksDecalButton;
-                const position = XBOX_BUTTON_DECALS.buttons[button];
+                if (!button) {
+                    decal.visible = Boolean(XBOX_BUTTON_DECALS.showDebugAnchor);
+                    if (decal.material) {
+                        decal.material.depthTest = xray ? false : true;
+                        decal.material.depthWrite = false;
+                        decal.renderOrder = xray ? 1000 : 1;
+                    }
+                    decal.position.set(0, 0, XBOX_BUTTON_DECALS.surfaceOffset);
+                    decal.rotation.set(0, 0, 0);
+                    decal.scale.setScalar(1);
+                    return;
+                }
+                const position = positions[button];
                 if (!position) return;
+                const offset = XBOX_BUTTON_DECALS.offsets?.[button] || { x: 0, y: 0, z: 0 };
+                if (decal.material) {
+                    decal.material.depthTest = xray ? false : true;
+                    decal.material.depthWrite = false;
+                    decal.material.side = xray ? THREE.DoubleSide : THREE.FrontSide;
+                    decal.material.needsUpdate = true;
+                    decal.renderOrder = xray ? 999 : 1;
+                }
                 decal.position.set(
-                    position.x + normal.x * XBOX_BUTTON_DECALS.lift,
-                    position.y + normal.y * XBOX_BUTTON_DECALS.lift,
-                    position.z + normal.z * XBOX_BUTTON_DECALS.lift
+                    position.x + offset.x,
+                    position.y + offset.y,
+                    position.z + offset.z
                 );
-                decal.rotation.set(
-                    XBOX_BUTTON_DECALS.rotation.x,
-                    XBOX_BUTTON_DECALS.rotation.y,
-                    XBOX_BUTTON_DECALS.rotation.z
-                );
-                decal.scale.setScalar(XBOX_BUTTON_DECALS.radius);
+                decal.rotation.set(0, 0, 0);
+                decal.scale.setScalar(XBOX_BUTTON_DECALS.letterSize);
             });
         };
 
@@ -503,7 +864,7 @@ function initializeInputTab() {
             const framingKey = modelKey === 'ps5' ? 'playstation' : modelKey;
             const preset = INPUT_MODEL_FRAMING[framingKey] || INPUT_MODEL_FRAMING.xbox;
             model.updateMatrixWorld(true);
-            const box = new THREE.Box3().setFromObject(model);
+            const box = getBoundsWithoutHelpers(model);
             const size = box.getSize(new THREE.Vector3());
             const center = box.getCenter(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z) || 1;
@@ -574,6 +935,18 @@ function initializeInputTab() {
             return texture?.name || image?.src || image?.currentSrc || image?.uuid || 'embedded/unknown';
         };
 
+        const markBaseColorTexture = (texture) => {
+            if (!texture) return;
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.needsUpdate = true;
+        };
+
+        const markGltfTextureOrientation = (texture) => {
+            if (!texture) return;
+            texture.flipY = false;
+            texture.needsUpdate = true;
+        };
+
         const createFallbackInputMaterial = (THREE) => new THREE.MeshPhysicalMaterial({
             name: 'xtweaks_missing_material_fallback',
             color: new THREE.Color(0x111214),
@@ -583,9 +956,22 @@ function initializeInputTab() {
             clearcoatRoughness: 0.5
         });
 
-        const applyXboxDarkTintPreserveMaps = (material) => {
+        const preserveOriginalMappedMaterial = (material) => {
+            if (!material) return null;
             const beforeColor = getMaterialColorHex(material);
+            if (material.map) {
+                markBaseColorTexture(material.map);
+                material.userData.xtweaksSuppressedMisplacedXboxAtlas = true;
+                material.map = null;
+            }
             material.color?.set?.('#111314');
+            markGltfTextureOrientation(material.map);
+            markGltfTextureOrientation(material.normalMap);
+            markGltfTextureOrientation(material.roughnessMap);
+            markGltfTextureOrientation(material.metalnessMap);
+            markGltfTextureOrientation(material.aoMap);
+            markGltfTextureOrientation(material.emissiveMap);
+            markGltfTextureOrientation(material.alphaMap);
             if ('roughness' in material) material.roughness = 0.42;
             if ('metalness' in material) material.metalness = 0.08;
             if ('clearcoat' in material) material.clearcoat = 0.18;
@@ -640,7 +1026,7 @@ function initializeInputTab() {
                     if (role !== 'unknown' && role !== 'shell') detailRows.push(row);
                 });
             });
-            console.info(`[INPUT 3D] ${modelKey} model inventory`, {
+            if (INPUT_MODEL_DEBUG_MATERIALS) console.info(`[INPUT 3D] ${modelKey} model inventory`, {
                 path,
                 meshCount: meshNames.size,
                 materialCount: materialNames.size,
@@ -648,7 +1034,7 @@ function initializeInputTab() {
                 materialNames: Array.from(materialNames),
                 materials: rows
             });
-            if (modelKey === 'xbox' && !detailRows.length) {
+            if (INPUT_MODEL_DEBUG_MATERIALS && modelKey === 'xbox' && !detailRows.length) {
                 console.info('[INPUT 3D] Xbox GLB does not expose separate named button/detail meshes; preserving its texture maps instead of applying per-button colors.');
             }
         };
@@ -658,7 +1044,7 @@ function initializeInputTab() {
                 const materialMode = modelKey === 'xbox'
                     ? INPUT_MODEL_MATERIAL_MODE.xbox
                     : INPUT_MODEL_MATERIAL_MODE.playstation;
-                console.info('[Input Model] preserving original materials for new controller asset', { modelKey, path, materialMode });
+                if (INPUT_MODEL_DEBUG_MATERIALS) console.info('[Input Model] preserving original materials for new controller asset', { modelKey, path, materialMode });
                 logInputMaterialInventory(model, modelKey, path);
                 model.traverse((child) => {
                     if (!child.isMesh) return;
@@ -668,8 +1054,8 @@ function initializeInputTab() {
                     const repaired = materials.map((material) => {
                         if (material) {
                             if (materialMode === 'darkTintPreserveMaps') {
-                                const result = applyXboxDarkTintPreserveMaps(material);
-                                console.info('[Input Model] Xbox material dark-tinted with maps preserved', {
+                                const result = preserveOriginalMappedMaterial(material);
+                                if (INPUT_MODEL_DEBUG_MATERIALS) console.info('[Input Model] Xbox material adjusted with maps preserved', {
                                     path,
                                     mesh: child.name || '(unnamed mesh)',
                                     material: material.name || '(unnamed material)',
@@ -678,12 +1064,12 @@ function initializeInputTab() {
                                     hasMap: result.mapsPreserved.map,
                                     mapSource: getTextureSourceName(material.map),
                                     mapsPreserved: result.mapsPreserved,
-                                    action: 'darkTintPreserveMaps'
+                                    action: 'preserveOriginalMappedMaterial'
                                 });
                                 return material;
                             }
 
-                            console.info('[Input Model] PS5 material preserved', {
+                            if (INPUT_MODEL_DEBUG_MATERIALS) console.info('[Input Model] PS5 material preserved', {
                                 path,
                                 mesh: child.name || '(unnamed mesh)',
                                 material: material.name || '(unnamed material)',
@@ -817,6 +1203,10 @@ function initializeInputTab() {
 
         return {
             loadModel,
+            updateModelFraming(modelKey) {
+                if (!currentModel || currentModel.userData.xtweaksModelKey !== modelKey) return;
+                applyFramingToObject(currentModel, modelKey);
+            },
             updateXboxFraming() {
                 if (!currentModel || currentModel.userData.xtweaksModelKey !== 'xbox') return;
                 applyFramingToObject(currentModel, 'xbox');
@@ -886,42 +1276,63 @@ function initializeInputTab() {
         updateFallbackTransform();
     };
 
-    const getXboxTuneValue = (path) => {
-        return path.split('.').reduce((value, key) => value?.[key], INPUT_MODEL_FRAMING.xbox);
+    const getActiveTuningKey = () => activeModel === 'ps5' ? 'playstation' : 'xbox';
+
+    const getActiveTuningLabel = () => activeModel === 'ps5' ? 'PlayStation' : 'Xbox';
+
+    const getActiveFramingPreset = () => INPUT_MODEL_FRAMING[getActiveTuningKey()];
+
+    const mirrorPlayStationPreset = () => {
+        INPUT_MODEL_FRAMING.ps5 = JSON.parse(JSON.stringify(INPUT_MODEL_FRAMING.playstation));
     };
 
-    const setXboxTuneValue = (path, value) => {
+    const getTuneValue = (path) => {
+        return path.split('.').reduce((value, key) => value?.[key], getActiveFramingPreset());
+    };
+
+    const setTuneValue = (path, value) => {
         const keys = path.split('.');
         const lastKey = keys.pop();
-        const target = keys.reduce((object, key) => object[key], INPUT_MODEL_FRAMING.xbox);
+        const target = keys.reduce((object, key) => object[key], getActiveFramingPreset());
         target[lastKey] = Number(value);
+        if (getActiveTuningKey() === 'playstation') mirrorPlayStationPreset();
     };
 
-    const syncXboxTunerField = (path) => {
-        const value = getXboxTuneValue(path);
+    const syncTunerField = (path) => {
+        const value = getTuneValue(path);
         xboxTuner?.querySelectorAll(`[data-xbox-tune="${path}"], [data-xbox-tune-number="${path}"]`).forEach((input) => {
             input.value = value;
         });
     };
 
+    const syncModelTunerLabels = () => {
+        const label = getActiveTuningLabel();
+        if (xboxTuneToggle) xboxTuneToggle.textContent = `Tune ${label}`;
+        if (inputTunerTitle) inputTunerTitle.textContent = `Temporary ${label} Framing Tuner`;
+    };
+
     const syncXboxTuner = () => {
-        xboxTuneFields.forEach(syncXboxTunerField);
+        syncModelTunerLabels();
+        xboxTuneFields.forEach(syncTunerField);
     };
 
     const applyXboxTunerValue = (path, value) => {
         const number = Number(value);
         if (!Number.isFinite(number)) return;
-        setXboxTuneValue(path, number);
-        syncXboxTunerField(path);
-        if (activeModel === 'xbox') {
-            threeViewer?.updateXboxFraming?.();
-        }
+        setTuneValue(path, number);
+        syncTunerField(path);
+        threeViewer?.updateModelFraming?.(activeModel);
     };
 
     const setXboxTunerVisibleForModel = () => {
-        const isXbox = activeModel === 'xbox';
-        if (xboxTuneToggle) xboxTuneToggle.hidden = !isXbox;
-        if (!isXbox && xboxTuner) xboxTuner.hidden = true;
+        if (!INPUT_XBOX_DECAL_TUNER_ENABLED) {
+            if (xboxTuneToggle) xboxTuneToggle.hidden = true;
+            if (xboxTuner) xboxTuner.hidden = true;
+            return;
+        }
+        if (xboxTuneToggle) xboxTuneToggle.hidden = false;
+        syncModelTunerLabels();
+        if (xboxTuner && !xboxTuner.hidden) syncXboxTuner();
     };
 
     const clampTunerToViewport = (left, top) => {
@@ -964,71 +1375,362 @@ function initializeInputTab() {
     };
 
     const formatXboxPresetForCopy = () => {
-        const xbox = INPUT_MODEL_FRAMING.xbox;
+        const presetKey = getActiveTuningKey();
+        const preset = getActiveFramingPreset();
         const value = (number) => Number(number).toFixed(2).replace(/\.00$/, '');
-        return `const xbox = {
-    distanceMultiplier: ${value(xbox.distanceMultiplier)},
-    scaleMultiplier: ${value(xbox.scaleMultiplier)},
-    positionOffset: { x: ${value(xbox.positionOffset.x)}, y: ${value(xbox.positionOffset.y)}, z: ${value(xbox.positionOffset.z)} },
-    targetOffset: { x: ${value(xbox.targetOffset.x)}, y: ${value(xbox.targetOffset.y)}, z: ${value(xbox.targetOffset.z)} },
-    cameraOffset: { x: ${value(xbox.cameraOffset.x)}, y: ${value(xbox.cameraOffset.y)}, z: ${value(xbox.cameraOffset.z)} },
-    rotation: { x: ${value(xbox.rotation.x)}, y: ${value(xbox.rotation.y)}, z: ${value(xbox.rotation.z)} }
+        return `const ${presetKey} = {
+    distanceMultiplier: ${value(preset.distanceMultiplier)},
+    scaleMultiplier: ${value(preset.scaleMultiplier)},
+    positionOffset: { x: ${value(preset.positionOffset.x)}, y: ${value(preset.positionOffset.y)}, z: ${value(preset.positionOffset.z)} },
+    targetOffset: { x: ${value(preset.targetOffset.x)}, y: ${value(preset.targetOffset.y)}, z: ${value(preset.targetOffset.z)} },
+    cameraOffset: { x: ${value(preset.cameraOffset.x)}, y: ${value(preset.cameraOffset.y)}, z: ${value(preset.cameraOffset.z)} },
+    rotation: { x: ${value(preset.rotation.x)}, y: ${value(preset.rotation.y)}, z: ${value(preset.rotation.z)} }
 };`;
     };
 
     const formatDecalValuesForCopy = () => {
         const value = (number) => Number(number).toFixed(3).replace(/\.?0+$/, '') || '0';
         const decals = XBOX_BUTTON_DECALS;
-        return `const XBOX_BUTTON_DECALS = {
+        return `const INPUT_XBOX_DECAL_TUNER_ENABLED = ${INPUT_XBOX_DECAL_TUNER_ENABLED};
+const XBOX_BUTTON_DECALS = {
     enabled: ${decals.enabled},
-    radius: ${value(decals.radius)},
-    lift: ${value(decals.lift)},
-    normal: { x: ${value(decals.normal.x)}, y: ${value(decals.normal.y)}, z: ${value(decals.normal.z)} },
+    showDebugAnchor: ${decals.showDebugAnchor},
+    xray: ${decals.xray},
+    position: { x: ${value(decals.position.x)}, y: ${value(decals.position.y)}, z: ${value(decals.position.z)} },
     rotation: { x: ${value(decals.rotation.x)}, y: ${value(decals.rotation.y)}, z: ${value(decals.rotation.z)} },
-    buttons: {
-        a: { x: ${value(decals.buttons.a.x)}, y: ${value(decals.buttons.a.y)}, z: ${value(decals.buttons.a.z)} },
-        b: { x: ${value(decals.buttons.b.x)}, y: ${value(decals.buttons.b.y)}, z: ${value(decals.buttons.b.z)} },
-        x: { x: ${value(decals.buttons.x.x)}, y: ${value(decals.buttons.x.y)}, z: ${value(decals.buttons.x.z)} },
-        y: { x: ${value(decals.buttons.y.x)}, y: ${value(decals.buttons.y.y)}, z: ${value(decals.buttons.y.z)} }
+    scale: ${value(decals.scale)},
+    letterSpacing: ${value(decals.letterSpacing)},
+    letterSize: ${value(decals.letterSize)},
+    surfaceOffset: ${value(decals.surfaceOffset)},
+    offsets: {
+        a: { x: ${value(decals.offsets.a.x)}, y: ${value(decals.offsets.a.y)}, z: ${value(decals.offsets.a.z)} },
+        b: { x: ${value(decals.offsets.b.x)}, y: ${value(decals.offsets.b.y)}, z: ${value(decals.offsets.b.z)} },
+        x: { x: ${value(decals.offsets.x.x)}, y: ${value(decals.offsets.x.y)}, z: ${value(decals.offsets.x.z)} },
+        y: { x: ${value(decals.offsets.y.x)}, y: ${value(decals.offsets.y.y)}, z: ${value(decals.offsets.y.z)} }
     }
 };`;
     };
 
-    const syncDecalField = (axis) => {
-        const value = XBOX_BUTTON_DECALS.buttons[selectedDecalButton][axis];
-        xboxTuner?.querySelectorAll(`[data-xbox-decal="${axis}"], [data-xbox-decal-number="${axis}"]`).forEach((input) => {
-            input.value = value;
-        });
+    const getDecalTuneValue = (path) => {
+        return path.split('.').reduce((value, key) => value?.[key], XBOX_BUTTON_DECALS);
     };
 
-    const syncDecalGlobalField = (field) => {
-        const value = XBOX_BUTTON_DECALS[field];
-        xboxTuner?.querySelectorAll(`[data-xbox-decal-global="${field}"], [data-xbox-decal-global-number="${field}"]`).forEach((input) => {
+    const setDecalTuneValue = (path, value) => {
+        const keys = path.split('.');
+        const lastKey = keys.pop();
+        const target = keys.reduce((object, key) => object?.[key], XBOX_BUTTON_DECALS);
+        if (!target || !(lastKey in target)) return false;
+        target[lastKey] = Number(value);
+        return true;
+    };
+
+    const updateDecalReadout = () => {
+        const text = formatDecalValuesForCopy();
+        if (decalGroupReadoutEl) {
+            const value = (number) => Number(number).toFixed(3).replace(/\.?0+$/, '') || '0';
+            const decals = XBOX_BUTTON_DECALS;
+            decalGroupReadoutEl.textContent = `pos ${value(decals.position.x)}, ${value(decals.position.y)}, ${value(decals.position.z)} | rot ${value(decals.rotation.x)}, ${value(decals.rotation.y)}, ${value(decals.rotation.z)} | scale ${value(decals.scale)} | spacing ${value(decals.letterSpacing)} | size ${value(decals.letterSize)} | x-ray ${decals.xray ? 'on' : 'off'} | anchor ${decals.showDebugAnchor ? 'on' : 'off'}`;
+        }
+        if (decalReadoutEl) decalReadoutEl.textContent = text;
+        return text;
+    };
+
+    const applyXboxDecalPreset = (preset) => {
+        XBOX_BUTTON_DECALS.enabled = true;
+        XBOX_BUTTON_DECALS.showDebugAnchor = false;
+        XBOX_BUTTON_DECALS.xray = true;
+        XBOX_BUTTON_DECALS.position = { ...preset.position };
+        XBOX_BUTTON_DECALS.rotation = { ...preset.rotation };
+        XBOX_BUTTON_DECALS.scale = preset.scale;
+        XBOX_BUTTON_DECALS.letterSpacing = preset.letterSpacing;
+        XBOX_BUTTON_DECALS.letterSize = preset.letterSize;
+        XBOX_BUTTON_DECALS.surfaceOffset = preset.surfaceOffset;
+        XBOX_BUTTON_DECALS.offsets = JSON.parse(JSON.stringify(preset.offsets));
+        if (decalVisibleToggle) decalVisibleToggle.checked = true;
+        syncDecalTuner();
+        if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
+    };
+
+    const resetXboxDecalsToVisibleDefaults = () => {
+        applyXboxDecalPreset(XBOX_BUTTON_DECAL_VISIBLE_DEFAULTS);
+        console.info('[INPUT 3D] Xbox decals reset to visible tuner defaults:', formatDecalValuesForCopy());
+    };
+
+    const snapXboxDecalsNearFaceButtons = () => {
+        applyXboxDecalPreset(XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS);
+        console.info('[INPUT 3D] Xbox decals snapped near face buttons:', formatDecalValuesForCopy());
+    };
+
+    const syncDecalTuneField = (path) => {
+        const value = getDecalTuneValue(path);
+        xboxTuner?.querySelectorAll(`[data-xbox-decal-setting="${path}"], [data-xbox-decal-setting-number="${path}"]`).forEach((input) => {
             input.value = value;
         });
     };
 
     const syncDecalTuner = () => {
+        if (!INPUT_XBOX_DECAL_TUNER_ENABLED) {
+            if (decalTunerPanel) decalTunerPanel.hidden = true;
+            return;
+        }
+        if (decalTunerPanel) decalTunerPanel.hidden = false;
         if (decalSelectedEl) decalSelectedEl.value = selectedDecalButton;
         if (decalVisibleToggle) decalVisibleToggle.checked = Boolean(XBOX_BUTTON_DECALS.enabled);
-        ['x', 'y', 'z'].forEach(syncDecalField);
-        ['radius', 'lift'].forEach(syncDecalGlobalField);
+        const debugAnchorToggle = document.getElementById('input-xbox-debug-anchor');
+        if (debugAnchorToggle) debugAnchorToggle.checked = Boolean(XBOX_BUTTON_DECALS.showDebugAnchor);
+        const xrayToggle = document.getElementById('input-xbox-xray-decals');
+        if (xrayToggle) xrayToggle.checked = Boolean(XBOX_BUTTON_DECALS.xray);
+        [
+            'position.x',
+            'position.y',
+            'position.z',
+            'rotation.x',
+            'rotation.y',
+            'rotation.z',
+            'scale',
+            'letterSpacing',
+            'letterSize',
+            'surfaceOffset',
+            'offsets.a.x',
+            'offsets.a.y',
+            'offsets.a.z',
+            'offsets.b.x',
+            'offsets.b.y',
+            'offsets.b.z',
+            'offsets.x.x',
+            'offsets.x.y',
+            'offsets.x.z',
+            'offsets.y.x',
+            'offsets.y.y',
+            'offsets.y.z'
+        ].forEach(syncDecalTuneField);
+        updateDecalReadout();
     };
 
-    const applyDecalPositionValue = (axis, value) => {
+    const applyDecalTuneValue = (path, value) => {
         const number = Number(value);
         if (!Number.isFinite(number)) return;
-        XBOX_BUTTON_DECALS.buttons[selectedDecalButton][axis] = number;
-        syncDecalField(axis);
+        if (!setDecalTuneValue(path, number)) return;
+        syncDecalTuneField(path);
+        const text = updateDecalReadout();
+        console.info('[INPUT 3D] Xbox decal tuner values:', text);
         if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
     };
 
-    const applyDecalGlobalValue = (field, value) => {
-        const number = Number(value);
-        if (!Number.isFinite(number)) return;
-        XBOX_BUTTON_DECALS[field] = number;
-        syncDecalGlobalField(field);
+    const nudgeXboxDecalGroup = (axis, amount) => {
+        XBOX_BUTTON_DECALS.position[axis] += amount;
+        syncDecalTuneField(`position.${axis}`);
+        const text = updateDecalReadout();
+        console.info('[INPUT 3D] Xbox decal group nudged:', text);
         if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
+    };
+
+    const installXboxDecalTunerControls = () => {
+        if (!decalTunerPanel) return;
+        if (!INPUT_XBOX_DECAL_TUNER_ENABLED) {
+            decalTunerPanel.hidden = true;
+            return;
+        }
+
+        decalTunerPanel.hidden = false;
+        const subhead = decalTunerPanel.querySelector('.input-tuner-subhead span');
+        if (subhead) subhead.textContent = 'ABXY Decal Debug Tuner';
+        const oldGrid = decalTunerPanel.querySelector('.input-tuner-grid');
+        if (oldGrid) oldGrid.hidden = true;
+
+        const groupFields = [
+            { path: 'position.x', label: 'group x', min: -10, max: 10, step: 0.05 },
+            { path: 'position.y', label: 'group y', min: -10, max: 10, step: 0.05 },
+            { path: 'position.z', label: 'group z', min: -10, max: 10, step: 0.05 },
+            { path: 'rotation.x', label: 'rotation x', min: -6.28, max: 6.28, step: 0.01 },
+            { path: 'rotation.y', label: 'rotation y', min: -6.28, max: 6.28, step: 0.01 },
+            { path: 'rotation.z', label: 'rotation z', min: -6.28, max: 6.28, step: 0.01 },
+            { path: 'scale', label: 'scale', min: 0.01, max: 5, step: 0.01 },
+            { path: 'letterSpacing', label: 'letter spacing', min: 0.01, max: 5, step: 0.01 },
+            { path: 'letterSize', label: 'letter size', min: 0.01, max: 3, step: 0.01 },
+            { path: 'surfaceOffset', label: 'surface offset', min: -0.5, max: 0.5, step: 0.005 }
+        ];
+        const letterFields = [
+            { path: 'offsets.a.x', label: 'A offset x', min: -0.35, max: 0.35, step: 0.005 },
+            { path: 'offsets.a.y', label: 'A offset y', min: -0.35, max: 0.35, step: 0.005 },
+            { path: 'offsets.a.z', label: 'A offset z', min: -0.12, max: 0.12, step: 0.001 },
+            { path: 'offsets.b.x', label: 'B offset x', min: -0.35, max: 0.35, step: 0.005 },
+            { path: 'offsets.b.y', label: 'B offset y', min: -0.35, max: 0.35, step: 0.005 },
+            { path: 'offsets.b.z', label: 'B offset z', min: -0.12, max: 0.12, step: 0.001 },
+            { path: 'offsets.x.x', label: 'X offset x', min: -0.35, max: 0.35, step: 0.005 },
+            { path: 'offsets.x.y', label: 'X offset y', min: -0.35, max: 0.35, step: 0.005 },
+            { path: 'offsets.x.z', label: 'X offset z', min: -0.12, max: 0.12, step: 0.001 },
+            { path: 'offsets.y.x', label: 'Y offset x', min: -0.35, max: 0.35, step: 0.005 },
+            { path: 'offsets.y.y', label: 'Y offset y', min: -0.35, max: 0.35, step: 0.005 },
+            { path: 'offsets.y.z', label: 'Y offset z', min: -0.12, max: 0.12, step: 0.001 }
+        ];
+
+        const createSectionTitle = (text) => {
+            const title = document.createElement('div');
+            title.textContent = text;
+            title.style.margin = '12px 0 8px';
+            title.style.fontSize = '11px';
+            title.style.fontWeight = '800';
+            title.style.letterSpacing = '0.08em';
+            title.style.color = 'rgba(255,255,255,0.82)';
+            return title;
+        };
+
+        const createFieldGrid = (fields) => {
+            const grid = document.createElement('div');
+            grid.className = 'input-tuner-grid';
+            grid.dataset.xboxDecalGenerated = 'true';
+            fields.forEach((field) => {
+                const label = document.createElement('label');
+                const labelText = document.createElement('span');
+                const range = document.createElement('input');
+                const number = document.createElement('input');
+                labelText.textContent = field.label;
+                range.type = 'range';
+                range.min = field.min;
+                range.max = field.max;
+                range.step = field.step;
+                range.dataset.xboxDecalSetting = field.path;
+                number.type = 'number';
+                number.min = field.min;
+                number.max = field.max;
+                number.step = field.step;
+                number.dataset.xboxDecalSettingNumber = field.path;
+                label.append(labelText, range, number);
+                grid.appendChild(label);
+            });
+            return grid;
+        };
+
+        decalGroupReadoutEl = document.createElement('div');
+        decalGroupReadoutEl.style.margin = '8px 0 10px';
+        decalGroupReadoutEl.style.padding = '8px';
+        decalGroupReadoutEl.style.border = '1px solid rgba(255,255,255,0.1)';
+        decalGroupReadoutEl.style.borderRadius = '6px';
+        decalGroupReadoutEl.style.background = 'rgba(255,255,255,0.05)';
+        decalGroupReadoutEl.style.color = 'rgba(255,255,255,0.82)';
+        decalGroupReadoutEl.style.fontSize = '11px';
+        decalGroupReadoutEl.style.lineHeight = '1.35';
+
+        const createNudgeGrid = (moves) => {
+            const grid = document.createElement('div');
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
+            grid.style.gap = '6px';
+            grid.style.margin = '8px 0 10px';
+            moves.forEach(([text, axis, amount]) => {
+                const button = document.createElement('button');
+                button.className = 'input-tuner-action';
+                button.type = 'button';
+                button.textContent = text;
+                button.addEventListener('click', () => nudgeXboxDecalGroup(axis, amount));
+                grid.appendChild(button);
+            });
+            return grid;
+        };
+
+        const coarseNudgeGrid = createNudgeGrid([
+            ['Coarse Down', 'y', -0.5],
+            ['Coarse Up', 'y', 0.5],
+            ['Coarse Left', 'x', -0.5],
+            ['Coarse Right', 'x', 0.5],
+            ['Coarse Forward', 'z', 0.5],
+            ['Coarse Back', 'z', -0.5]
+        ]);
+        const fineNudgeGrid = createNudgeGrid([
+            ['Fine Down', 'y', -0.05],
+            ['Fine Up', 'y', 0.05],
+            ['Fine Left', 'x', -0.05],
+            ['Fine Right', 'x', 0.05],
+            ['Fine Forward', 'z', 0.05],
+            ['Fine Back', 'z', -0.05]
+        ]);
+
+        const presetGrid = document.createElement('div');
+        presetGrid.style.display = 'flex';
+        presetGrid.style.flexWrap = 'wrap';
+        presetGrid.style.gap = '6px';
+        presetGrid.style.margin = '8px 0 10px';
+        const anchorLabel = document.createElement('label');
+        anchorLabel.style.display = 'inline-flex';
+        anchorLabel.style.alignItems = 'center';
+        anchorLabel.style.gap = '6px';
+        anchorLabel.style.fontSize = '11px';
+        anchorLabel.style.color = 'rgba(255,255,255,0.78)';
+        const anchorCheckbox = document.createElement('input');
+        anchorCheckbox.type = 'checkbox';
+        anchorCheckbox.id = 'input-xbox-debug-anchor';
+        anchorCheckbox.checked = Boolean(XBOX_BUTTON_DECALS.showDebugAnchor);
+        anchorCheckbox.addEventListener('change', () => {
+            XBOX_BUTTON_DECALS.showDebugAnchor = Boolean(anchorCheckbox.checked);
+            updateDecalReadout();
+            if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
+        });
+        const anchorText = document.createElement('span');
+        anchorText.textContent = 'Show Debug Anchor';
+        anchorLabel.append(anchorCheckbox, anchorText);
+        const xrayLabel = document.createElement('label');
+        xrayLabel.style.display = 'inline-flex';
+        xrayLabel.style.alignItems = 'center';
+        xrayLabel.style.gap = '6px';
+        xrayLabel.style.fontSize = '11px';
+        xrayLabel.style.color = 'rgba(255,255,255,0.78)';
+        const xrayCheckbox = document.createElement('input');
+        xrayCheckbox.type = 'checkbox';
+        xrayCheckbox.id = 'input-xbox-xray-decals';
+        xrayCheckbox.checked = Boolean(XBOX_BUTTON_DECALS.xray);
+        xrayCheckbox.addEventListener('change', () => {
+            XBOX_BUTTON_DECALS.xray = Boolean(xrayCheckbox.checked);
+            updateDecalReadout();
+            if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
+        });
+        const xrayText = document.createElement('span');
+        xrayText.textContent = 'X-Ray Decals';
+        xrayLabel.append(xrayCheckbox, xrayText);
+        const snapButton = document.createElement('button');
+        snapButton.className = 'input-tuner-action';
+        snapButton.type = 'button';
+        snapButton.textContent = 'Snap Near Xbox Face Buttons';
+        snapButton.addEventListener('click', snapXboxDecalsNearFaceButtons);
+        const resetVisibleButton = document.createElement('button');
+        resetVisibleButton.className = 'input-tuner-action';
+        resetVisibleButton.type = 'button';
+        resetVisibleButton.textContent = 'Reset ABXY Visible';
+        resetVisibleButton.addEventListener('click', resetXboxDecalsToVisibleDefaults);
+        presetGrid.append(snapButton, resetVisibleButton, xrayLabel, anchorLabel);
+
+        const groupTitle = createSectionTitle('ABXY GROUP POSITION');
+        const groupGrid = createFieldGrid(groupFields);
+        const fineTitle = createSectionTitle('PER-LETTER FINE TUNE');
+        const letterGrid = createFieldGrid(letterFields);
+
+        decalReadoutEl = document.createElement('pre');
+        decalReadoutEl.style.whiteSpace = 'pre-wrap';
+        decalReadoutEl.style.margin = '10px 0 0';
+        decalReadoutEl.style.maxHeight = '150px';
+        decalReadoutEl.style.overflow = 'auto';
+        decalReadoutEl.style.fontSize = '10px';
+        decalReadoutEl.style.lineHeight = '1.35';
+        decalReadoutEl.style.color = 'rgba(255,255,255,0.72)';
+        decalReadoutEl.style.background = 'rgba(255,255,255,0.04)';
+        decalReadoutEl.style.border = '1px solid rgba(255,255,255,0.08)';
+        decalReadoutEl.style.borderRadius = '6px';
+        decalReadoutEl.style.padding = '8px';
+
+        const copyButton = decalTunerPanel.querySelector('#input-copy-decal-values');
+        if (copyButton) {
+            decalTunerPanel.insertBefore(groupTitle, copyButton);
+            decalTunerPanel.insertBefore(decalGroupReadoutEl, copyButton);
+            decalTunerPanel.insertBefore(coarseNudgeGrid, copyButton);
+            decalTunerPanel.insertBefore(fineNudgeGrid, copyButton);
+            decalTunerPanel.insertBefore(presetGrid, copyButton);
+            decalTunerPanel.insertBefore(groupGrid, copyButton);
+            decalTunerPanel.insertBefore(fineTitle, copyButton);
+            decalTunerPanel.insertBefore(letterGrid, copyButton);
+            decalTunerPanel.insertBefore(decalReadoutEl, copyButton);
+        } else {
+            decalTunerPanel.append(groupTitle, decalGroupReadoutEl, coarseNudgeGrid, fineNudgeGrid, presetGrid, groupGrid, fineTitle, letterGrid, decalReadoutEl);
+        }
     };
 
     const setActiveModel = (model) => {
@@ -1052,8 +1754,11 @@ function initializeInputTab() {
 
     document.getElementById('input-reset-view')?.addEventListener('click', resetView);
 
+    installXboxDecalTunerControls();
+
     xboxTuneToggle?.addEventListener('click', () => {
-        if (activeModel !== 'xbox' || !xboxTuner) return;
+        if (!INPUT_XBOX_DECAL_TUNER_ENABLED) return;
+        if (!xboxTuner) return;
         xboxTuner.hidden = !xboxTuner.hidden;
         if (!xboxTuner.hidden) {
             syncXboxTuner();
@@ -1117,22 +1822,21 @@ function initializeInputTab() {
         if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
     });
 
-    xboxTuner?.querySelectorAll('[data-xbox-decal], [data-xbox-decal-number]').forEach((input) => {
-        const axis = input.dataset.xboxDecal || input.dataset.xboxDecalNumber;
-        input.addEventListener('input', () => applyDecalPositionValue(axis, input.value));
-        input.addEventListener('change', () => applyDecalPositionValue(axis, input.value));
-    });
-
-    xboxTuner?.querySelectorAll('[data-xbox-decal-global], [data-xbox-decal-global-number]').forEach((input) => {
-        const field = input.dataset.xboxDecalGlobal || input.dataset.xboxDecalGlobalNumber;
-        input.addEventListener('input', () => applyDecalGlobalValue(field, input.value));
-        input.addEventListener('change', () => applyDecalGlobalValue(field, input.value));
+    xboxTuner?.querySelectorAll('[data-xbox-decal-setting], [data-xbox-decal-setting-number]').forEach((input) => {
+        const path = input.dataset.xboxDecalSetting || input.dataset.xboxDecalSettingNumber;
+        input.addEventListener('input', () => applyDecalTuneValue(path, input.value));
+        input.addEventListener('change', () => applyDecalTuneValue(path, input.value));
     });
 
     xboxResetSlidersBtn?.addEventListener('click', () => {
-        INPUT_MODEL_FRAMING.xbox = JSON.parse(JSON.stringify(defaultXboxFraming));
+        if (getActiveTuningKey() === 'playstation') {
+            INPUT_MODEL_FRAMING.playstation = JSON.parse(JSON.stringify(defaultPlayStationFraming));
+            mirrorPlayStationPreset();
+        } else {
+            INPUT_MODEL_FRAMING.xbox = JSON.parse(JSON.stringify(defaultXboxFraming));
+        }
         syncXboxTuner();
-        if (activeModel === 'xbox') threeViewer?.updateXboxFraming?.();
+        threeViewer?.updateModelFraming?.(activeModel);
     });
 
     xboxCopyValuesBtn?.addEventListener('click', async () => {
@@ -1142,7 +1846,7 @@ function initializeInputTab() {
         if (copied) {
             xboxCopyValuesBtn.textContent = 'Copied';
         } else {
-            console.info('[INPUT 3D] Xbox framing values:', text);
+            console.info(`[INPUT 3D] ${getActiveTuningLabel()} framing values:`, text);
             xboxCopyValuesBtn.textContent = 'Logged';
         }
         window.setTimeout(() => {
@@ -1541,11 +2245,21 @@ function formatUptime(seconds) {
     }
 }
 
-function showNotification(type, title, message) {
+function showNotification(type, title, message, options = {}) {
     const container = document.getElementById('notification-container');
+    if (!container) return;
+
+    if (options.key) {
+        container.querySelectorAll(`[data-notification-key="${options.key}"]`).forEach((existing) => {
+            existing.remove();
+        });
+    }
 
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
+    if (options.key) {
+        notification.dataset.notificationKey = options.key;
+    }
 
     let iconSvg = '';
     switch (type) {
@@ -1583,7 +2297,7 @@ function showNotification(type, title, message) {
 
     setTimeout(() => {
         dismissNotification(notification);
-    }, 5000);
+    }, options.duration || 5000);
 }
 
 function dismissNotification(notification) {
@@ -2834,14 +3548,6 @@ function initializeDashboardExtras() {
         if (heroU && u && u !== '-') heroU.textContent = u;
     }, 1000);
 
-    // Settings icon (placeholder)
-    const settingsBtn = document.getElementById('settings-btn');
-    if (settingsBtn) {
-        settingsBtn.addEventListener('click', () => {
-            showNotification('warning', 'Settings', 'Settings panel coming soon');
-        });
-    }
-
     // Discord links inside dashboard
     document.querySelectorAll('a[data-social="discord"]').forEach(a => {
         a.addEventListener('click', (e) => {
@@ -2871,6 +3577,754 @@ function initializeDashboardExtras() {
 }
 
 document.addEventListener('DOMContentLoaded', initializeDashboardExtras);
+
+const GAME_TUNE_PROFILES = [
+    {
+        id: 'fortnite',
+        name: 'Fortnite',
+        category: 'Battle Royale',
+        status: 'Wired',
+        image: 'assets/games/Fortnite.png',
+        tone: 'violet',
+        description: 'Competitive profile with Fortnite-specific and system-level tweaks.',
+        optimizeTweaks: ['fortnite-priority', 'fortnite-clear-cache', 'optimize-power-plan', 'optimize-visual-effects', 'disable-xbox-services'],
+        sections: [
+            {
+                title: 'FPS',
+                items: [
+                    { type: 'slider', label: 'FPS Limit', value: 240, min: 30, max: 360, step: 10, unit: ' FPS' },
+                    { type: 'toggle', label: 'Multithreaded Rendering', detail: 'Use all available CPU cores.', tweakId: 'toggle-fn-multithreaded', defaultChecked: true },
+                    { type: 'button', label: 'Fortnite High Priority', detail: 'Set Fortnite process scheduling priority.', tweakId: 'fortnite-priority' }
+                ]
+            },
+            {
+                title: 'Graphics',
+                items: [
+                    { type: 'slider', label: '3D Resolution Scale', value: 100, min: 50, max: 100, step: 5, unit: '%' },
+                    { type: 'slider', label: 'View Distance', value: 3, min: 1, max: 4, step: 1, labels: ['Near', 'Medium', 'Far', 'Epic'] },
+                    { type: 'slider', label: 'Effects Quality', value: 1, min: 1, max: 4, step: 1, labels: ['Low', 'Medium', 'High', 'Epic'] }
+                ]
+            },
+            {
+                title: 'Latency',
+                items: [
+                    { type: 'button', label: 'Timer Resolution', detail: 'Sharpen timing precision for competitive play.', tweakId: 'timer-resolution' },
+                    { type: 'button', label: 'High Performance Power', detail: 'Keep CPU and GPU clocks stable.', tweakId: 'optimize-power-plan' }
+                ]
+            },
+            {
+                title: 'Input',
+                items: [
+                    { type: 'button', label: 'Disable Xbox Services', detail: 'Reduce unused gaming overlay services.', tweakId: 'disable-xbox-services' },
+                    { type: 'toggle', label: 'NVIDIA Highlights', detail: 'Background clip capture.', tweakId: 'toggle-fn-nvidia-highlights' }
+                ]
+            },
+            {
+                title: 'Network',
+                items: [
+                    { type: 'button', label: 'Disable Nagle Algorithm', detail: 'Lower TCP packet delay for supported adapters.', tweakId: 'disable-nagle' },
+                    { type: 'button', label: 'Network Throttling', detail: 'Remove Windows network throttling.', tweakId: 'optimize-network-throttling' }
+                ]
+            },
+            {
+                title: 'System',
+                items: [
+                    { type: 'button', label: 'Clear Fortnite Cache', detail: 'Remove stale cache files that can stutter.', tweakId: 'fortnite-clear-cache' },
+                    { type: 'button', label: 'Optimize Visual Effects', detail: 'Free system UI rendering overhead.', tweakId: 'optimize-visual-effects' }
+                ]
+            }
+        ]
+    },
+    {
+        id: 'apex',
+        name: 'Apex Legends',
+        category: 'Battle Royale',
+        status: 'Template',
+        image: 'assets/games/Apex Legends.jpg',
+        tone: 'teal',
+        description: 'Fast-paced shooter profile ready for per-game wiring.',
+        sections: []
+    },
+    {
+        id: 'cod',
+        name: 'Call of Duty / Warzone',
+        category: 'FPS',
+        status: 'Template',
+        image: 'assets/games/Call of Duty  Warzone.jpg',
+        tone: 'steel',
+        description: 'FPS profile scaffold for latency, graphics, and network tuning.',
+        sections: []
+    },
+    {
+        id: 'cs2',
+        name: 'Counter-Strike 2',
+        category: 'FPS',
+        status: 'Template',
+        image: 'assets/games/csgo 2.jpg',
+        tone: 'amber',
+        description: 'Competitive shooter profile scaffold.',
+        sections: []
+    },
+    {
+        id: 'valorant',
+        name: 'Valorant',
+        category: 'FPS',
+        status: 'Template',
+        image: 'assets/games/valorant-game.jpg',
+        tone: 'rose',
+        description: 'Tactical shooter profile scaffold.',
+        sections: []
+    },
+    {
+        id: 'overwatch-2',
+        name: 'Overwatch 2',
+        category: 'Hero Shooter',
+        status: 'Template',
+        image: 'assets/games/Overwatch 2.jpg',
+        tone: 'blue',
+        description: 'Hero shooter profile scaffold.',
+        sections: []
+    },
+    {
+        id: 'rainbow-six-siege',
+        name: 'Rainbow Six Siege',
+        category: 'FPS',
+        status: 'Template',
+        image: 'assets/games/Rainbow 6 Seige.jpg',
+        tone: 'silver',
+        description: 'Tactical shooter profile scaffold.',
+        sections: []
+    },
+    {
+        id: 'pubg',
+        name: 'PUBG: Battlegrounds',
+        category: 'Battle Royale',
+        status: 'Template',
+        image: 'assets/games/pubg-battlegrounds-16v1j.jpg',
+        tone: 'amber',
+        description: 'Battle royale profile scaffold.',
+        sections: []
+    },
+    {
+        id: 'the-finals',
+        name: 'The Finals',
+        category: 'FPS',
+        status: 'Template',
+        image: 'assets/games/The finals.png',
+        tone: 'teal',
+        description: 'Arena shooter profile scaffold.',
+        sections: []
+    }
+];
+
+function initializeGameTunePage() {
+    const page = document.getElementById('page-fortnite');
+    if (!page) return;
+
+    const grid = document.getElementById('game-tune-grid');
+    const chips = document.getElementById('game-tune-chips');
+    const search = document.getElementById('game-tune-search');
+    const empty = document.getElementById('game-tune-empty');
+    const count = document.getElementById('game-tune-count');
+    const gridView = document.getElementById('game-tune-grid-view');
+    const editor = document.getElementById('game-tune-editor');
+    const editorTitle = document.getElementById('game-tune-editor-title');
+    const editorSub = document.getElementById('game-tune-editor-sub');
+    const editorGrid = document.getElementById('game-tune-editor-grid');
+    const editorOptimize = document.getElementById('game-tune-editor-optimize');
+    const backBtn = document.getElementById('game-tune-back');
+    const devToggle = document.getElementById('game-tune-dev-toggle');
+    const devPanel = document.getElementById('game-tune-dev-panel');
+    const devTarget = document.getElementById('gt-anim-target');
+    const respectMotionToggle = document.getElementById('gt-anim-respect-motion');
+    if (!grid || !chips || !search || !gridView || !editor || !editorGrid) return;
+
+    const categories = ['All', ...Array.from(new Set(GAME_TUNE_PROFILES.map(game => game.category)))];
+    let activeCategory = 'All';
+    let activeGame = GAME_TUNE_PROFILES[0];
+    const animDefaults = {
+        duration: 620,
+        stagger: 85,
+        slideX: 0,
+        slideY: 18,
+        blur: 2,
+        opacity: 0.05,
+        scale: 0.98,
+        easing: 'cubic-bezier(0.16, 1, 0.3, 1)'
+    };
+    const allAnim = { ...animDefaults };
+    const gameAnimOverrides = new Map();
+    let activeAnimTarget = 'all';
+
+    const safeText = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+
+    const getSections = (game) => game.sections?.length ? game.sections : [
+        {
+            title: 'FPS',
+            items: [
+                { type: 'slider', label: 'Frame Target', value: 165, min: 60, max: 360, step: 15, unit: ' FPS' },
+                { type: 'button', label: 'Power Plan', detail: 'Apply the shared high performance profile.', tweakId: 'optimize-power-plan' }
+            ]
+        },
+        {
+            title: 'Latency',
+            items: [
+                { type: 'button', label: 'Timer Resolution', detail: 'Shared competitive timing tweak.', tweakId: 'timer-resolution' },
+                { type: 'button', label: 'Disable Nagle Algorithm', detail: 'Shared low-latency network tweak.', tweakId: 'disable-nagle' }
+            ]
+        },
+        {
+            title: 'Graphics',
+            items: [
+                { type: 'slider', label: 'Render Scale', value: 100, min: 70, max: 100, step: 5, unit: '%' },
+                { type: 'button', label: 'Visual Effects', detail: 'Reduce Windows visual overhead.', tweakId: 'optimize-visual-effects' }
+            ]
+        },
+        {
+            title: 'Input',
+            items: [
+                { type: 'button', label: 'Disable Xbox Services', detail: 'Remove unused gaming services.', tweakId: 'disable-xbox-services' },
+                { type: 'toggle', label: 'Focus Input Path', detail: 'Local placeholder setting.' }
+            ]
+        },
+        {
+            title: 'Network',
+            items: [
+                { type: 'button', label: 'Network Throttling', detail: 'Shared network throughput tweak.', tweakId: 'optimize-network-throttling' }
+            ]
+        },
+        {
+            title: 'System',
+            items: [
+                { type: 'toggle', label: 'Quiet Background Apps', detail: 'Local placeholder setting.' }
+            ]
+        }
+    ];
+
+    const profileHasRealOptimize = (game) => Array.isArray(game.optimizeTweaks) && game.optimizeTweaks.length > 0;
+
+    const getAnimConfig = (gameId) => ({
+        ...allAnim,
+        ...(gameId && gameAnimOverrides.get(gameId) ? gameAnimOverrides.get(gameId) : {})
+    });
+
+    const getCurrentAnimConfig = () => activeAnimTarget === 'all'
+        ? allAnim
+        : getAnimConfig(activeAnimTarget);
+
+    const writeCurrentAnimConfig = (patch) => {
+        if (activeAnimTarget === 'all') {
+            Object.assign(allAnim, patch);
+            return;
+        }
+        gameAnimOverrides.set(activeAnimTarget, {
+            ...getAnimConfig(activeAnimTarget),
+            ...patch
+        });
+    };
+
+    const getVisibleGameCards = () => Array.from(grid.querySelectorAll('.game-card[data-game-id]')).filter(card => !card.closest('[hidden]'));
+
+    const getAnimTargetLabel = (targetId) => {
+        if (targetId === 'all') return 'All cards';
+        return GAME_TUNE_PROFILES.find(game => game.id === targetId)?.name || targetId || 'Unknown';
+    };
+
+    const getSelectLabel = (select, value) => Array.from(select?.options || []).find(option => option.value === value)?.textContent || value || '';
+
+    const setCustomMenuOpen = (key, open) => {
+        const button = document.getElementById(`gt-anim-${key}-button`);
+        const menu = document.getElementById(`gt-anim-${key}-menu`);
+        if (!button || !menu) return;
+        ['target', 'easing'].forEach(otherKey => {
+            if (otherKey === key) return;
+            const otherButton = document.getElementById(`gt-anim-${otherKey}-button`);
+            const otherMenu = document.getElementById(`gt-anim-${otherKey}-menu`);
+            if (otherButton && otherMenu) {
+                otherMenu.hidden = true;
+                otherButton.setAttribute('aria-expanded', 'false');
+            }
+        });
+        menu.hidden = !open;
+        button.setAttribute('aria-expanded', String(open));
+    };
+
+    const syncCustomSelect = (key) => {
+        const select = document.getElementById(`gt-anim-${key}`);
+        const button = document.getElementById(`gt-anim-${key}-button`);
+        const menu = document.getElementById(`gt-anim-${key}-menu`);
+        if (!select || !button || !menu) return;
+        button.textContent = getSelectLabel(select, select.value);
+        menu.innerHTML = Array.from(select.options).map(option => (
+            `<button type="button" role="option" data-value="${safeText(option.value)}" aria-selected="${option.value === select.value ? 'true' : 'false'}">${safeText(option.textContent)}</button>`
+        )).join('');
+    };
+
+    const animateCards = (targetId = 'all', options = {}) => {
+        const reduceMotion = Boolean(respectMotionToggle?.checked) && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const cards = getVisibleGameCards();
+        const targetCards = targetId === 'all'
+            ? cards
+            : cards.filter(card => card.dataset.gameId === targetId);
+
+        const getStartState = (config) => {
+            const startOpacity = Math.max(0, Math.min(0.95, Number(config.opacity)));
+            const startScale = Math.max(0.78, Math.min(1.12, Number(config.scale)));
+            const slideX = Number(config.slideX) || 0;
+            const slideY = Number(config.slideY) || 0;
+            const blur = Math.max(0, Number(config.blur) || 0);
+            return {
+                opacity: startOpacity,
+                transform: `translate3d(${slideX}px, ${slideY}px, 0) scale(${startScale})`,
+                filter: `blur(${blur}px)`
+            };
+        };
+
+        const resetCardAnimationState = (card) => {
+            if (card._gameTuneAnimTimer) {
+                window.clearTimeout(card._gameTuneAnimTimer);
+                card._gameTuneAnimTimer = null;
+            }
+            card.classList.remove('game-card-enter');
+            card.style.removeProperty('--gt-enter-opacity');
+            card.style.removeProperty('--gt-enter-transform');
+            card.style.removeProperty('--gt-enter-filter');
+            card.style.removeProperty('--gt-enter-duration');
+            card.style.removeProperty('--gt-enter-delay');
+            card.style.removeProperty('--gt-enter-easing');
+        };
+
+        if (targetCards.length === 0) {
+            return;
+        }
+
+        if (reduceMotion) {
+            targetCards.forEach(resetCardAnimationState);
+            return;
+        }
+
+        targetCards.forEach((card, targetIndex) => {
+            resetCardAnimationState(card);
+            const config = getAnimConfig(card.dataset.gameId);
+            const start = getStartState(config);
+            const delay = targetId === 'all'
+                ? Math.max(0, targetIndex) * Number(config.stagger || 0)
+                : 0;
+            const duration = Number(config.duration) || animDefaults.duration;
+            card.style.setProperty('--gt-enter-opacity', String(start.opacity));
+            card.style.setProperty('--gt-enter-transform', start.transform);
+            card.style.setProperty('--gt-enter-filter', start.filter);
+            card.style.setProperty('--gt-enter-duration', `${duration}ms`);
+            card.style.setProperty('--gt-enter-delay', `${delay}ms`);
+            card.style.setProperty('--gt-enter-easing', config.easing || animDefaults.easing);
+        });
+
+        if (targetCards[0]) targetCards[0].getBoundingClientRect();
+
+        requestAnimationFrame(() => {
+            targetCards.forEach((card) => {
+                const config = getAnimConfig(card.dataset.gameId);
+                const delay = Number.parseFloat(card.style.getPropertyValue('--gt-enter-delay')) || 0;
+                const duration = Number(config.duration) || animDefaults.duration;
+                card.classList.add('game-card-enter');
+                card._gameTuneAnimTimer = window.setTimeout(() => {
+                    resetCardAnimationState(card);
+                }, delay + duration + 80);
+            });
+        });
+    };
+
+    window.replayGameTuneCards = () => {
+        if (!page.classList.contains('active') || editor.hidden === false) return;
+        requestAnimationFrame(() => animateCards('all', { fromPageVisit: true }));
+    };
+
+    const renderChips = () => {
+        chips.innerHTML = categories.map(cat => (
+            `<button class="game-tune-chip${cat === activeCategory ? ' is-active' : ''}" type="button" data-category="${safeText(cat)}">${safeText(cat)}</button>`
+        )).join('');
+    };
+
+    const renderAnimTargets = () => {
+        if (!devTarget) return;
+        devTarget.innerHTML = [
+            '<option value="all">All cards</option>',
+            ...GAME_TUNE_PROFILES.map(game => `<option value="${safeText(game.id)}">${safeText(game.name)}</option>`)
+        ].join('');
+        devTarget.value = activeAnimTarget;
+        syncCustomSelect('target');
+    };
+
+    const cardImage = (game) => {
+        if (game.image) {
+            return `<img src="${safeText(game.image)}" alt="${safeText(game.name)} banner" loading="lazy">`;
+        }
+        return `<div class="game-card-placeholder" data-tone="${safeText(game.tone)}"><span>${safeText(game.name)}</span></div>`;
+    };
+
+    const renderCards = () => {
+        const query = search.value.trim().toLowerCase();
+        const visibleGames = GAME_TUNE_PROFILES.filter(game => {
+            const categoryOk = activeCategory === 'All' || game.category === activeCategory;
+            const text = `${game.name} ${game.category} ${game.description}`.toLowerCase();
+            return categoryOk && (!query || text.includes(query));
+        });
+
+        grid.innerHTML = visibleGames.map(game => `
+            <article class="game-card" data-game-id="${safeText(game.id)}" tabindex="0" aria-label="Open ${safeText(game.name)} editor">
+                <span class="tc-aurora" aria-hidden="true"></span>
+                <span class="tc-accent" aria-hidden="true"></span>
+                <div class="game-card-media">${cardImage(game)}</div>
+                <div class="game-card-body">
+                    <div class="game-card-title-row">
+                        <h3>${safeText(game.name)}</h3>
+                        <span class="game-status-dot${profileHasRealOptimize(game) ? ' is-wired' : ''}" title="${safeText(game.status)}"></span>
+                    </div>
+                    <span class="pcard-cat-pill">${safeText(game.category)}</span>
+                    <p>${safeText(game.description)}</p>
+                    <div class="game-card-actions">
+                        <button class="pcard-btn-primary game-optimize-btn" type="button" data-game-id="${safeText(game.id)}">Optimize</button>
+                        <button class="pcard-btn-secondary game-editor-btn" type="button" data-game-id="${safeText(game.id)}">Open Editor</button>
+                    </div>
+                </div>
+            </article>
+        `).join('');
+
+        if (empty) empty.hidden = visibleGames.length > 0;
+        if (count) count.textContent = `${visibleGames.length} ${visibleGames.length === 1 ? 'game' : 'games'}`;
+
+        grid.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('pointermove', (e) => {
+                const r = card.getBoundingClientRect();
+                card.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
+                card.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
+            });
+        });
+
+        requestAnimationFrame(() => animateCards('all'));
+    };
+
+    const applyGameOptimize = async (game, trigger) => {
+        if (!game) return;
+        const originalText = trigger?.textContent;
+        if (trigger) {
+            trigger.disabled = true;
+            trigger.textContent = 'Optimizing...';
+        }
+
+        try {
+            if (profileHasRealOptimize(game)) {
+                const results = [];
+                for (const tweakId of game.optimizeTweaks) {
+                    results.push(await window.electronAPI.applyTweak(tweakId, 'apply'));
+                }
+                const failed = results.find(result => !result?.success);
+                if (failed) {
+                    showNotification('error', `${game.name} Optimize Failed`, failed.message || 'One tweak could not be applied.');
+                } else {
+                    showNotification('success', `${game.name} Optimized`, 'Profile tweaks applied successfully.');
+                }
+            } else {
+                showNotification('warning', `${game.name} Profile`, 'This profile is ready in the UI. Per-game optimize commands are not wired yet.');
+            }
+        } catch (error) {
+            showNotification('error', `${game.name} Optimize Failed`, error.message || 'Unexpected error.');
+        } finally {
+            if (trigger) {
+                trigger.disabled = false;
+                trigger.textContent = originalText || 'Optimize';
+            }
+        }
+    };
+
+    const renderControl = (game, section, item, index) => {
+        const key = `${game.id}-${section.title}-${index}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        if (item.type === 'slider') {
+            const valueText = item.labels ? item.labels[Math.max(0, Number(item.value) - Number(item.min))] : `${item.value}${item.unit || ''}`;
+            const marks = item.labels ? item.labels : [item.min, Math.round((item.min + item.max) / 2), item.max].map(v => `${v}${item.unit || ''}`);
+            return `
+                <div class="game-editor-control game-editor-slider">
+                    <div class="slider-header">
+                        <span class="slider-label">${safeText(item.label)}</span>
+                        <span class="slider-value" id="${key}-value">${safeText(valueText)}</span>
+                    </div>
+                    <input type="range" class="custom-slider game-tune-range" id="${key}" min="${item.min}" max="${item.max}" step="${item.step}" value="${item.value}" data-labels="${safeText((item.labels || []).join('|'))}" data-unit="${safeText(item.unit || '')}">
+                    <div class="slider-marks">${marks.map(mark => `<span>${safeText(mark)}</span>`).join('')}</div>
+                </div>
+            `;
+        }
+
+        if (item.type === 'toggle') {
+            return `
+                <div class="game-editor-control game-editor-toggle">
+                    <div>
+                        <h4>${safeText(item.label)}</h4>
+                        <p>${safeText(item.detail || 'Local profile setting.')}</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" ${item.defaultChecked ? 'checked' : ''} data-game-toggle="${safeText(item.tweakId || '')}">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="game-editor-control game-editor-button">
+                <div>
+                    <h4>${safeText(item.label)}</h4>
+                    <p>${safeText(item.detail || 'Apply this profile action.')}</p>
+                </div>
+                <button class="pcard-btn-secondary game-editor-action" type="button" data-tweak-id="${safeText(item.tweakId || '')}">Apply</button>
+            </div>
+        `;
+    };
+
+    const openEditor = (game) => {
+        activeGame = game || GAME_TUNE_PROFILES[0];
+        editorTitle.textContent = activeGame.name;
+        editorSub.textContent = activeGame.description;
+        editorOptimize.textContent = `Optimize ${activeGame.name}`;
+        editorGrid.innerHTML = getSections(activeGame).map(section => `
+            <section class="game-editor-card">
+                <span class="tc-aurora" aria-hidden="true"></span>
+                <div class="game-editor-card-head">
+                    <span class="game-tune-eyebrow-sm">${safeText(section.title)}</span>
+                </div>
+                <div class="game-editor-controls">
+                    ${section.items.map((item, index) => renderControl(activeGame, section, item, index)).join('')}
+                </div>
+            </section>
+        `).join('');
+        gridView.hidden = true;
+        editor.hidden = false;
+        if (backBtn) backBtn.hidden = false;
+    };
+
+    const closeEditor = () => {
+        editor.hidden = true;
+        gridView.hidden = false;
+        if (backBtn) backBtn.hidden = true;
+        requestAnimationFrame(() => animateCards('all'));
+    };
+
+    const pulseButton = (button) => {
+        if (!button) return;
+        button.classList.remove('game-tune-btn-pulse');
+        void button.offsetWidth;
+        button.classList.add('game-tune-btn-pulse');
+        window.setTimeout(() => button.classList.remove('game-tune-btn-pulse'), 420);
+    };
+
+    chips.addEventListener('click', (e) => {
+        const chip = e.target.closest('.game-tune-chip');
+        if (!chip) return;
+        activeCategory = chip.dataset.category || 'All';
+        renderChips();
+        renderCards();
+    });
+
+    search.addEventListener('input', renderCards);
+
+    grid.addEventListener('click', (e) => {
+        const optimizeBtn = e.target.closest('.game-optimize-btn');
+        const editorBtn = e.target.closest('.game-editor-btn');
+        const card = e.target.closest('.game-card[data-game-id]');
+        const gameId = (optimizeBtn || editorBtn || card)?.dataset.gameId;
+        const game = GAME_TUNE_PROFILES.find(profile => profile.id === gameId);
+        if (optimizeBtn) {
+            pulseButton(optimizeBtn);
+            applyGameOptimize(game, optimizeBtn);
+            return;
+        }
+        if (editorBtn) {
+            openEditor(game);
+            return;
+        }
+        if (card) openEditor(game);
+    });
+
+    grid.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.target.closest('button, input, select, textarea')) return;
+        const card = e.target.closest('.game-card[data-game-id]');
+        if (!card) return;
+        e.preventDefault();
+        const game = GAME_TUNE_PROFILES.find(profile => profile.id === card.dataset.gameId);
+        openEditor(game);
+    });
+
+    editorGrid.addEventListener('input', (e) => {
+        const slider = e.target.closest('.game-tune-range');
+        if (!slider) return;
+        const valueEl = document.getElementById(`${slider.id}-value`);
+        const labels = (slider.dataset.labels || '').split('|').filter(Boolean);
+        const value = Number(slider.value);
+        const min = Number(slider.min);
+        if (valueEl) {
+            valueEl.textContent = labels.length ? labels[Math.max(0, value - min)] : `${slider.value}${slider.dataset.unit || ''}`;
+        }
+    });
+
+    editorGrid.addEventListener('change', async (e) => {
+        const toggle = e.target.closest('[data-game-toggle]');
+        if (!toggle) return;
+        const tweakId = toggle.dataset.gameToggle;
+        if (!tweakId) {
+            showNotification('warning', 'Local Setting', 'This toggle is a UI-only profile setting for now.');
+            return;
+        }
+        try {
+            const result = await window.electronAPI.applyTweak(tweakId, toggle.checked ? 'enable' : 'disable');
+            if (result.success) showNotification('success', 'Setting Updated', `${activeGame.name} setting updated.`);
+            else showNotification('error', 'Setting Failed', result.message || 'Could not apply setting.');
+        } catch (error) {
+            showNotification('error', 'Setting Failed', error.message || 'Could not apply setting.');
+        }
+    });
+
+    editorGrid.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.game-editor-action');
+        if (!btn) return;
+        const tweakId = btn.dataset.tweakId;
+        if (!tweakId) {
+            showNotification('warning', 'Local Action', 'This action is a UI-only profile placeholder for now.');
+            return;
+        }
+        const original = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Applying...';
+        try {
+            const result = await window.electronAPI.applyTweak(tweakId, 'apply');
+            if (result.success) showNotification('success', 'Tweak Applied', `${activeGame.name}: ${original} applied.`);
+            else showNotification('error', 'Tweak Failed', result.message || 'Could not apply tweak.');
+        } catch (error) {
+            showNotification('error', 'Tweak Failed', error.message || 'Could not apply tweak.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = original;
+        }
+    });
+
+    editorOptimize.addEventListener('click', () => applyGameOptimize(activeGame, editorOptimize));
+    backBtn?.addEventListener('click', () => {
+        pulseButton(backBtn);
+        closeEditor();
+    });
+
+    devToggle?.addEventListener('click', () => {
+        if (!devPanel) return;
+        devPanel.hidden = !devPanel.hidden;
+        devToggle.setAttribute('aria-expanded', String(!devPanel.hidden));
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!devPanel || devPanel.hidden) return;
+        if (e.target.closest('#game-tune-dev')) return;
+        devPanel.hidden = true;
+        devToggle?.setAttribute('aria-expanded', 'false');
+    });
+
+    const animControls = {
+        duration: { input: document.getElementById('gt-anim-duration'), label: document.getElementById('gt-anim-duration-value'), unit: 'ms', fromInput: Number, toInput: value => value, format: value => `${value}ms` },
+        stagger: { input: document.getElementById('gt-anim-stagger'), label: document.getElementById('gt-anim-stagger-value'), unit: 'ms', fromInput: Number, toInput: value => value, format: value => `${value}ms` },
+        slideX: { input: document.getElementById('gt-anim-slide-x'), label: document.getElementById('gt-anim-slide-x-value'), unit: 'px', fromInput: Number, toInput: value => value, format: value => `${value}px` },
+        slideY: { input: document.getElementById('gt-anim-slide-y'), label: document.getElementById('gt-anim-slide-y-value'), unit: 'px', fromInput: Number, toInput: value => value, format: value => `${value}px` },
+        blur: { input: document.getElementById('gt-anim-blur'), label: document.getElementById('gt-anim-blur-value'), unit: 'px', fromInput: Number, toInput: value => value, format: value => `${value}px` },
+        opacity: { input: document.getElementById('gt-anim-opacity'), label: document.getElementById('gt-anim-opacity-value'), fromInput: value => Number(value) / 100, toInput: value => Math.round(Number(value) * 100), format: value => Number(value).toFixed(2) },
+        scale: { input: document.getElementById('gt-anim-scale'), label: document.getElementById('gt-anim-scale-value'), fromInput: value => Number(value) / 100, toInput: value => Math.round(Number(value) * 100), format: value => Number(value).toFixed(2) }
+    };
+
+    const syncAnimControls = () => {
+        const config = getCurrentAnimConfig();
+        Object.entries(animControls).forEach(([key, control]) => {
+            if (!control.input) return;
+            control.input.value = control.toInput(config[key]);
+            if (control.label) control.label.textContent = control.format(config[key]);
+        });
+        const easing = document.getElementById('gt-anim-easing');
+        if (easing) easing.value = config.easing;
+        syncCustomSelect('target');
+        syncCustomSelect('easing');
+    };
+
+    Object.entries(animControls).forEach(([key, control]) => {
+        if (!control.input) return;
+        control.input.addEventListener('input', () => {
+            writeCurrentAnimConfig({ [key]: control.fromInput(control.input.value) });
+            syncAnimControls();
+            animateCards(activeAnimTarget);
+        });
+    });
+
+    document.getElementById('gt-anim-easing')?.addEventListener('change', (e) => {
+        writeCurrentAnimConfig({ easing: e.target.value });
+        syncAnimControls();
+        animateCards(activeAnimTarget);
+    });
+
+    devTarget?.addEventListener('change', (e) => {
+        activeAnimTarget = e.target.value || 'all';
+        syncAnimControls();
+        animateCards(activeAnimTarget);
+    });
+
+    devPanel?.addEventListener('click', (e) => {
+        const customButton = e.target.closest('.game-tune-custom-select > button');
+        const customOption = e.target.closest('.game-tune-custom-menu [data-value]');
+        if (customButton) {
+            const key = customButton.parentElement?.dataset.gtSelect;
+            if (!key) return;
+            setCustomMenuOpen(key, customButton.getAttribute('aria-expanded') !== 'true');
+            return;
+        }
+        if (customOption) {
+            const customSelect = customOption.closest('.game-tune-custom-select');
+            const key = customSelect?.dataset.gtSelect;
+            const select = key ? document.getElementById(`gt-anim-${key}`) : null;
+            if (!select) return;
+            select.value = customOption.dataset.value || '';
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            syncCustomSelect(key);
+            setCustomMenuOpen(key, false);
+            return;
+        }
+        setCustomMenuOpen('target', false);
+        setCustomMenuOpen('easing', false);
+    });
+
+    devPanel?.addEventListener('click', (e) => {
+        if (!e.target.closest('#gt-anim-replay')) return;
+        animateCards(activeAnimTarget, { fromReplay: true });
+    });
+
+    document.getElementById('gt-anim-reset-selected')?.addEventListener('click', () => {
+        if (activeAnimTarget === 'all') {
+            Object.assign(allAnim, animDefaults);
+            gameAnimOverrides.clear();
+        } else {
+            gameAnimOverrides.set(activeAnimTarget, { ...animDefaults });
+        }
+        syncAnimControls();
+        animateCards(activeAnimTarget, { fromReplay: true });
+    });
+
+    document.getElementById('gt-anim-reset-all')?.addEventListener('click', () => {
+        Object.assign(allAnim, animDefaults);
+        gameAnimOverrides.clear();
+        syncAnimControls();
+        animateCards('all', { fromReplay: true });
+    });
+
+    devToggle?.setAttribute('aria-expanded', 'false');
+    renderAnimTargets();
+    syncAnimControls();
+
+    renderChips();
+    renderCards();
+}
 
 const TOGGLE_DETAILS = {
     'gaming-game-bar': {
