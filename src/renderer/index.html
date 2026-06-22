@@ -2625,12 +2625,44 @@
 
                         <!-- AI Tweaker settings gear -->
                         <div class="ai-settings-wrap" id="ai-settings-wrap">
+                            <button class="ai-motion-btn" id="ai-modal-motion-btn" type="button" title="Modal Motion">Motion</button>
                             <button class="ai-settings-btn" id="ai-settings-btn" title="Settings">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                             </button>
                             <div class="ai-settings-dropdown" id="ai-settings-dropdown">
                                 <button class="ai-settings-item" id="ai-settings-clear-chat">Clear Chat</button>
                                 <button class="ai-settings-item" id="ai-settings-show-welcome">Show Welcome Popup</button>
+                            </div>
+                        </div>
+                        <!-- TODO: Hide or remove this modal motion tuning panel for production builds. -->
+                        <div class="ai-motion-panel" id="ai-modal-motion-panel" hidden>
+                            <div class="ai-motion-panel-head">
+                                <div>
+                                    <span>Modal Motion</span>
+                                    <strong>Welcome popup tuning</strong>
+                                </div>
+                                <button class="ai-motion-close" id="ai-modal-motion-close" type="button" aria-label="Close Modal Motion">&times;</button>
+                            </div>
+                            <div class="ai-motion-section">
+                                <h4>Backdrop / Blur</h4>
+                                <label>Opacity <output data-ai-motion-output="backdropOpacity">0.58</output><input type="range" min="0.20" max="0.85" step="0.01" data-ai-motion="backdropOpacity"></label>
+                                <label>Blur <output data-ai-motion-output="backdropBlur">12px</output><input type="range" min="0" max="28" step="1" data-ai-motion="backdropBlur"></label>
+                                <label>Duration <output data-ai-motion-output="backdropDuration">500ms</output><input type="range" min="150" max="1000" step="10" data-ai-motion="backdropDuration"></label>
+                                <label>Delay <output data-ai-motion-output="backdropDelay">0ms</output><input type="range" min="0" max="400" step="10" data-ai-motion="backdropDelay"></label>
+                            </div>
+                            <div class="ai-motion-section">
+                                <h4>Popup Card</h4>
+                                <label>Start opacity <output data-ai-motion-output="cardOpacityStart">0</output><input type="range" min="0" max="1" step="0.01" data-ai-motion="cardOpacityStart"></label>
+                                <label>Duration <output data-ai-motion-output="cardDuration">620ms</output><input type="range" min="150" max="1000" step="10" data-ai-motion="cardDuration"></label>
+                                <label>Delay <output data-ai-motion-output="cardDelay">90ms</output><input type="range" min="0" max="500" step="10" data-ai-motion="cardDelay"></label>
+                                <label>Slide Y <output data-ai-motion-output="cardSlideY">18px</output><input type="range" min="0" max="40" step="1" data-ai-motion="cardSlideY"></label>
+                                <label>Scale start <output data-ai-motion-output="cardScaleStart">0.965</output><input type="range" min="0.90" max="1.00" step="0.001" data-ai-motion="cardScaleStart"></label>
+                                <label>Blur start <output data-ai-motion-output="cardBlurStart">10px</output><input type="range" min="0" max="18" step="1" data-ai-motion="cardBlurStart"></label>
+                            </div>
+                            <div class="ai-motion-actions">
+                                <button type="button" id="ai-modal-motion-preview">Preview</button>
+                                <button type="button" id="ai-modal-motion-reset">Reset</button>
+                                <button type="button" id="ai-modal-motion-save">Save</button>
                             </div>
                         </div>
                     </div>

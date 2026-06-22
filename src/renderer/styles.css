@@ -5447,6 +5447,139 @@ body.game-tune-active .top-bar {
   top: 14px;
   right: 18px;
   z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ai-motion-btn {
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.13);
+  background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035));
+  color: rgba(232,232,236,0.86);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 10px 24px rgba(0,0,0,0.28);
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+.ai-motion-btn:hover,
+.ai-motion-btn.is-open {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,0.24);
+  background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.055));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 12px 28px rgba(0,0,0,0.34), 0 0 22px rgba(255,255,255,0.08);
+}
+.ai-motion-btn:active {
+  transform: translateY(0);
+}
+.ai-motion-panel {
+  position: fixed;
+  top: 76px;
+  right: 22px;
+  width: min(360px, calc(100vw - 44px));
+  max-height: calc(100vh - 104px);
+  overflow: auto;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background:
+    linear-gradient(160deg, rgba(28,28,30,0.92), rgba(8,8,10,0.94)),
+    rgba(10,10,12,0.94);
+  color: rgba(245,245,247,0.92);
+  box-shadow: 0 24px 70px rgba(0,0,0,0.62), inset 0 1px 0 rgba(255,255,255,0.10);
+  backdrop-filter: blur(24px) saturate(130%);
+  -webkit-backdrop-filter: blur(24px) saturate(130%);
+  z-index: 10002;
+}
+.ai-motion-panel[hidden] {
+  display: none !important;
+}
+.ai-motion-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 4px 10px;
+}
+.ai-motion-panel-head span {
+  display: block;
+  margin-bottom: 3px;
+  color: rgba(255,255,255,0.48);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.ai-motion-panel-head strong {
+  color: rgba(255,255,255,0.94);
+  font-size: 14px;
+  font-weight: 800;
+}
+.ai-motion-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.70);
+  cursor: pointer;
+}
+.ai-motion-section {
+  padding: 11px;
+  margin-top: 9px;
+  border: 1px solid rgba(255,255,255,0.095);
+  border-radius: 13px;
+  background: rgba(255,255,255,0.035);
+}
+.ai-motion-section h4 {
+  margin: 0 0 10px;
+  color: rgba(255,255,255,0.88);
+  font-size: 12px;
+  font-weight: 850;
+}
+.ai-motion-section label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 10px;
+  align-items: center;
+  margin: 8px 0;
+  color: rgba(255,255,255,0.68);
+  font-size: 11px;
+  font-weight: 700;
+}
+.ai-motion-section output {
+  color: rgba(255,255,255,0.86);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+}
+.ai-motion-section input[type="range"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: #f4f4f6;
+}
+.ai-motion-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 11px;
+}
+.ai-motion-actions button {
+  min-height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.82);
+  font-size: 11px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.ai-motion-actions button:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.24);
 }
 .ai-settings-btn {
   width: 44px;
@@ -6257,16 +6390,57 @@ ol.ai-msg-list li {
 
 /* ── Card keyframes ── */
 @keyframes ai-welcome-card-in {
-  from { opacity: 0; transform: translateY(24px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  0%   { opacity: var(--ai-modal-card-opacity-start, 0); transform: translate3d(0, var(--ai-modal-card-slide-y, 18px), 0) scale(var(--ai-modal-card-scale-start, 0.965)); filter: blur(var(--ai-modal-card-blur-start, 10px)); }
+  64%  { opacity: 1; transform: translate3d(0, -2px, 0) scale(1.01);  filter: blur(1px); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1);       filter: blur(0); }
 }
 @keyframes ai-welcome-card-out {
-  from { opacity: 1; transform: translateY(0)    scale(1);    }
-  to   { opacity: 0; transform: translateY(12px) scale(0.96); }
+  from { opacity: 1; transform: translate3d(0, 0, 0) scale(1);      filter: blur(0); }
+  to   { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.97); filter: blur(5px); }
 }
 @keyframes ai-welcome-svg-in {
   from { opacity: 0; transform: translateY(18px) scale(0.96); }
   to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+@keyframes ai-welcome-backdrop-in {
+  from {
+    opacity: 0;
+    background:
+      radial-gradient(circle at 50% 42%, rgba(255,255,255,0), transparent 42%),
+      rgba(4,4,6,0);
+    backdrop-filter: blur(0) saturate(100%);
+    -webkit-backdrop-filter: blur(0) saturate(100%);
+  }
+  to {
+    opacity: 1;
+    background:
+      radial-gradient(circle at 50% 42%, rgba(255,255,255,0.055), transparent 42%),
+      rgba(4,4,6,var(--ai-modal-backdrop-opacity, 0.58));
+    backdrop-filter: blur(var(--ai-modal-backdrop-blur, 12px)) saturate(120%);
+    -webkit-backdrop-filter: blur(var(--ai-modal-backdrop-blur, 12px)) saturate(120%);
+  }
+}
+@keyframes ai-welcome-backdrop-out {
+  from {
+    opacity: 1;
+    background:
+      radial-gradient(circle at 50% 42%, rgba(255,255,255,0.055), transparent 42%),
+      rgba(4,4,6,var(--ai-modal-backdrop-opacity, 0.58));
+    backdrop-filter: blur(var(--ai-modal-backdrop-blur, 12px)) saturate(120%);
+    -webkit-backdrop-filter: blur(var(--ai-modal-backdrop-blur, 12px)) saturate(120%);
+  }
+  to {
+    opacity: 0;
+    background:
+      radial-gradient(circle at 50% 42%, rgba(255,255,255,0), transparent 42%),
+      rgba(4,4,6,0);
+    backdrop-filter: blur(0) saturate(100%);
+    -webkit-backdrop-filter: blur(0) saturate(100%);
+  }
+}
+@keyframes ai-welcome-control-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); filter: blur(4px); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0);    filter: blur(0); }
 }
 
 /* ── Orb pulse ── */
@@ -6327,39 +6501,79 @@ ol.ai-msg-list li {
 
 /* ── Button shimmer sweep ── */
 @keyframes ai-welcome-btn-shimmer {
-  0%        { left: -100%; }
-  50%, 100% { left: 160%; }
+  0%   { transform: translateX(-180%) skewX(-18deg); opacity: 0; }
+  18%  { opacity: 0.82; }
+  100% { transform: translateX(250%) skewX(-18deg); opacity: 0; }
 }
 
-/* Overlay — sits inside .main-content so sidebar stays visible behind it */
+/* AI Tweaker welcome overlay covers the full app viewport in every sidebar mode. */
 .ai-welcome-overlay {
-  position: absolute;
-  left: 240px; right: 0; top: 0; bottom: 0;
-  background: rgba(4,4,6,0.50);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  z-index: 50;
+  --ai-modal-backdrop-opacity: 0.58;
+  --ai-modal-backdrop-blur: 12px;
+  --ai-modal-backdrop-duration: 500ms;
+  --ai-modal-backdrop-delay: 0ms;
+  --ai-modal-card-opacity-start: 0;
+  --ai-modal-card-duration: 620ms;
+  --ai-modal-card-delay: 90ms;
+  --ai-modal-card-slide-y: 18px;
+  --ai-modal-card-scale-start: 0.965;
+  --ai-modal-card-blur-start: 10px;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  isolation: isolate;
+  background: transparent;
+  z-index: 10000;
   display: flex; align-items: center; justify-content: center;
   padding: 24px;
+  pointer-events: none;
+  opacity: 1;
+}
+.ai-welcome-overlay::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255,255,255,0.055), transparent 42%),
+    rgba(4,4,6,var(--ai-modal-backdrop-opacity, 0.58));
+  backdrop-filter: blur(var(--ai-modal-backdrop-blur, 12px)) saturate(120%);
+  -webkit-backdrop-filter: blur(var(--ai-modal-backdrop-blur, 12px)) saturate(120%);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 0;
 }
 .ai-welcome-overlay.is-open {
-  opacity: 1;
   pointer-events: all;
 }
-/* Card entrance — 800ms spring */
-.ai-welcome-overlay.is-open .ai-welcome-modal {
-  animation: ai-welcome-card-in 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+.ai-welcome-overlay.ai-motion-reset,
+.ai-welcome-overlay.ai-motion-reset::before {
+  animation: none !important;
+  opacity: 0 !important;
 }
-/* Card exit */
-.ai-welcome-overlay.is-closing .ai-welcome-modal {
-  animation: ai-welcome-card-out 340ms ease-in both;
+.ai-welcome-overlay.ai-motion-reset .ai-welcome-modal,
+.ai-welcome-overlay.ai-motion-reset .ai-welcome-svg-asset,
+.ai-welcome-overlay.ai-motion-reset .ai-welcome-footer > *,
+.ai-welcome-overlay.ai-motion-reset .ai-welcome-continue-btn::after {
+  animation: none !important;
+  opacity: 0 !important;
 }
-.ai-welcome-overlay.is-closing {
-  opacity: 0;
-  transition: opacity 300ms cubic-bezier(0.16,1,0.3,1);
+.ai-welcome-overlay.ai-motion-reset .ai-welcome-modal {
+  transform: translate3d(0, var(--ai-modal-card-slide-y, 18px), 0) scale(var(--ai-modal-card-scale-start, 0.965)) !important;
+  filter: blur(var(--ai-modal-card-blur-start, 10px)) !important;
+}
+.ai-welcome-overlay.ai-card-waapi-entering .ai-welcome-svg-asset,
+.ai-welcome-overlay.ai-card-waapi-entering .ai-welcome-footer > * {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+}
+.ai-welcome-overlay.is-open::before {
+  animation: ai-welcome-backdrop-in var(--ai-modal-backdrop-duration, 500ms) cubic-bezier(0.22, 1, 0.36, 1) var(--ai-modal-backdrop-delay, 0ms) both;
+}
+.ai-welcome-overlay.is-closing::before {
+  animation: ai-welcome-backdrop-out min(var(--ai-modal-backdrop-duration, 500ms), 360ms) cubic-bezier(0.16,1,0.3,1) both;
 }
 /* SVG entrance — slight delay so card outline appears first */
 .ai-welcome-overlay.is-open .ai-welcome-svg-asset {
@@ -6457,7 +6671,7 @@ ol.ai-msg-list li {
     0 0 0 1px rgba(255,255,255,0.08),
     0 0 60px rgba(255,255,255,0.07);
   position: relative; overflow: hidden;
-  z-index: 2;
+  z-index: 3;
 }
 /* Top edge highlight — sits over SVG as a subtle gloss line */
 .ai-welcome-modal::before {
@@ -6559,6 +6773,16 @@ ol.ai-msg-list li {
   padding: 16px 28px 24px;
   box-sizing: border-box;
 }
+.ai-welcome-footer > * {
+  opacity: 0;
+  transform: translate3d(0, 8px, 0);
+}
+.ai-welcome-overlay.is-open .ai-welcome-dismiss-label {
+  animation: ai-welcome-control-in 440ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--ai-modal-card-delay, 90ms) + min(var(--ai-modal-card-duration, 620ms), 620ms) - 150ms) both;
+}
+.ai-welcome-overlay.is-open .ai-welcome-continue-btn {
+  animation: ai-welcome-control-in 440ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--ai-modal-card-delay, 90ms) + min(var(--ai-modal-card-duration, 620ms), 620ms) - 90ms) both;
+}
 
 .ai-welcome-dismiss-label {
   display: flex; align-items: center; gap: 8px; cursor: pointer;
@@ -6615,18 +6839,23 @@ ol.ai-msg-list li {
 .ai-welcome-continue-btn::after {
   content: '';
   position: absolute;
-  top: -10%; left: -80%;
-  width: 38%; height: 120%;
-  background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.72) 50%, transparent 80%);
-  animation: ai-welcome-btn-shimmer 2.8s ease-in-out infinite;
+  top: -22%; left: 0;
+  width: 42%; height: 144%;
+  background: linear-gradient(105deg, transparent 18%, rgba(255,255,255,0.76) 50%, transparent 82%);
+  transform: translateX(-180%) skewX(-18deg);
+  opacity: 0;
   pointer-events: none;
+}
+.ai-welcome-overlay.is-open .ai-welcome-continue-btn::after {
+  animation: ai-welcome-btn-shimmer 780ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--ai-modal-card-delay, 90ms) + var(--ai-modal-card-duration, 620ms) + 330ms) both;
 }
 
 /* Reduced motion — disable all animations, keep modal usable */
 @media (prefers-reduced-motion: reduce) {
-  .ai-welcome-overlay { transition: none !important; }
+  .ai-welcome-overlay.is-open::before,
+  .ai-welcome-overlay.is-closing::before { opacity: 1 !important; animation: none !important; }
   .ai-welcome-overlay.is-open .ai-welcome-modal,
-  .ai-welcome-overlay.is-closing .ai-welcome-modal { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .ai-welcome-overlay.is-closing .ai-welcome-modal { animation: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }
   .ai-welcome-overlay.is-open .ai-welcome-svg-asset,
   .ai-welcome-overlay.is-closing .ai-welcome-svg-asset { animation: none !important; opacity: 1 !important; transform: none !important; }
   /* Internal SVG groups — show immediately, no entrance motion */
@@ -6640,6 +6869,7 @@ ol.ai-msg-list li {
   .ai-welcome-ambient,
   .ai-welcome-init-dot,
   .ai-welcome-continue-btn::after { animation: none !important; }
+  .ai-welcome-footer > * { opacity: 1 !important; transform: none !important; filter: none !important; animation: none !important; }
   .ai-welcome-canvas { display: none !important; }
   .ai-welcome-ambient { opacity: 0.75; transform: translate(-50%, -50%); }
 }
@@ -6663,7 +6893,7 @@ ol.ai-msg-list li {
   inset: 0;
   width: 100%; height: 100%;
   pointer-events: none;
-  z-index: 0;
+  z-index: 1;
   opacity: 0;
   transition: opacity 500ms ease;
 }
@@ -6677,7 +6907,7 @@ ol.ai-msg-list li {
   width: 700px; height: 480px;
   background: radial-gradient(ellipse at center, rgba(255,255,255,0.075) 0%, transparent 68%);
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
   animation: ai-welcome-ambient-pulse 5s ease-in-out infinite;
 }
 

@@ -1,4 +1,5 @@
 let aiWelcomeShownThisSession = false;
+let aiWelcomePageEnterLastRun = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
@@ -118,10 +119,18 @@ function initializeNavigation() {
             }
             if (!aiWelcomeShownThisSession && !localStorage.getItem('xtweaks-ai-welcome-seen')) {
                 aiWelcomeShownThisSession = true;
-                setTimeout(() => {
+                const openWelcome = window.replayAiWelcomeModalMotion || ((options = {}) => {
                     const ov = document.getElementById('ai-welcome-overlay');
-                    if (ov) { ov.classList.remove('is-closing'); ov.classList.add('is-open'); }
-                }, 60);
+                    if (!ov) return;
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            if (options.source === 'page-enter' && !document.getElementById('page-ai-tweaker')?.classList.contains('active')) return;
+                            ov.classList.remove('is-closing', 'ai-motion-reset');
+                            ov.classList.add('is-open');
+                        });
+                    });
+                });
+                openWelcome({ source: 'page-enter' });
             }
         } else if (targetPage === 'network') {
             document.body.classList.remove('ai-tweaker-active');
@@ -209,6 +218,11 @@ function initializeSettingsPage() {
         return next;
     }
 
+    function getPersistedSettings(nextSettings) {
+        const { navigationStyle, ...persisted } = nextSettings;
+        return persisted;
+    }
+
     function loadSettings() {
         try {
             const stored = JSON.parse(localStorage.getItem(storageKey) || '{}');
@@ -220,8 +234,9 @@ function initializeSettingsPage() {
                 stored.navigationStyle = defaults.navigationStyle;
             }
             const normalized = normalizeSettings(stored);
-            if (storedVersion < settingsVersion) {
-                localStorage.setItem(storageKey, JSON.stringify(normalized));
+            normalized.navigationStyle = defaults.navigationStyle;
+            if (storedVersion < settingsVersion || Object.prototype.hasOwnProperty.call(stored, 'navigationStyle')) {
+                localStorage.setItem(storageKey, JSON.stringify(getPersistedSettings(normalized)));
             }
             return normalized;
         } catch {
@@ -231,7 +246,7 @@ function initializeSettingsPage() {
 
     function saveSettings(nextSettings) {
         const normalized = normalizeSettings(nextSettings);
-        localStorage.setItem(storageKey, JSON.stringify(normalized));
+        localStorage.setItem(storageKey, JSON.stringify(getPersistedSettings(normalized)));
         return normalized;
     }
 
@@ -382,8 +397,8 @@ function initializeSettingsPage() {
                 });
             } else if (group === 'navigationStyle') {
                 updateSettings({ navigationStyle: value }, {
-                    title: 'Navigation Style Saved',
-                    message: `${choice.textContent.trim()} selected.`
+                    title: 'Navigation Style Updated',
+                    message: `${choice.textContent.trim()} enabled for this session.`
                 });
             }
         });
@@ -7438,10 +7453,9 @@ function initializeAiTweaker() {
             localStorage.removeItem('xtweaks-ai-welcome-seen');
             aiWelcomeShownThisSession = true;
             dropdown.classList.remove('open');
-            setTimeout(() => {
-                const ov = document.getElementById('ai-welcome-overlay');
-                if (ov) { ov.classList.remove('is-closing'); ov.classList.add('is-open'); }
-            }, 60);
+            if (typeof window.replayAiWelcomeModalMotion === 'function') {
+                window.replayAiWelcomeModalMotion({ source: 'manual' });
+            }
         });
 
         // Dynamically add "Reset AI Learning" option
@@ -7465,28 +7479,292 @@ function initializeAiTweaker() {
         const dismissCheck = document.getElementById('ai-welcome-dismiss-check');
         const modal = document.getElementById('ai-welcome-modal');
         if (!overlay || !continueBtn) return;
+        const motionStorageKey = 'xtweaks-ai-modal-motion-v1';
+        const motionSettingsVersion = 3;
+        const motionDefaults = {
+            backdropOpacity: 0.58,
+            backdropBlur: 12,
+            backdropDuration: 500,
+            backdropDelay: 0,
+            cardOpacityStart: 0,
+            cardDuration: 620,
+            cardDelay: 90,
+            cardSlideY: 18,
+            cardScaleStart: 0.965,
+            cardBlurStart: 10
+        };
+        const motionFields = {
+            backdropOpacity: { css: '--ai-modal-backdrop-opacity', unit: '', decimals: 2 },
+            backdropBlur: { css: '--ai-modal-backdrop-blur', unit: 'px', decimals: 0 },
+            backdropDuration: { css: '--ai-modal-backdrop-duration', unit: 'ms', decimals: 0 },
+            backdropDelay: { css: '--ai-modal-backdrop-delay', unit: 'ms', decimals: 0 },
+            cardOpacityStart: { css: '--ai-modal-card-opacity-start', unit: '', decimals: 2 },
+            cardDuration: { css: '--ai-modal-card-duration', unit: 'ms', decimals: 0 },
+            cardDelay: { css: '--ai-modal-card-delay', unit: 'ms', decimals: 0 },
+            cardSlideY: { css: '--ai-modal-card-slide-y', unit: 'px', decimals: 0 },
+            cardScaleStart: { css: '--ai-modal-card-scale-start', unit: '', decimals: 3 },
+            cardBlurStart: { css: '--ai-modal-card-blur-start', unit: 'px', decimals: 0 }
+        };
+        let motionSettings = { ...motionDefaults };
+        const motionTimers = new Set();
+        const motionFrames = new Set();
+        let cardMotionAnimation = null;
+
+        function clearAiModalMotionTimers() {
+            motionTimers.forEach((timerId) => clearTimeout(timerId));
+            motionTimers.clear();
+            motionFrames.forEach((frameId) => cancelAnimationFrame(frameId));
+            motionFrames.clear();
+            modal?.getAnimations().forEach((animation) => animation.cancel());
+            if (cardMotionAnimation) {
+                cardMotionAnimation.cancel();
+                cardMotionAnimation = null;
+            }
+        }
+
+        function setMotionTimeout(callback, delay) {
+            const timerId = setTimeout(() => {
+                motionTimers.delete(timerId);
+                callback();
+            }, delay);
+            motionTimers.add(timerId);
+            return timerId;
+        }
+
+        function setMotionFrame(callback) {
+            const frameId = requestAnimationFrame(() => {
+                motionFrames.delete(frameId);
+                callback();
+            });
+            motionFrames.add(frameId);
+            return frameId;
+        }
+
+        function clampMotionValue(key, value) {
+            const input = document.querySelector(`[data-ai-motion="${key}"]`);
+            const numeric = Number(value);
+            if (!Number.isFinite(numeric)) return motionDefaults[key];
+            if (!input) return numeric;
+            return Math.min(Math.max(numeric, Number(input.min)), Number(input.max));
+        }
+
+        function formatMotionValue(key, value) {
+            const field = motionFields[key];
+            const fixed = Number(value).toFixed(field.decimals);
+            const clean = field.decimals > 0 ? fixed.replace(/\.?0+$/, '') : fixed;
+            return `${clean}${field.unit}`;
+        }
+
+        function applyModalMotionSettings(next = motionSettings) {
+            motionSettings = { ...motionSettings, ...next };
+            Object.entries(motionFields).forEach(([key, field]) => {
+                const value = clampMotionValue(key, motionSettings[key]);
+                motionSettings[key] = value;
+                overlay.style.setProperty(field.css, formatMotionValue(key, value));
+                const input = document.querySelector(`[data-ai-motion="${key}"]`);
+                const output = document.querySelector(`[data-ai-motion-output="${key}"]`);
+                if (input) input.value = String(value);
+                if (output) output.textContent = formatMotionValue(key, value);
+            });
+        }
+
+        function loadModalMotionSettings() {
+            try {
+                const stored = JSON.parse(localStorage.getItem(motionStorageKey) || '{}');
+                motionSettings = stored.motionSettingsVersion === motionSettingsVersion
+                    ? { ...motionDefaults, ...stored }
+                    : { ...motionDefaults };
+            } catch {
+                motionSettings = { ...motionDefaults };
+            }
+            applyModalMotionSettings(motionSettings);
+        }
+
+        function getMotionCloseFallbackMs() {
+            const backdropMs = motionSettings.backdropDuration + motionSettings.backdropDelay;
+            const cardMs = 320;
+            return Math.max(360, Math.min(Math.max(backdropMs, cardMs) + 120, 1200));
+        }
+
+        function getMotionEntranceTotalMs() {
+            const backdropMs = motionSettings.backdropDuration + motionSettings.backdropDelay;
+            const cardMs = motionSettings.cardDuration + motionSettings.cardDelay + 1200;
+            return Math.max(backdropMs, cardMs) + 160;
+        }
+
+        function clearModalCardInlineState() {
+            if (!modal) return;
+            modal.style.removeProperty('opacity');
+            modal.style.removeProperty('transform');
+            modal.style.removeProperty('filter');
+            modal.style.removeProperty('will-change');
+        }
+
+        function setModalCardStartState() {
+            if (!modal) return;
+            modal.style.opacity = String(motionSettings.cardOpacityStart);
+            modal.style.transform = `translate3d(0, ${motionSettings.cardSlideY}px, 0) scale(${motionSettings.cardScaleStart})`;
+            modal.style.filter = `blur(${motionSettings.cardBlurStart}px)`;
+            modal.style.visibility = 'visible';
+            modal.style.pointerEvents = 'auto';
+            modal.style.willChange = 'transform, opacity, filter';
+        }
+
+        function animateModalCardIn() {
+            if (!modal) return null;
+            if (cardMotionAnimation) {
+                cardMotionAnimation.cancel();
+                cardMotionAnimation = null;
+            }
+            overlay.classList.add('ai-card-waapi-entering');
+            setModalCardStartState();
+            void modal.offsetHeight;
+            setMotionFrame(() => {
+                setMotionFrame(() => {
+                    if (!overlay.classList.contains('is-open') || overlay.classList.contains('ai-motion-reset')) return;
+                    setModalCardStartState();
+                    modal.getBoundingClientRect();
+                    cardMotionAnimation = modal.animate([
+                        {
+                            opacity: motionSettings.cardOpacityStart,
+                            transform: `translate3d(0, ${motionSettings.cardSlideY}px, 0) scale(${motionSettings.cardScaleStart})`,
+                            filter: `blur(${motionSettings.cardBlurStart}px)`
+                        },
+                        {
+                            opacity: 1,
+                            transform: 'translate3d(0, 0, 0) scale(1)',
+                            filter: 'blur(0px)'
+                        }
+                    ], {
+                        duration: motionSettings.cardDuration,
+                        delay: motionSettings.cardDelay,
+                        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+                        fill: 'forwards'
+                    });
+                    cardMotionAnimation.onfinish = () => {
+                        if (cardMotionAnimation) {
+                            cardMotionAnimation.cancel();
+                            cardMotionAnimation = null;
+                        }
+                        modal.style.opacity = '1';
+                        modal.style.transform = 'translate3d(0, 0, 0) scale(1)';
+                        modal.style.filter = 'blur(0px)';
+                        modal.style.removeProperty('will-change');
+                        overlay.classList.remove('ai-card-waapi-entering');
+                    };
+                    cardMotionAnimation.oncancel = () => {
+                        overlay.classList.remove('ai-card-waapi-entering');
+                        if (cardMotionAnimation) cardMotionAnimation = null;
+                    };
+                });
+            });
+            return null;
+        }
+
+        function animateModalCardOut() {
+            if (!modal) return null;
+            if (cardMotionAnimation) {
+                cardMotionAnimation.cancel();
+                cardMotionAnimation = null;
+            }
+            modal.style.opacity = '1';
+            modal.style.transform = 'translate3d(0, 0, 0) scale(1)';
+            modal.style.filter = 'blur(0px)';
+            modal.style.visibility = 'visible';
+            modal.style.pointerEvents = 'auto';
+            modal.style.willChange = 'transform, opacity, filter';
+            void modal.offsetHeight;
+            cardMotionAnimation = modal.animate([
+                {
+                    opacity: 1,
+                    transform: 'translate3d(0, 0, 0) scale(1)',
+                    filter: 'blur(0px)'
+                },
+                {
+                    opacity: 0,
+                    transform: 'translate3d(0, 12px, 0) scale(0.985)',
+                    filter: 'blur(6px)'
+                }
+            ], {
+                duration: 280,
+                easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+                fill: 'forwards'
+            });
+            cardMotionAnimation.onfinish = () => {
+                if (cardMotionAnimation) {
+                    cardMotionAnimation.cancel();
+                    cardMotionAnimation = null;
+                }
+                clearModalCardInlineState();
+            };
+            cardMotionAnimation.oncancel = () => {
+                if (cardMotionAnimation) cardMotionAnimation = null;
+            };
+            return cardMotionAnimation;
+        }
+
+        function resetAiModalAnimationState() {
+            overlay.classList.remove('is-open', 'is-closing');
+            overlay.classList.remove('ai-card-waapi-entering');
+            overlay.classList.add('ai-motion-reset');
+            setModalCardStartState();
+            void overlay.offsetWidth;
+        }
+
+        function replayAiModalMotionPreview(options = {}) {
+            const aiPage = document.getElementById('page-ai-tweaker');
+            const now = performance.now();
+            if (options.source === 'page-enter' && now - aiWelcomePageEnterLastRun < 700) return;
+            if (options.source === 'page-enter') aiWelcomePageEnterLastRun = now;
+
+            clearAiModalMotionTimers();
+            resetAiModalAnimationState();
+
+            setMotionFrame(() => {
+                setMotionFrame(() => {
+                    if (options.source === 'page-enter' && !aiPage?.classList.contains('active')) return;
+                    overlay.classList.remove('ai-motion-reset', 'is-closing');
+                    void overlay.offsetWidth;
+                    overlay.classList.add('is-open');
+                    animateModalCardIn();
+                    setMotionTimeout(() => {
+                        overlay.classList.remove('ai-motion-reset');
+                    }, getMotionEntranceTotalMs());
+                });
+            });
+        }
 
         function closeWelcome() {
             if (!overlay.classList.contains('is-open')) return; // already closing or closed
             if (dismissCheck?.checked) {
                 localStorage.setItem('xtweaks-ai-welcome-seen', '1');
             }
+            clearAiModalMotionTimers();
             overlay.classList.remove('is-open');
+            overlay.classList.remove('ai-motion-reset');
+            overlay.classList.remove('ai-card-waapi-entering');
             overlay.classList.add('is-closing');
+            animateModalCardOut();
 
             let done = false;
             function finish() {
                 if (done) return;
                 done = true;
                 overlay.classList.remove('is-closing');
+                overlay.classList.remove('ai-motion-reset');
+                overlay.classList.remove('ai-card-waapi-entering');
+                clearModalCardInlineState();
             }
             if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
                 finish();
             } else {
                 modal?.addEventListener('animationend', finish, { once: true });
-                setTimeout(finish, 400); // fallback if animationend doesn't fire
+                setTimeout(finish, getMotionCloseFallbackMs()); // fallback if animationend doesn't fire
             }
         }
+
+        loadModalMotionSettings();
+        window.replayAiWelcomeModalMotion = replayAiModalMotionPreview;
 
         continueBtn.addEventListener('click', closeWelcome);
         overlay.addEventListener('click', (e) => {
@@ -7494,6 +7772,56 @@ function initializeAiTweaker() {
         });
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeWelcome();
+        });
+
+        const motionBtn = document.getElementById('ai-modal-motion-btn');
+        const motionPanel = document.getElementById('ai-modal-motion-panel');
+        const motionClose = document.getElementById('ai-modal-motion-close');
+        const motionPreview = document.getElementById('ai-modal-motion-preview');
+        const motionReset = document.getElementById('ai-modal-motion-reset');
+        const motionSave = document.getElementById('ai-modal-motion-save');
+        const setMotionPanelOpen = (isOpen) => {
+            if (!motionPanel || !motionBtn) return;
+            motionPanel.hidden = !isOpen;
+            motionBtn.classList.toggle('is-open', isOpen);
+            motionBtn.setAttribute('aria-expanded', String(isOpen));
+        };
+        motionBtn?.setAttribute('aria-controls', 'ai-modal-motion-panel');
+        motionBtn?.setAttribute('aria-expanded', 'false');
+        motionBtn?.addEventListener('click', (event) => {
+            event.stopPropagation();
+            setMotionPanelOpen(Boolean(motionPanel?.hidden));
+        });
+        motionClose?.addEventListener('click', () => setMotionPanelOpen(false));
+        motionPanel?.querySelectorAll('[data-ai-motion]').forEach((input) => {
+            input.addEventListener('input', () => {
+                const key = input.dataset.aiMotion;
+                if (!key) return;
+                applyModalMotionSettings({ [key]: Number(input.value) });
+            });
+        });
+        motionPreview?.addEventListener('click', () => replayAiModalMotionPreview({ source: 'preview' }));
+        motionReset?.addEventListener('click', () => {
+            applyModalMotionSettings({ ...motionDefaults });
+            localStorage.removeItem(motionStorageKey);
+        });
+        motionSave?.addEventListener('click', () => {
+            localStorage.setItem(motionStorageKey, JSON.stringify({
+                motionSettingsVersion,
+                ...motionSettings
+            }));
+            showNotification('success', 'Modal Motion Saved', 'AI Tweaker modal motion saved locally.', {
+                key: 'ai-modal-motion',
+                duration: 2200
+            });
+        });
+        document.addEventListener('click', (event) => {
+            if (!motionPanel || motionPanel.hidden) return;
+            if (motionPanel.contains(event.target) || motionBtn?.contains(event.target)) return;
+            setMotionPanelOpen(false);
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') setMotionPanelOpen(false);
         });
 
         // Floating symbol mouse parallax (gyroscope tilt)
