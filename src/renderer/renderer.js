@@ -484,20 +484,20 @@ function initializeInputTab() {
             rotation: { x: 0.24, y: -1.95, z: 0.04 }
         },
         ps5: {
-            distanceMultiplier: 0.46,
-            scaleMultiplier: 3.25,
-            positionOffset: { x: -0.04, y: -0.04, z: 0 },
-            targetOffset: { x: -0.02, y: 0.03, z: 0 },
-            cameraOffset: { x: 0.12, y: 0.16, z: 0.03 },
-            rotation: { x: 0.16, y: -0.55, z: 0.03 }
+            distanceMultiplier: 0.52,
+            scaleMultiplier: 2.96,
+            positionOffset: { x: 0, y: 0.04, z: 0 },
+            targetOffset: { x: 0, y: 0.055, z: 0 },
+            cameraOffset: { x: 0.08, y: 0.2, z: 0.04 },
+            rotation: { x: 0.2, y: -0.42, z: 0.01 }
         },
         playstation: {
-            distanceMultiplier: 0.46,
-            scaleMultiplier: 3.25,
-            positionOffset: { x: -0.04, y: -0.04, z: 0 },
-            targetOffset: { x: -0.02, y: 0.03, z: 0 },
-            cameraOffset: { x: 0.12, y: 0.16, z: 0.03 },
-            rotation: { x: 0.16, y: -0.55, z: 0.03 }
+            distanceMultiplier: 0.52,
+            scaleMultiplier: 2.96,
+            positionOffset: { x: 0, y: 0.04, z: 0 },
+            targetOffset: { x: 0, y: 0.055, z: 0 },
+            cameraOffset: { x: 0.08, y: 0.2, z: 0.04 },
+            rotation: { x: 0.2, y: -0.42, z: 0.01 }
         }
     };
     const INPUT_XBOX_DECAL_TUNER_ENABLED = false;
