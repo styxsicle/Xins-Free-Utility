@@ -23,6 +23,7 @@ function initializeApp() {
     initializeGpuPage();
     initializeInputTab();
     initializeAiTweaker();
+    initializeGamingPage();
     initializeGameTunePage();
     initializeNetworkCards();
     initializeDnsOptimizer();
@@ -63,17 +64,29 @@ function _integrateNetTopBar() {
     const filterBar = netPage && netPage.querySelector('.net-filter-bar');
     if (!bar || !netPage || !filterBar || bar.parentElement === netPage) return;
     netPage.insertBefore(bar, filterBar);
+    bar.classList.remove('gaming-integrated');
     bar.classList.add('net-integrated');
 }
 
 function _restoreNetTopBar() {
     const bar = document.querySelector('.top-bar');
-    if (!bar || !bar.classList.contains('net-integrated')) return;
+    if (!bar || (!bar.classList.contains('net-integrated') && !bar.classList.contains('gaming-integrated'))) return;
     const main = document.querySelector('.content');
     const pageBody = document.querySelector('.page-body');
     if (!main || !pageBody) return;
     main.insertBefore(bar, pageBody);
     bar.classList.remove('net-integrated');
+    bar.classList.remove('gaming-integrated');
+}
+
+function _integrateGamingTopBar() {
+    const bar = document.querySelector('.top-bar');
+    const gamingPage = document.getElementById('page-gaming');
+    const filterBar = gamingPage && gamingPage.querySelector('.gaming-filter-bar');
+    if (!bar || !gamingPage || !filterBar || bar.parentElement === gamingPage) return;
+    gamingPage.insertBefore(bar, filterBar);
+    bar.classList.remove('net-integrated');
+    bar.classList.add('gaming-integrated');
 }
 
 function initializeNavigation() {
@@ -94,6 +107,7 @@ function initializeNavigation() {
         if (targetPage === 'ai-tweaker') {
             document.body.classList.add('ai-tweaker-active');
             document.body.classList.remove('net-page-active');
+            document.body.classList.remove('gaming-page-active');
             document.body.classList.remove('game-tune-active');
             _restoreNetTopBar();
             const aiPage = document.getElementById('page-ai-tweaker');
@@ -111,18 +125,28 @@ function initializeNavigation() {
             }
         } else if (targetPage === 'network') {
             document.body.classList.remove('ai-tweaker-active');
+            document.body.classList.remove('gaming-page-active');
             document.body.classList.remove('game-tune-active');
             document.body.classList.add('net-page-active');
             _integrateNetTopBar();
+        } else if (targetPage === 'gaming') {
+            document.body.classList.remove('ai-tweaker-active');
+            document.body.classList.remove('net-page-active');
+            document.body.classList.remove('game-tune-active');
+            document.body.classList.add('gaming-page-active');
+            _integrateGamingTopBar();
+            scheduleGamingCardsOnEntry({ source: 'page-enter' });
         } else if (targetPage === 'fortnite') {
             document.body.classList.remove('ai-tweaker-active');
             document.body.classList.remove('net-page-active');
+            document.body.classList.remove('gaming-page-active');
             document.body.classList.add('game-tune-active');
             _restoreNetTopBar();
             window.replayGameTuneCards?.();
         } else {
             document.body.classList.remove('ai-tweaker-active');
             document.body.classList.remove('net-page-active');
+            document.body.classList.remove('gaming-page-active');
             document.body.classList.remove('game-tune-active');
             _restoreNetTopBar();
         }
@@ -145,7 +169,9 @@ function initializeSettingsPage() {
     page.dataset.settingsInitialized = 'true';
 
     const storageKey = 'xtweaks-settings-v1';
+    const settingsVersion = 3;
     const defaults = {
+        settingsVersion,
         launchOnStartup: true,
         minimizeToTray: false,
         language: 'English',
@@ -160,9 +186,8 @@ function initializeSettingsPage() {
         'frost-glass': 'Frost Glass'
     };
     const navigationLabels = {
-        full: 'Full',
-        compact: 'Compact',
-        hidden: 'Hidden'
+        full: 'Full Sidebar',
+        compact: 'Compact Rail'
     };
     const validOptions = {
         language: ['English'],
@@ -173,6 +198,7 @@ function initializeSettingsPage() {
 
     function normalizeSettings(input = {}) {
         const next = { ...defaults, ...input };
+        next.settingsVersion = settingsVersion;
         next.launchOnStartup = Boolean(next.launchOnStartup);
         next.minimizeToTray = Boolean(next.minimizeToTray);
         if (!validOptions.language.includes(next.language)) next.language = defaults.language;
@@ -184,7 +210,19 @@ function initializeSettingsPage() {
 
     function loadSettings() {
         try {
-            return normalizeSettings(JSON.parse(localStorage.getItem(storageKey) || '{}'));
+            const stored = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            const storedVersion = Number(stored.settingsVersion) || 1;
+            if (storedVersion < 2 && stored.theme === 'obsidian') {
+                stored.theme = defaults.theme;
+            }
+            if (storedVersion < settingsVersion && stored.navigationStyle === 'hidden') {
+                stored.navigationStyle = defaults.navigationStyle;
+            }
+            const normalized = normalizeSettings(stored);
+            if (storedVersion < settingsVersion) {
+                localStorage.setItem(storageKey, JSON.stringify(normalized));
+            }
+            return normalized;
         } catch {
             return { ...defaults };
         }
@@ -223,6 +261,7 @@ function initializeSettingsPage() {
         document.body.classList.toggle('settings-nav-compact', navigationStyle === 'compact');
         document.body.classList.toggle('settings-nav-hidden', navigationStyle === 'hidden');
         document.body.classList.toggle('settings-nav-full', navigationStyle === 'full');
+        document.querySelector('[data-sidebar-layout-toggle]')?.setAttribute('aria-pressed', String(navigationStyle === 'compact'));
     }
 
     function updateStatusChips() {
@@ -291,6 +330,19 @@ function initializeSettingsPage() {
         if (typeof window.activateRendererPage === 'function') {
             window.activateRendererPage('settings');
         }
+    });
+
+    const sidebarLayoutToggle = document.querySelector('[data-sidebar-layout-toggle]');
+    const toggleSidebarLayout = () => {
+        updateSettings({
+            navigationStyle: settings.navigationStyle === 'compact' ? 'full' : 'compact'
+        });
+    };
+    sidebarLayoutToggle?.addEventListener('click', toggleSidebarLayout);
+    sidebarLayoutToggle?.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        toggleSidebarLayout();
     });
 
     page.querySelectorAll('.settings-toggle').forEach((toggle) => {
@@ -4617,6 +4669,155 @@ function hideTooltip() {
     if (toggleTooltip) toggleTooltip.classList.remove('visible');
 }
 
+const GAMING_ENTRY_MOTION = {
+    duration: 620,
+    stagger: 55,
+    slideX: 0,
+    slideY: 14,
+    blur: 5,
+    opacity: 0,
+    scale: 0.985,
+    easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
+};
+let gamingPageEnterMotionLastRun = 0;
+
+function getGamingEntryCards(page) {
+    const collect = (selector) => Array.from(page.querySelectorAll(selector)).filter(item => {
+        if (!item) return false;
+        if (item.dataset.gamingHidden === 'true' || item.closest('[data-gaming-hidden]')) return false;
+        const rect = item.getBoundingClientRect();
+        return rect.width >= 8 && rect.height >= 8;
+    });
+
+    const presetCards = collect('.gaming-preset-card');
+    const toggleCards = collect('.gaming-pcard, .gaming-toggle-card');
+    const sliderCards = collect('.gaming-slider-card');
+    const advancedCards = collect('.gaming-adv-card, .gaming-tool-card');
+    return [...presetCards, ...toggleCards, ...sliderCards, ...advancedCards];
+}
+
+function clearGamingEntryCardAnimations(items = []) {
+    items.forEach(item => {
+        if (item._gamingWaapiAnimation) {
+            item._gamingWaapiAnimation.cancel();
+            item._gamingWaapiAnimation = null;
+        }
+        item.style.removeProperty('will-change');
+        item.style.removeProperty('opacity');
+        item.style.removeProperty('transform');
+        item.style.removeProperty('filter');
+    });
+}
+
+function animateGamingCardsOnEntry() {
+    const page = document.getElementById('page-gaming');
+    if (!page?.classList.contains('active')) return 0;
+
+    const targetItems = getGamingEntryCards(page).filter(Boolean);
+    clearGamingEntryCardAnimations(targetItems);
+    if (targetItems[0]) targetItems[0].offsetHeight;
+    console.log('Gaming entry animation fired', targetItems.length);
+
+    const started = [];
+    targetItems.forEach((item, index) => {
+        const rect = item.getBoundingClientRect();
+        if (rect.width < 8 || rect.height < 8) return;
+
+        const animation = item.animate([
+            {
+                opacity: GAMING_ENTRY_MOTION.opacity,
+                transform: `translate3d(${GAMING_ENTRY_MOTION.slideX}px, ${GAMING_ENTRY_MOTION.slideY}px, 0) scale(${GAMING_ENTRY_MOTION.scale})`,
+                filter: `blur(${GAMING_ENTRY_MOTION.blur}px)`
+            },
+            {
+                opacity: 1,
+                transform: 'translate3d(0, 0, 0) scale(1)',
+                filter: 'blur(0px)'
+            }
+        ], {
+            duration: GAMING_ENTRY_MOTION.duration,
+            delay: index * GAMING_ENTRY_MOTION.stagger,
+            easing: GAMING_ENTRY_MOTION.easing,
+            fill: 'both'
+        });
+
+        item.style.willChange = 'transform, opacity, filter';
+        item._gamingWaapiAnimation = animation;
+        animation.finished
+            .catch(() => {})
+            .finally(() => {
+                if (item._gamingWaapiAnimation === animation) {
+                    animation.cancel();
+                    item._gamingWaapiAnimation = null;
+                    item.style.removeProperty('will-change');
+                    item.style.removeProperty('opacity');
+                    item.style.removeProperty('transform');
+                    item.style.removeProperty('filter');
+                }
+            });
+        started.push(animation);
+    });
+
+    return started.length;
+}
+
+function scheduleGamingCardsOnEntry(options = {}) {
+    const page = document.getElementById('page-gaming');
+    if (!page) return;
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (!page.classList.contains('active')) return;
+            const now = performance.now();
+            if (options.source === 'page-enter' && now - gamingPageEnterMotionLastRun < 900) return;
+            if (options.source === 'page-enter') gamingPageEnterMotionLastRun = now;
+            animateGamingCardsOnEntry();
+        });
+    });
+}
+
+function initializeGamingPage() {
+    const page = document.getElementById('page-gaming');
+    const tabs = page?.querySelectorAll('.gaming-filter-tab');
+    if (!page || !tabs?.length || page.dataset.gamingInitialized === 'true') return;
+    page.dataset.gamingInitialized = 'true';
+
+    const applyFilter = (filter) => {
+        tabs.forEach(tab => {
+            tab.classList.toggle('gaming-filter-active', tab.dataset.gamingFilter === filter);
+        });
+
+        page.querySelectorAll('[data-gaming-section]').forEach(section => {
+            const sectionKey = section.dataset.gamingSection || '';
+            section.toggleAttribute('data-gaming-hidden', filter !== 'all' && sectionKey !== filter);
+        });
+
+        page.querySelectorAll('[data-gaming-cat]').forEach(item => {
+            const cats = (item.dataset.gamingCat || '').split(/\s+/);
+            item.toggleAttribute('data-gaming-hidden', filter !== 'all' && !cats.includes(filter));
+        });
+
+    };
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            applyFilter(tab.dataset.gamingFilter || 'all');
+        });
+    });
+
+    page.querySelectorAll('[data-gaming-preset]').forEach(button => {
+        button.addEventListener('click', () => {
+            const card = button.closest('.gaming-preset-card');
+            const presetName = card?.querySelector('.gaming-preset-title')?.textContent || 'Gaming preset';
+            // TODO: Phase 2 - wire preset buttons to backend preset execution after review.
+            showNotification('success', 'Preset queued', `${presetName} is ready for local preset wiring.`);
+        });
+    });
+
+    applyFilter('all');
+    window.animateGamingCardsOnEntry = animateGamingCardsOnEntry;
+    if (page.classList.contains('active')) scheduleGamingCardsOnEntry({ source: 'page-enter' });
+}
+
 function enhanceToggleCards() {
     const cards = document.querySelectorAll('.toggle-card[data-toggle]');
     cards.forEach(card => {
@@ -4636,33 +4837,60 @@ function enhanceToggleCards() {
         const input = sw.querySelector('input[type="checkbox"]');
         const isChecked = !!(input && input.checked);
 
-        // Rebuild the card content with the new premium structure
-        card.innerHTML = `
-            <span class="tc-aurora" aria-hidden="true"></span>
-            <span class="tc-shine" aria-hidden="true"></span>
-            <span class="tc-accent" aria-hidden="true"></span>
-            <div class="tc-head">
-                <div class="tc-icon">${getToggleIconHtml(id)}</div>
-                <div class="tc-titles">
-                    <h4>${title}</h4>
-                    <p>${desc}</p>
+        if (card.classList.contains('gaming-pcard')) {
+            const detail = TOGGLE_DETAILS[id] || {};
+            card.innerHTML = `
+                <span class="tc-aurora" aria-hidden="true"></span>
+                <span class="tc-shine" aria-hidden="true"></span>
+                <span class="tc-accent" aria-hidden="true"></span>
+                <div class="pcard-top">
+                    <div class="pcard-icon-wrap">${getToggleIconHtml(id)}</div>
+                    <span class="pcard-cat-pill">${detail.category || 'Gaming'}</span>
                 </div>
-            </div>
-            <div class="tc-foot">
-                <div class="tc-status">
-                    <span class="tc-status-dot"></span>
-                    <span class="tc-status-text">${isChecked ? 'Enabled' : 'Disabled'}</span>
+                <div class="pcard-body">
+                    <h4 class="pcard-title">${title}</h4>
+                    <p class="pcard-desc">${desc}</p>
                 </div>
-            </div>
-        `;
+                <div class="pcard-tags">
+                    <span class="pcard-tag">${detail.impact || 'Medium'} impact</span>
+                    <span class="pcard-tag">Local</span>
+                </div>
+                <div class="pcard-foot">
+                    <div class="pcard-status">
+                        <span class="tc-status-dot"></span>
+                        <span class="pcard-status-text">${isChecked ? 'Enabled' : 'Disabled'}</span>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Rebuild the card content with the new premium structure
+            card.innerHTML = `
+                <span class="tc-aurora" aria-hidden="true"></span>
+                <span class="tc-shine" aria-hidden="true"></span>
+                <span class="tc-accent" aria-hidden="true"></span>
+                <div class="tc-head">
+                    <div class="tc-icon">${getToggleIconHtml(id)}</div>
+                    <div class="tc-titles">
+                        <h4>${title}</h4>
+                        <p>${desc}</p>
+                    </div>
+                </div>
+                <div class="tc-foot">
+                    <div class="tc-status">
+                        <span class="tc-status-dot"></span>
+                        <span class="tc-status-text">${isChecked ? 'Enabled' : 'Disabled'}</span>
+                    </div>
+                </div>
+            `;
+        }
         // Re-attach the original toggle switch (preserves its event listeners)
-        card.querySelector('.tc-foot').appendChild(sw);
+        (card.querySelector('.tc-foot') || card.querySelector('.pcard-foot')).appendChild(sw);
 
         // Mirror state to .on / .off classes
         const sync = () => {
             card.classList.toggle('on', !!input.checked);
             card.classList.toggle('off', !input.checked);
-            const txt = card.querySelector('.tc-status-text');
+            const txt = card.querySelector('.tc-status-text, .pcard-status-text');
             if (txt) txt.textContent = input.checked ? 'Enabled' : 'Disabled';
             // If tooltip is currently showing this card, refresh state
             if (toggleTooltip && toggleTooltip.classList.contains('visible') && toggleTooltip.dataset.targetId === id) {
@@ -4740,6 +4968,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         enhanceToggleCards();
         enhanceNetworkCards();
+        if (document.getElementById('page-gaming')?.classList.contains('active')) {
+            scheduleGamingCardsOnEntry({ source: 'page-enter' });
+        }
     }, 0);
 });
 
