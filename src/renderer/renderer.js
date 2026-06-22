@@ -4704,6 +4704,8 @@ const GAMING_ENTRY_MOTION = {
     easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
 };
 let gamingPageEnterMotionLastRun = 0;
+let gamingTabMotionLastRun = 0;
+let gamingTabMotionRequest = 0;
 
 function getGamingEntryCards(page) {
     const collect = (selector) => Array.from(page.querySelectorAll(selector)).filter(item => {
@@ -4717,7 +4719,8 @@ function getGamingEntryCards(page) {
     const toggleCards = collect('.gaming-pcard, .gaming-toggle-card');
     const sliderCards = collect('.gaming-slider-card');
     const advancedCards = collect('.gaming-adv-card, .gaming-tool-card');
-    return [...presetCards, ...toggleCards, ...sliderCards, ...advancedCards];
+    const emptyCards = collect('.gaming-empty-state:not([hidden])');
+    return [...presetCards, ...toggleCards, ...sliderCards, ...advancedCards, ...emptyCards];
 }
 
 function clearGamingEntryCardAnimations(items = []) {
@@ -4790,12 +4793,25 @@ function animateGamingCardsOnEntry() {
 function scheduleGamingCardsOnEntry(options = {}) {
     const page = document.getElementById('page-gaming');
     if (!page) return;
+    const requestId = ++gamingTabMotionRequest;
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             if (!page.classList.contains('active')) return;
             const now = performance.now();
             if (options.source === 'page-enter' && now - gamingPageEnterMotionLastRun < 900) return;
             if (options.source === 'page-enter') gamingPageEnterMotionLastRun = now;
+            if (options.source === 'tab-click') {
+                if (requestId !== gamingTabMotionRequest) return;
+                if (now - gamingTabMotionLastRun < 450) {
+                    setTimeout(() => {
+                        if (requestId !== gamingTabMotionRequest || !page.classList.contains('active')) return;
+                        gamingTabMotionLastRun = performance.now();
+                        animateGamingCardsOnEntry();
+                    }, 450 - (now - gamingTabMotionLastRun));
+                    return;
+                }
+                gamingTabMotionLastRun = now;
+            }
             animateGamingCardsOnEntry();
         });
     });
@@ -4808,25 +4824,43 @@ function initializeGamingPage() {
     page.dataset.gamingInitialized = 'true';
 
     const applyFilter = (filter) => {
+        const activeFilter = ['all', 'toggles', 'performance', 'advanced'].includes(filter) ? filter : 'all';
+        const sectionMap = {
+            all: ['presets', 'toggles', 'performance', 'advanced'],
+            toggles: ['toggles'],
+            performance: ['performance'],
+            advanced: ['advanced']
+        };
+        const visibleSections = new Set(sectionMap[activeFilter] || sectionMap.all);
+        const advancedCards = Array.from(page.querySelectorAll('.gaming-adv-card, .gaming-tool-card'));
+        const advancedEmpty = document.getElementById('gaming-advanced-empty');
+
         tabs.forEach(tab => {
-            tab.classList.toggle('gaming-filter-active', tab.dataset.gamingFilter === filter);
+            tab.classList.toggle('gaming-filter-active', tab.dataset.gamingFilter === activeFilter);
         });
 
         page.querySelectorAll('[data-gaming-section]').forEach(section => {
             const sectionKey = section.dataset.gamingSection || '';
-            section.toggleAttribute('data-gaming-hidden', filter !== 'all' && sectionKey !== filter);
+            section.toggleAttribute('data-gaming-hidden', !visibleSections.has(sectionKey));
         });
 
         page.querySelectorAll('[data-gaming-cat]').forEach(item => {
-            const cats = (item.dataset.gamingCat || '').split(/\s+/);
-            item.toggleAttribute('data-gaming-hidden', filter !== 'all' && !cats.includes(filter));
+            item.toggleAttribute('data-gaming-hidden', false);
         });
 
+        if (advancedEmpty) {
+            advancedEmpty.hidden = !['all', 'advanced'].includes(activeFilter) || advancedCards.length > 0;
+        }
     };
 
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
+            clearGamingEntryCardAnimations(Array.from(page.querySelectorAll('.gaming-preset-card, .gaming-pcard, .gaming-toggle-card, .gaming-slider-card, .gaming-adv-card, .gaming-tool-card, .gaming-empty-state')));
             applyFilter(tab.dataset.gamingFilter || 'all');
+            tab.classList.remove('is-activating');
+            void tab.offsetWidth;
+            tab.classList.add('is-activating');
+            scheduleGamingCardsOnEntry({ source: 'tab-click' });
         });
     });
 
@@ -7623,6 +7657,8 @@ const NETWORK_ENTRY_MOTION = {
     easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
 };
 let networkPageEnterMotionLastRun = 0;
+let networkTabMotionLastRun = 0;
+let networkTabMotionRequest = 0;
 
 function getNetworkEntryCards(page) {
     return Array.from(page.querySelectorAll('.net-pcard, .net-adv-card, .network-card')).filter(card => {
@@ -7703,12 +7739,25 @@ function animateNetworkCardsOnEntry() {
 function scheduleNetworkCardsOnEntry(options = {}) {
     const page = document.getElementById('page-network');
     if (!page) return;
+    const requestId = ++networkTabMotionRequest;
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             if (!page.classList.contains('active')) return;
             const now = performance.now();
             if (options.source === 'page-enter' && now - networkPageEnterMotionLastRun < 900) return;
             if (options.source === 'page-enter') networkPageEnterMotionLastRun = now;
+            if (options.source === 'tab-click') {
+                if (requestId !== networkTabMotionRequest) return;
+                if (now - networkTabMotionLastRun < 450) {
+                    setTimeout(() => {
+                        if (requestId !== networkTabMotionRequest || !page.classList.contains('active')) return;
+                        networkTabMotionLastRun = performance.now();
+                        animateNetworkCardsOnEntry();
+                    }, 450 - (now - networkTabMotionLastRun));
+                    return;
+                }
+                networkTabMotionLastRun = now;
+            }
             animateNetworkCardsOnEntry();
         });
     });
@@ -7719,12 +7768,10 @@ function initializeNetworkCards() {
     let netActiveFilter = 'all';
 
     function applyNetworkFilter() {
-        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const q = (document.getElementById('global-search')?.value || '').trim().toLowerCase();
         const allCards = document.querySelectorAll('#page-network [data-net-cat]');
         let featuredVisible = 0;
         let advancedVisible = 0;
-        let enterIndex = 0;
 
         allCards.forEach(card => {
             const cats  = (card.dataset.netCat || '').split(' ');
@@ -7732,6 +7779,27 @@ function initializeNetworkCards() {
             const catOk = netActiveFilter === 'all' || cats.includes(netActiveFilter);
             const textOk = !q || text.includes(q);
             const show   = catOk && textOk;
+
+            if (card._netAnim) {
+                card._netAnim.cancel();
+                card._netAnim = null;
+            }
+            if (card._networkEntryAnimation) {
+                card._networkEntryAnimation.cancel();
+                card._networkEntryAnimation = null;
+            }
+            clearEntryCardShine(card);
+            card.style.removeProperty('opacity');
+            card.style.removeProperty('transform');
+            card.style.removeProperty('filter');
+            card.style.removeProperty('will-change');
+            card.style.display = show ? '' : 'none';
+
+            if (show) {
+                if (card.classList.contains('net-pcard')) featuredVisible++;
+                else advancedVisible++;
+            }
+            return;
 
             const wasHidden = card.style.display === 'none';
 
@@ -7820,9 +7888,9 @@ function initializeNetworkCards() {
         const featuredSection = document.querySelector('#page-network .net-section:not(.net-section-adv)');
         const advancedSection = document.querySelector('#page-network .net-section-adv');
         if (featuredVisible > 0) { if (featuredSection) featuredSection.style.display = ''; }
-        else { setTimeout(() => { if (featuredSection) featuredSection.style.display = 'none'; }, 200); }
+        else if (featuredSection) featuredSection.style.display = 'none';
         if (advancedVisible > 0) { if (advancedSection) advancedSection.style.display = ''; }
-        else { setTimeout(() => { if (advancedSection) advancedSection.style.display = 'none'; }, 200); }
+        else if (advancedSection) advancedSection.style.display = 'none';
 
         // Empty state
         let emptyEl = document.getElementById('net-empty-state');
@@ -7868,7 +7936,9 @@ function initializeNetworkCards() {
         }
 
         netActiveFilter = tab.dataset.filter || 'all';
+        clearNetworkEntryCardAnimations(Array.from(document.querySelectorAll('#page-network .net-pcard, #page-network .net-adv-card, #page-network .network-card')));
         applyNetworkFilter();
+        scheduleNetworkCardsOnEntry({ source: 'tab-click' });
     });
 
     // Search — re-run combined filter when network page is active
