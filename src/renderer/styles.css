@@ -56,6 +56,44 @@ svg { max-width: 100%; max-height: 100%; }
   --radius-sm: 12px;
   --shadow: var(--shadow-soft);
   --shadow-glow: 0 0 60px var(--accent-glow);
+
+  /* Themed surface holdouts — overridden per data-theme; default keeps the
+     original Xins Premium look so the default theme is never altered. */
+  --hero-bg: #040406;
+  --topbar-bg: rgba(10, 10, 10, 0.55);
+
+  /* Dashboard surfaces — default values reproduce the original Xins Premium
+     look exactly (purple hero, blurple community card, dark glass stat cards).
+     Each theme overrides these so the Dashboard recolors coherently. */
+  --dashboard-hero-bg:
+    radial-gradient(140% 100% at 100% 0%, rgba(255,255,255,0.18) 0%, transparent 55%),
+    radial-gradient(80% 80% at 0% 100%, rgba(255,255,255,0.10) 0%, transparent 60%),
+    linear-gradient(135deg, #050505 0%, #0a0a0a 50%, #2e1066 100%);
+  --stat-card-bg:
+    linear-gradient(160deg, rgba(22,22,22,0.85) 0%, rgba(8,8,8,0.7) 60%, rgba(40,40,40,0.55) 100%);
+  --community-card-bg:
+    radial-gradient(120% 80% at 100% 0%, rgba(88,101,242,0.28) 0%, transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, rgba(255,255,255,0.18) 0%, transparent 60%),
+    linear-gradient(160deg, #0a0418 0%, #150a2e 40%, #2a1574 100%);
+  --community-card-glow: rgba(88,101,242,0.12);
+  --community-accent: #5865f2;
+  --community-accent-2: #4752c4;
+  --community-glow: rgba(88,101,242,0.45);
+
+  /* Icons & toolbars — defaults reproduce the original Xins Premium look.
+     Each theme overrides these so card icons, search bars and filter/action
+     bars recolor with the theme. */
+  --icon-color: rgba(255,255,255,0.78);
+  --icon-muted: var(--text-muted);
+  --icon-accent: var(--accent-primary);
+  --card-icon-bg:
+    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.055) 33%, rgba(255,255,255,0.012) 62%, rgba(255,255,255,0) 100%),
+    linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.025) 38%, rgba(255,255,255,0.006) 72%),
+    linear-gradient(145deg, rgba(34,34,36,0.96) 0%, rgba(14,14,15,0.98) 58%, rgba(26,26,28,0.94) 100%);
+  --toolbar-bg: linear-gradient(165deg, rgba(14,14,18,0.96) 0%, rgba(8,8,10,1) 100%);
+  --search-bg: rgba(255,255,255,0.04);
+  --search-border: rgba(255,255,255,0.10);
+  --search-focus-border: rgba(255,255,255,0.20);
 }
 
 :root[data-theme="xins-premium"] {
@@ -72,46 +110,146 @@ svg { max-width: 100%; max-height: 100%; }
   --shadow-soft: 0 16px 50px rgba(0, 0, 0, 0.82);
 }
 
+/* Obsidian — deep black graphite, silver edge highlights, stealth/blacked-out */
 :root[data-theme="obsidian"] {
-  --app-bg: #070708;
-  --app-bg-soft: #111216;
-  --panel-bg: rgba(34, 35, 38, 0.54);
-  --panel-bg-strong: rgba(46, 48, 52, 0.70);
-  --panel-border: rgba(255, 255, 255, 0.085);
-  --panel-border-hover: rgba(255, 255, 255, 0.20);
-  --text-primary: #ffffff;
-  --text-secondary: #c9cbd0;
-  --button-bg: linear-gradient(135deg, #202126 0%, #62666e 100%);
-  --button-border: rgba(255, 255, 255, 0.24);
-  --shadow-soft: 0 12px 40px rgba(0, 0, 0, 0.58);
+  --app-bg: #08090b;
+  --app-bg-soft: #15161b;
+  --panel-bg: rgba(30, 32, 36, 0.55);
+  --panel-bg-strong: rgba(44, 47, 53, 0.74);
+  --panel-border: rgba(214, 218, 226, 0.10);
+  --panel-border-hover: rgba(220, 224, 232, 0.24);
+  --text-primary: #f5f6f8;
+  --text-secondary: #bdc1c9;
+  --button-bg: linear-gradient(135deg, #1c1d22 0%, #4d515a 100%);
+  --button-border: rgba(220, 224, 232, 0.24);
+  --shadow-soft: 0 14px 44px rgba(0, 0, 0, 0.70);
+  /* graphite/silver accent so glow, nav-active and borders read across the app */
+  --accent-primary: #cfd2d8;
+  --accent-rgb: 207, 210, 216;
+  --accent-glow: rgba(214, 220, 230, 0.13);
+  --accent-border: rgba(208, 213, 222, 0.30);
+  --accent-gradient: linear-gradient(135deg, #dfe2e8 0%, #ffffff 48%, #8e929b 100%);
+  --hero-bg: radial-gradient(120% 150% at 50% -25%, #1a1c22 0%, #0a0b0e 58%, #060709 100%);
+  --topbar-bg: rgba(18, 19, 23, 0.60);
+  /* Dashboard — stealth graphite/black with silver edge glow */
+  --dashboard-hero-bg:
+    radial-gradient(140% 100% at 100% 0%, rgba(228,232,238,0.16) 0%, transparent 55%),
+    radial-gradient(80% 80% at 0% 100%, rgba(255,255,255,0.06) 0%, transparent 60%),
+    linear-gradient(135deg, #060708 0%, #0e0f12 50%, #2b2e35 100%);
+  --stat-card-bg:
+    linear-gradient(160deg, rgba(34,36,40,0.85) 0%, rgba(10,11,13,0.74) 60%, rgba(52,55,61,0.55) 100%);
+  --community-card-bg:
+    radial-gradient(120% 80% at 100% 0%, rgba(206,212,222,0.12) 0%, transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, rgba(255,255,255,0.08) 0%, transparent 60%),
+    linear-gradient(160deg, #0a0b0d 0%, #17191e 40%, #2e323a 100%);
+  --community-card-glow: rgba(200,206,216,0.12);
+  --community-accent: #565a63;
+  --community-accent-2: #2c2f36;
+  --community-glow: rgba(190,196,206,0.40);
+  /* Icons & toolbars — graphite tiles, silver glyphs, black search/filter bars */
+  --icon-color: rgba(228,232,238,0.82);
+  --icon-accent: #cfd2d8;
+  --card-icon-bg:
+    radial-gradient(circle at 24% 18%, rgba(228,232,238,0.20) 0%, rgba(228,232,238,0.06) 33%, rgba(228,232,238,0.014) 62%, transparent 100%),
+    linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 38%, transparent 72%),
+    linear-gradient(145deg, rgba(48,50,56,0.96) 0%, rgba(18,19,22,0.98) 58%, rgba(38,40,45,0.94) 100%);
+  --toolbar-bg: linear-gradient(165deg, rgba(26,28,32,0.96) 0%, rgba(10,11,13,1) 100%);
+  --search-bg: rgba(228,232,238,0.05);
+  --search-border: rgba(220,224,232,0.12);
 }
 
+/* Silver Mist — dark gunmetal/steel, brushed silver glass, pearl highlights */
 :root[data-theme="silver-mist"] {
-  --app-bg: #0b0c0e;
-  --app-bg-soft: #1a1c20;
-  --panel-bg: rgba(74, 76, 82, 0.42);
-  --panel-bg-strong: rgba(92, 96, 104, 0.60);
-  --panel-border: rgba(255, 255, 255, 0.13);
-  --panel-border-hover: rgba(255, 255, 255, 0.29);
-  --text-primary: #ffffff;
-  --text-secondary: #d3d5d9;
-  --button-bg: linear-gradient(135deg, #30333a 0%, #858b96 100%);
-  --button-border: rgba(255, 255, 255, 0.30);
-  --shadow-soft: 0 12px 38px rgba(0, 0, 0, 0.50);
+  --app-bg: #15171c;
+  --app-bg-soft: #262a32;
+  --panel-bg: rgba(78, 84, 94, 0.42);
+  --panel-bg-strong: rgba(98, 105, 117, 0.62);
+  --panel-border: rgba(228, 232, 240, 0.18);
+  --panel-border-hover: rgba(236, 240, 247, 0.36);
+  --text-primary: #f7f8fa;
+  --text-secondary: #cfd3db;
+  --button-bg: linear-gradient(135deg, #3c424c 0%, #9ea5b1 100%);
+  --button-border: rgba(236, 240, 247, 0.36);
+  --shadow-soft: 0 14px 40px rgba(0, 0, 0, 0.50);
+  --accent-primary: #e2e6ed;
+  --accent-rgb: 226, 230, 237;
+  --accent-glow: rgba(216, 223, 233, 0.18);
+  --accent-border: rgba(224, 230, 240, 0.40);
+  --accent-gradient: linear-gradient(135deg, #f0f2f6 0%, #c6ccd6 50%, #9aa1ad 100%);
+  --hero-bg: linear-gradient(157deg, #2b2f37 0%, #1b1e24 64%, #14161a 100%);
+  --topbar-bg: rgba(40, 44, 52, 0.50);
+  /* Dashboard — gunmetal/steel with silver mist accents */
+  --dashboard-hero-bg:
+    radial-gradient(140% 100% at 100% 0%, rgba(255,255,255,0.20) 0%, transparent 55%),
+    radial-gradient(80% 80% at 0% 100%, rgba(214,221,232,0.09) 0%, transparent 60%),
+    linear-gradient(135deg, #15171c 0%, #232831 50%, #3c424d 100%);
+  --stat-card-bg:
+    linear-gradient(160deg, rgba(90,97,109,0.52) 0%, rgba(42,46,53,0.62) 60%, rgba(110,117,130,0.42) 100%);
+  --community-card-bg:
+    radial-gradient(120% 80% at 100% 0%, rgba(216,223,234,0.18) 0%, transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, rgba(255,255,255,0.14) 0%, transparent 60%),
+    linear-gradient(160deg, #1a1d22 0%, #2b3039 40%, #464d59 100%);
+  --community-card-glow: rgba(204,213,226,0.15);
+  --community-accent: #717a87;
+  --community-accent-2: #3c424c;
+  --community-glow: rgba(196,206,220,0.42);
+  /* Icons & toolbars — brushed-steel tiles, pearl glyphs, gunmetal search/filter bars */
+  --icon-color: rgba(244,247,250,0.90);
+  --icon-accent: #e2e6ed;
+  --card-icon-bg:
+    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.07) 33%, transparent 62%),
+    linear-gradient(145deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 38%, transparent 72%),
+    linear-gradient(145deg, rgba(96,103,114,0.92) 0%, rgba(48,52,60,0.96) 58%, rgba(82,89,100,0.90) 100%);
+  --toolbar-bg: linear-gradient(165deg, rgba(48,52,60,0.92) 0%, rgba(26,29,34,1) 100%);
+  --search-bg: rgba(236,240,247,0.07);
+  --search-border: rgba(236,240,247,0.16);
 }
 
+/* Frost Glass — cool slate / icy translucent glass, pale blue-silver highlights */
 :root[data-theme="frost-glass"] {
-  --app-bg: #101114;
-  --app-bg-soft: #20232a;
-  --panel-bg: rgba(112, 116, 126, 0.32);
-  --panel-bg-strong: rgba(132, 138, 148, 0.46);
-  --panel-border: rgba(255, 255, 255, 0.16);
-  --panel-border-hover: rgba(255, 255, 255, 0.31);
-  --text-primary: #ffffff;
-  --text-secondary: #e1e4ea;
-  --button-bg: linear-gradient(135deg, #3d4149 0%, #aeb4bf 100%);
-  --button-border: rgba(255, 255, 255, 0.32);
-  --shadow-soft: 0 12px 34px rgba(0, 0, 0, 0.44);
+  --app-bg: #0e151e;
+  --app-bg-soft: #1c2837;
+  --panel-bg: rgba(150, 172, 198, 0.20);
+  --panel-bg-strong: rgba(166, 188, 214, 0.32);
+  --panel-border: rgba(214, 230, 247, 0.22);
+  --panel-border-hover: rgba(222, 237, 251, 0.42);
+  --text-primary: #f2f7fd;
+  --text-secondary: #c9d6e6;
+  --button-bg: linear-gradient(135deg, #31465e 0%, #a9bdd4 100%);
+  --button-border: rgba(222, 237, 251, 0.40);
+  --shadow-soft: 0 14px 38px rgba(8, 18, 32, 0.50);
+  --accent-primary: #cfe1f4;
+  --accent-rgb: 207, 225, 244;
+  --accent-glow: rgba(186, 214, 246, 0.24);
+  --accent-border: rgba(202, 224, 248, 0.44);
+  --accent-gradient: linear-gradient(135deg, #e8f3fd 0%, #bcd4ec 50%, #8eb1d6 100%);
+  --hero-bg: linear-gradient(157deg, #233448 0%, #16212e 66%, #101822 100%);
+  --topbar-bg: rgba(36, 54, 74, 0.42);
+  /* Dashboard — cool frosted slate with pale blue-silver accents */
+  --dashboard-hero-bg:
+    radial-gradient(140% 100% at 100% 0%, rgba(222,238,253,0.20) 0%, transparent 55%),
+    radial-gradient(80% 80% at 0% 100%, rgba(255,255,255,0.10) 0%, transparent 60%),
+    linear-gradient(135deg, #0e151e 0%, #1b2937 50%, #2f4358 100%);
+  --stat-card-bg:
+    linear-gradient(160deg, rgba(154,176,202,0.26) 0%, rgba(92,114,142,0.30) 60%, rgba(176,198,222,0.18) 100%);
+  --community-card-bg:
+    radial-gradient(120% 80% at 100% 0%, rgba(184,214,246,0.22) 0%, transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, rgba(255,255,255,0.16) 0%, transparent 60%),
+    linear-gradient(160deg, #122031 0%, #1e3247 40%, #355476 100%);
+  --community-card-glow: rgba(156,200,242,0.18);
+  --community-accent: #5b86b8;
+  --community-accent-2: #33567c;
+  --community-glow: rgba(150,196,240,0.45);
+  /* Icons & toolbars — icy translucent tiles, blue-white glyphs, frosted search/filter bars */
+  --icon-color: rgba(240,248,255,0.92);
+  --icon-accent: #cfe1f4;
+  --card-icon-bg:
+    radial-gradient(circle at 24% 18%, rgba(224,240,255,0.26) 0%, rgba(224,240,255,0.08) 33%, transparent 62%),
+    linear-gradient(145deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 38%, transparent 72%),
+    linear-gradient(145deg, rgba(120,150,184,0.50) 0%, rgba(60,86,118,0.62) 58%, rgba(150,180,210,0.42) 100%);
+  --toolbar-bg: linear-gradient(165deg, rgba(40,58,78,0.82) 0%, rgba(18,28,40,0.96) 100%);
+  --search-bg: rgba(214,232,250,0.09);
+  --search-border: rgba(214,232,250,0.20);
 }
 
 :root[data-accent-finish="graphite"] {
@@ -388,7 +526,7 @@ body::after {
   align-items: center;
   gap: 16px;
   padding: 18px 28px;
-  background: rgba(10, 10, 10, 0.55);
+  background: var(--topbar-bg, rgba(10, 10, 10, 0.55));
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   border-bottom: 1px solid var(--border);
@@ -401,7 +539,7 @@ body::after {
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  background: rgba(255,255,255,0.04);
+  background: var(--search-bg);
   border: 1px solid var(--border);
   border-radius: 12px;
   transition: border-color 0.2s ease, background 0.2s ease;
@@ -577,10 +715,7 @@ body::after {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 32px;
-  background:
-    radial-gradient(140% 100% at 100% 0%, rgba(255,255,255,0.18) 0%, transparent 55%),
-    radial-gradient(80% 80% at 0% 100%, rgba(255,255,255,0.10) 0%, transparent 60%),
-    linear-gradient(135deg, #050505 0%, #0a0a0a 50%, #2e1066 100%);
+  background: var(--dashboard-hero-bg);
   border: 1px solid rgba(255,255,255,0.18);
   overflow: hidden;
 }
@@ -1013,7 +1148,7 @@ body::after {
   gap: 14px;
   cursor: pointer;
   min-height: 290px;
-  background: linear-gradient(160deg, rgba(22, 22, 22,0.85) 0%, rgba(8, 8, 8,0.7) 60%, rgba(40, 40, 40,0.55) 100%);
+  background: var(--stat-card-bg);
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
               border-color 0.3s ease,
               box-shadow 0.3s ease;
@@ -1236,24 +1371,21 @@ body::after {
 
 .side-panel {
   padding: 24px;
-  background:
-    radial-gradient(120% 80% at 100% 0%, rgba(88,101,242,0.28) 0%, transparent 55%),
-    radial-gradient(80% 60% at 0% 100%, rgba(255,255,255,0.18) 0%, transparent 60%),
-    linear-gradient(160deg, #0a0418 0%, #150a2e 40%, #2a1574 100%);
+  background: var(--community-card-bg);
   border: 1px solid rgba(255,255,255,0.4);
   display: flex;
   flex-direction: column;
   gap: 18px;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 60px rgba(88,101,242,0.12);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 60px var(--community-card-glow);
 }
 
 .discord-bg-glow {
   position: absolute;
   top: -50%; right: -50%;
   width: 320px; height: 320px;
-  background: radial-gradient(circle, rgba(88,101,242,0.4) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--community-glow) 0%, transparent 70%);
   filter: blur(40px);
   pointer-events: none;
   animation: discordPulse 5s ease-in-out infinite;
@@ -1286,8 +1418,8 @@ body::after {
   width: 48px; height: 48px;
   border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
-  box-shadow: 0 8px 22px rgba(88,101,242,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+  background: linear-gradient(135deg, var(--community-accent) 0%, var(--community-accent-2) 100%);
+  box-shadow: 0 8px 22px var(--community-glow), inset 0 1px 0 rgba(255,255,255,0.2);
   flex-shrink: 0;
 }
 .discord-mark svg { width: 24px; height: 24px; color: #fff; }
@@ -1365,7 +1497,7 @@ body::after {
   justify-content: center;
   gap: 10px;
   padding: 13px 18px;
-  background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+  background: linear-gradient(135deg, var(--community-accent) 0%, var(--community-accent-2) 100%);
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -1376,12 +1508,12 @@ body::after {
   cursor: pointer;
   text-decoration: none;
   overflow: hidden;
-  box-shadow: 0 10px 28px rgba(88,101,242,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+  box-shadow: 0 10px 28px var(--community-glow), inset 0 1px 0 rgba(255,255,255,0.18);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .discord-join-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 36px rgba(88,101,242,0.6), inset 0 1px 0 rgba(255,255,255,0.25);
+  box-shadow: 0 14px 36px var(--community-glow), inset 0 1px 0 rgba(255,255,255,0.25);
 }
 .discord-join-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 .djb-shimmer {
@@ -4504,14 +4636,14 @@ body.game-tune-active .top-bar {
 }
 .top-bar.net-integrated .top-bar-search,
 .top-bar.gaming-integrated .top-bar-search {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--search-bg);
+  border: 1px solid var(--search-border, rgba(255,255,255,0.1));
   border-radius: 10px;
   box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
 }
 .top-bar.net-integrated .top-bar-search:focus-within,
 .top-bar.gaming-integrated .top-bar-search:focus-within {
-  border-color: rgba(255,255,255,0.2);
+  border-color: var(--search-focus-border, rgba(255,255,255,0.2));
   background: rgba(255,255,255,0.06);
   box-shadow: 0 0 0 1px rgba(255,255,255,0.06) inset;
 }
@@ -7395,7 +7527,7 @@ ol.ai-msg-list li {
   padding: 42px 36px 40px;
   margin-bottom: 16px;
   border-radius: 18px;
-  background: #040406;
+  background: var(--hero-bg, #040406);
   border: 1px solid rgba(255,255,255,0.11);
   overflow: hidden;
   isolation: isolate;
@@ -7531,7 +7663,7 @@ ol.ai-msg-list li {
   justify-content: flex-start;
   margin-bottom: 26px;
   padding: 5px 10px 5px 5px;
-  background: linear-gradient(165deg, rgba(14,14,18,0.96) 0%, rgba(8,8,10,1) 100%);
+  background: var(--toolbar-bg);
   border: 1px solid rgba(255,255,255,0.09);
   border-radius: 13px;
   box-shadow:
@@ -7695,10 +7827,7 @@ ol.ai-msg-list li {
   position: relative;
   overflow: hidden;
   border-radius: 13px;
-  background:
-    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.055) 33%, rgba(255,255,255,0.012) 62%, rgba(255,255,255,0) 100%),
-    linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.025) 38%, rgba(255,255,255,0.006) 72%),
-    linear-gradient(145deg, rgba(34,34,36,0.96) 0%, rgba(14,14,15,0.98) 58%, rgba(26,26,28,0.94) 100%);
+  background: var(--card-icon-bg);
   border: 1px solid rgba(218,218,222,0.18);
   color: rgba(255,255,255,0.55);
   display: flex; align-items: center; justify-content: center;
@@ -8142,7 +8271,7 @@ ol.ai-msg-list li {
   padding: 42px 36px 40px;
   margin-bottom: 16px;
   border-radius: 18px;
-  background: #040406;
+  background: var(--hero-bg, #040406);
   border: 1px solid rgba(255,255,255,0.11);
   overflow: hidden;
   isolation: isolate;
@@ -8257,7 +8386,7 @@ ol.ai-msg-list li {
   justify-content: flex-start;
   margin-bottom: 26px;
   padding: 5px 10px 5px 5px;
-  background: linear-gradient(165deg, rgba(14,14,18,0.96) 0%, rgba(8,8,10,1) 100%);
+  background: var(--toolbar-bg);
   border: 1px solid rgba(255,255,255,0.09);
   border-radius: 13px;
   box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 4px 16px rgba(0,0,0,0.45);
@@ -8412,10 +8541,7 @@ ol.ai-msg-list li {
   position: relative;
   overflow: hidden;
   border-radius: 13px;
-  background:
-    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.055) 33%, rgba(255,255,255,0.012) 62%, rgba(255,255,255,0) 100%),
-    linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.025) 38%, rgba(255,255,255,0.006) 72%),
-    linear-gradient(145deg, rgba(34,34,36,0.96) 0%, rgba(14,14,15,0.98) 58%, rgba(26,26,28,0.94) 100%);
+  background: var(--card-icon-bg);
   border: 1px solid rgba(218,218,222,0.18);
   color: rgba(255,255,255,0.58);
   display: flex;
@@ -8651,10 +8777,7 @@ ol.ai-msg-list li {
   position: relative;
   overflow: hidden;
   border-radius: 13px;
-  background:
-    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.055) 33%, rgba(255,255,255,0.012) 62%, rgba(255,255,255,0) 100%),
-    linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.025) 38%, rgba(255,255,255,0.006) 72%),
-    linear-gradient(145deg, rgba(34,34,36,0.96) 0%, rgba(14,14,15,0.98) 58%, rgba(26,26,28,0.94) 100%);
+  background: var(--card-icon-bg);
   border: 1px solid rgba(218,218,222,0.18);
   color: rgba(255,255,255,0.55);
   display: flex;
@@ -8931,7 +9054,7 @@ ol.ai-msg-list li {
   padding: 42px 36px 40px;
   margin-bottom: 16px;
   border-radius: 18px;
-  background: #040406;
+  background: var(--hero-bg, #040406);
   border: 1px solid rgba(255,255,255,0.11);
   overflow: visible;
   isolation: isolate;
@@ -9250,12 +9373,12 @@ ol.ai-msg-list li {
   height: 42px;
   padding: 0 14px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--search-border, rgba(255,255,255,0.1));
+  background: var(--search-bg);
   box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
 }
 #page-fortnite .game-tune-search:focus-within {
-  border-color: rgba(255,255,255,0.2);
+  border-color: var(--search-focus-border, rgba(255,255,255,0.2));
   background: rgba(255,255,255,0.06);
 }
 #page-fortnite .game-tune-search svg {
@@ -10593,7 +10716,7 @@ ol.ai-msg-list li {
   padding: 42px 36px 40px;
   margin-bottom: 16px;
   border-radius: 18px;
-  background: #040406;
+  background: var(--hero-bg, #040406);
   border: 1px solid rgba(255,255,255,0.11);
   overflow: hidden;
   isolation: isolate;
@@ -10714,7 +10837,7 @@ ol.ai-msg-list li {
   justify-content: flex-start;
   margin-bottom: 26px;
   padding: 5px 10px 5px 5px;
-  background: linear-gradient(165deg, rgba(14,14,18,0.96) 0%, rgba(8,8,10,1) 100%);
+  background: var(--toolbar-bg);
   border: 1px solid rgba(255,255,255,0.09);
   border-radius: 13px;
   box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 4px 16px rgba(0,0,0,0.45);
@@ -10841,10 +10964,7 @@ ol.ai-msg-list li {
   position: relative;
   overflow: hidden;
   border-radius: 13px;
-  background:
-    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.055) 33%, rgba(255,255,255,0.012) 62%, rgba(255,255,255,0) 100%),
-    linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.025) 38%, rgba(255,255,255,0.006) 72%),
-    linear-gradient(145deg, rgba(34,34,36,0.96) 0%, rgba(14,14,15,0.98) 58%, rgba(26,26,28,0.94) 100%);
+  background: var(--card-icon-bg);
   border: 1px solid rgba(218,218,222,0.18);
   color: rgba(255,255,255,0.55);
   display: flex;
@@ -10919,7 +11039,7 @@ ol.ai-msg-list li {
   padding: 42px 36px 40px;
   margin-bottom: 16px;
   border-radius: 18px;
-  background: #040406;
+  background: var(--hero-bg, #040406);
   border: 1px solid rgba(255,255,255,0.11);
   overflow: hidden;
   isolation: isolate;
@@ -11038,7 +11158,7 @@ ol.ai-msg-list li {
   justify-content: flex-start;
   margin-bottom: 26px;
   padding: 5px 10px 5px 5px;
-  background: linear-gradient(165deg, rgba(14,14,18,0.96) 0%, rgba(8,8,10,1) 100%);
+  background: var(--toolbar-bg);
   border: 1px solid rgba(255,255,255,0.09);
   border-radius: 13px;
   box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 4px 16px rgba(0,0,0,0.45);
@@ -11165,10 +11285,7 @@ ol.ai-msg-list li {
   position: relative;
   overflow: hidden;
   border-radius: 13px;
-  background:
-    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.055) 33%, rgba(255,255,255,0.012) 62%, rgba(255,255,255,0) 100%),
-    linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.025) 38%, rgba(255,255,255,0.006) 72%),
-    linear-gradient(145deg, rgba(34,34,36,0.96) 0%, rgba(14,14,15,0.98) 58%, rgba(26,26,28,0.94) 100%);
+  background: var(--card-icon-bg);
   border: 1px solid rgba(218,218,222,0.18);
   color: rgba(255,255,255,0.55);
   display: flex;
@@ -12368,6 +12485,8 @@ ol.ai-msg-list li {
 
 .settings-theme-card {
   position: relative;
+  z-index: 1;                 /* sit above the decorative ::before wash */
+  pointer-events: auto;       /* the button is always the click target */
   min-height: 82px;
   display: grid;
   align-content: end;
@@ -12390,11 +12509,15 @@ ol.ai-msg-list li {
   position: absolute;
   inset: 0;
   opacity: 0.92;
+  pointer-events: none; /* decorative preview wash — never swallow card clicks */
 }
 
+/* Children are visual only; let every click fall through to the button itself so
+   the entire visible card is the hitbox (fixes Obsidian "only a corner" clicks). */
 .settings-theme-card > * {
   position: relative;
   z-index: 1;
+  pointer-events: none;
 }
 
 .settings-theme-card b {
@@ -12409,25 +12532,46 @@ ol.ai-msg-list li {
 
 .settings-theme-card.is-selected {
   border-color: var(--accent-border);
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 0 16px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.12);
+  box-shadow:
+    0 0 0 1.5px var(--accent-border),
+    0 0 0 4px color-mix(in srgb, var(--accent-glow) 55%, transparent),
+    0 8px 22px var(--accent-glow),
+    inset 0 1px 0 rgba(255,255,255,0.14);
+  transform: translateY(-1px);
+}
+.settings-theme-card.is-selected::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 13px;
+  height: 13px;
+  z-index: 2;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-bg) 72%, transparent), 0 2px 6px rgba(0,0,0,0.45);
+  pointer-events: none;
 }
 
+/* Obsidian preview — graphite black with a silver sheen */
 .settings-theme-premium::before {
   background:
-    radial-gradient(circle at 50% 42%, rgba(255,255,255,0.11), transparent 32%),
-    linear-gradient(145deg, rgba(36,38,43,0.82), rgba(5,5,6,0.94) 68%);
+    radial-gradient(circle at 50% 34%, rgba(220,224,230,0.16), transparent 38%),
+    linear-gradient(145deg, rgba(40,42,48,0.95), rgba(8,9,11,0.98) 70%);
 }
 
 .settings-theme-midnight::before {
   background: linear-gradient(145deg, rgba(18,20,25,0.78), rgba(2,2,3,0.96) 70%);
 }
 
+/* Silver Mist preview — brushed gunmetal steel */
 .settings-theme-silver::before {
-  background: linear-gradient(135deg, rgba(243,244,247,0.86) 0%, rgba(117,122,130,0.72) 46%, rgba(47,50,56,0.82) 100%);
+  background: linear-gradient(135deg, rgba(180,186,196,0.92) 0%, rgba(110,116,126,0.84) 48%, rgba(44,48,55,0.92) 100%);
 }
 
+/* Frost Glass preview — icy translucent blue glass */
 .settings-theme-light::before {
-  background: linear-gradient(135deg, rgba(255,255,255,0.88), rgba(222,224,229,0.78) 56%, rgba(248,249,251,0.86));
+  background: linear-gradient(135deg, rgba(214,232,250,0.92), rgba(150,182,214,0.78) 55%, rgba(96,128,162,0.90));
 }
 
 .settings-theme-logo {
