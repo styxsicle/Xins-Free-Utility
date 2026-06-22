@@ -129,6 +129,7 @@ function initializeNavigation() {
             document.body.classList.remove('game-tune-active');
             document.body.classList.add('net-page-active');
             _integrateNetTopBar();
+            scheduleNetworkCardsOnEntry({ source: 'page-enter' });
         } else if (targetPage === 'gaming') {
             document.body.classList.remove('ai-tweaker-active');
             document.body.classList.remove('net-page-active');
@@ -4669,6 +4670,29 @@ function hideTooltip() {
     if (toggleTooltip) toggleTooltip.classList.remove('visible');
 }
 
+const ENTRY_CARD_SHINE_DURATION = 780;
+const ENTRY_CARD_SHINE_OFFSET = 60;
+
+function clearEntryCardShine(item) {
+    if (!item) return;
+    if (item._entryShineTimer) {
+        clearTimeout(item._entryShineTimer);
+        item._entryShineTimer = null;
+    }
+    item.classList.remove('page-card-entry-shine');
+    item.style.removeProperty('--entry-shine-delay');
+}
+
+function applyEntryCardShine(item, index, stagger = 55, duration = ENTRY_CARD_SHINE_DURATION) {
+    if (!item) return;
+    clearEntryCardShine(item);
+    item.style.setProperty('--entry-shine-delay', `${index * stagger + ENTRY_CARD_SHINE_OFFSET}ms`);
+    item.classList.add('page-card-entry-shine');
+    item._entryShineTimer = setTimeout(() => {
+        clearEntryCardShine(item);
+    }, index * stagger + ENTRY_CARD_SHINE_OFFSET + duration + 180);
+}
+
 const GAMING_ENTRY_MOTION = {
     duration: 620,
     stagger: 55,
@@ -4702,6 +4726,7 @@ function clearGamingEntryCardAnimations(items = []) {
             item._gamingWaapiAnimation.cancel();
             item._gamingWaapiAnimation = null;
         }
+        clearEntryCardShine(item);
         item.style.removeProperty('will-change');
         item.style.removeProperty('opacity');
         item.style.removeProperty('transform');
@@ -4722,6 +4747,7 @@ function animateGamingCardsOnEntry() {
     targetItems.forEach((item, index) => {
         const rect = item.getBoundingClientRect();
         if (rect.width < 8 || rect.height < 8) return;
+        applyEntryCardShine(item, index, GAMING_ENTRY_MOTION.stagger);
 
         const animation = item.animate([
             {
@@ -4818,6 +4844,13 @@ function initializeGamingPage() {
     if (page.classList.contains('active')) scheduleGamingCardsOnEntry({ source: 'page-enter' });
 }
 
+const GAMING_CARD_DESCRIPTIONS = {
+    'gaming-game-bar': 'Control the Xbox Game Bar overlay and background capture behavior.',
+    'gaming-game-mode': 'Tune Windows Game Mode behavior for smoother gaming sessions.',
+    'gaming-mouse-accel': 'Adjust pointer precision behavior for more consistent aim and input.',
+    'gaming-fullscreen-opt': 'Control Windows fullscreen optimization behavior for game compatibility.'
+};
+
 function enhanceToggleCards() {
     const cards = document.querySelectorAll('.toggle-card[data-toggle]');
     cards.forEach(card => {
@@ -4839,6 +4872,7 @@ function enhanceToggleCards() {
 
         if (card.classList.contains('gaming-pcard')) {
             const detail = TOGGLE_DETAILS[id] || {};
+            const cardDesc = GAMING_CARD_DESCRIPTIONS[id] || desc;
             card.innerHTML = `
                 <span class="tc-aurora" aria-hidden="true"></span>
                 <span class="tc-shine" aria-hidden="true"></span>
@@ -4849,7 +4883,7 @@ function enhanceToggleCards() {
                 </div>
                 <div class="pcard-body">
                     <h4 class="pcard-title">${title}</h4>
-                    <p class="pcard-desc">${desc}</p>
+                    <p class="pcard-desc">${cardDesc}</p>
                 </div>
                 <div class="pcard-tags">
                     <span class="pcard-tag">${detail.impact || 'Medium'} impact</span>
@@ -4968,6 +5002,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         enhanceToggleCards();
         enhanceNetworkCards();
+        if (document.getElementById('page-network')?.classList.contains('active')) {
+            scheduleNetworkCardsOnEntry({ source: 'page-enter' });
+        }
         if (document.getElementById('page-gaming')?.classList.contains('active')) {
             scheduleGamingCardsOnEntry({ source: 'page-enter' });
         }
@@ -7575,6 +7612,108 @@ function initializeAiTweaker() {
 }
 
 // ── Network Card Actions ──────────────────────────────────────
+const NETWORK_ENTRY_MOTION = {
+    duration: 620,
+    stagger: 55,
+    slideX: 0,
+    slideY: 14,
+    blur: 5,
+    opacity: 0,
+    scale: 0.985,
+    easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
+};
+let networkPageEnterMotionLastRun = 0;
+
+function getNetworkEntryCards(page) {
+    return Array.from(page.querySelectorAll('.net-pcard, .net-adv-card, .network-card')).filter(card => {
+        if (!card) return false;
+        if (card.closest('.net-hero, .net-filter-bar, .top-bar')) return false;
+        if (card.style.display === 'none') return false;
+        const rect = card.getBoundingClientRect();
+        return rect.width >= 8 && rect.height >= 8;
+    });
+}
+
+function clearNetworkEntryCardAnimations(items = []) {
+    items.forEach(item => {
+        if (item._networkEntryAnimation) {
+            item._networkEntryAnimation.cancel();
+            item._networkEntryAnimation = null;
+        }
+        clearEntryCardShine(item);
+        item.style.removeProperty('will-change');
+        item.style.removeProperty('opacity');
+        item.style.removeProperty('transform');
+        item.style.removeProperty('filter');
+    });
+}
+
+function animateNetworkCardsOnEntry() {
+    const page = document.getElementById('page-network');
+    if (!page?.classList.contains('active')) return 0;
+
+    const targetItems = getNetworkEntryCards(page);
+    clearNetworkEntryCardAnimations(targetItems);
+    if (targetItems[0]) targetItems[0].offsetHeight;
+
+    let started = 0;
+    targetItems.forEach((item, index) => {
+        const rect = item.getBoundingClientRect();
+        if (rect.width < 8 || rect.height < 8) return;
+        applyEntryCardShine(item, index, NETWORK_ENTRY_MOTION.stagger);
+
+        const animation = item.animate([
+            {
+                opacity: NETWORK_ENTRY_MOTION.opacity,
+                transform: `translate3d(${NETWORK_ENTRY_MOTION.slideX}px, ${NETWORK_ENTRY_MOTION.slideY}px, 0) scale(${NETWORK_ENTRY_MOTION.scale})`,
+                filter: `blur(${NETWORK_ENTRY_MOTION.blur}px)`
+            },
+            {
+                opacity: 1,
+                transform: 'translate3d(0, 0, 0) scale(1)',
+                filter: 'blur(0px)'
+            }
+        ], {
+            duration: NETWORK_ENTRY_MOTION.duration,
+            delay: index * NETWORK_ENTRY_MOTION.stagger,
+            easing: NETWORK_ENTRY_MOTION.easing,
+            fill: 'both'
+        });
+
+        item.style.willChange = 'transform, opacity, filter';
+        item._networkEntryAnimation = animation;
+        animation.finished
+            .catch(() => {})
+            .finally(() => {
+                if (item._networkEntryAnimation === animation) {
+                    animation.cancel();
+                    item._networkEntryAnimation = null;
+                    item.style.removeProperty('will-change');
+                    item.style.removeProperty('opacity');
+                    item.style.removeProperty('transform');
+                    item.style.removeProperty('filter');
+                }
+            });
+        started++;
+    });
+
+    return started;
+}
+
+function scheduleNetworkCardsOnEntry(options = {}) {
+    const page = document.getElementById('page-network');
+    if (!page) return;
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (!page.classList.contains('active')) return;
+            const now = performance.now();
+            if (options.source === 'page-enter' && now - networkPageEnterMotionLastRun < 900) return;
+            if (options.source === 'page-enter') networkPageEnterMotionLastRun = now;
+            animateNetworkCardsOnEntry();
+        });
+    });
+}
+
 function initializeNetworkCards() {
     // ── Tab filter + search ────────────────────────────────────
     let netActiveFilter = 'all';
