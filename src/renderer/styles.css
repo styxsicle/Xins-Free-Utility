@@ -10856,12 +10856,6 @@ ol.ai-msg-list li {
   font-weight: 700;
 }
 
-.input-decal-tuner {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255,255,255,0.12);
-}
-
 .input-tuner-subhead {
   display: flex;
   align-items: center;
@@ -10875,22 +10869,6 @@ ol.ai-msg-list li {
   text-transform: uppercase;
 }
 
-.input-decal-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: rgba(255,255,255,0.68);
-  font-size: 10.5px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.input-decal-toggle input {
-  width: 14px;
-  height: 14px;
-  accent-color: #d8d8d8;
-}
-
 .input-tuner-grid select {
   grid-column: span 2;
   min-height: 28px;
@@ -10900,11 +10878,6 @@ ol.ai-msg-list li {
   color: #fff;
   font-size: 11px;
   font-weight: 800;
-}
-
-.input-decal-copy {
-  width: 100%;
-  margin-top: 10px;
 }
 
 .input-viewer-stage {

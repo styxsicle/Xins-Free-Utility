@@ -1,3 +1,6 @@
+// Input page temporarily hidden until controller visualizer is stable.
+const INPUT_PAGE_ENABLED = false;
+
 let aiWelcomeShownThisSession = false;
 let aiWelcomePageEnterLastRun = 0;
 
@@ -22,7 +25,7 @@ function initializeApp() {
     loadSystemInfo();
     startLiveMonitoring();
     initializeGpuPage();
-    initializeInputTab();
+    if (INPUT_PAGE_ENABLED) initializeInputTab();
     initializeAiTweaker();
     initializeGamingPage();
     initializeGameTunePage();
@@ -94,7 +97,22 @@ function initializeNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     const pages = document.querySelectorAll('.page');
 
+    // Hide Input tab from sidebar if disabled
+    if (!INPUT_PAGE_ENABLED) {
+        const inputNavItem = document.querySelector('[data-page="input"]');
+        if (inputNavItem) {
+            inputNavItem.style.display = 'none';
+        }
+    }
+
     function activatePage(targetPage, activeItem = null) {
+        // Prevent Input page from being activated if disabled
+        if (!INPUT_PAGE_ENABLED && targetPage === 'input') {
+            targetPage = 'dashboard';
+            const dashboardNavItem = document.querySelector('[data-page="dashboard"]');
+            activeItem = dashboardNavItem;
+        }
+        
         navItems.forEach(nav => nav.classList.remove('active'));
         if (activeItem) activeItem.classList.add('active');
 
@@ -441,6 +459,9 @@ function initializeSettingsPage() {
 }
 
 function initializeInputTab() {
+    // Input page temporarily hidden until controller visualizer is stable.
+    if (!INPUT_PAGE_ENABLED) return;
+    
     const page = document.getElementById('page-input');
     if (!page) return;
 
@@ -456,16 +477,12 @@ function initializeInputTab() {
     const xboxCopyValuesBtn = document.getElementById('input-xbox-copy-values');
     const xboxResetSlidersBtn = document.getElementById('input-xbox-reset-sliders');
     const xboxTunerCloseBtn = document.getElementById('input-xbox-tuner-close');
-    const decalVisibleToggle = document.getElementById('input-decal-visible');
-    const decalSelectedEl = document.getElementById('input-decal-selected');
-    const decalCopyValuesBtn = document.getElementById('input-copy-decal-values');
-    const decalTunerPanel = xboxTuner?.querySelector('.input-decal-tuner');
     const selectedButtonEl = document.getElementById('input-selected-button');
     const assignmentSelect = document.getElementById('input-assignment-select');
     const profileStatus = document.getElementById('input-profile-status');
     const profileKey = 'xtweaks-input-remap-profile';
     const modelPaths = {
-        xbox: 'assets/models/controllers/xbox-controller-black/source/xbox.glb',
+        xbox: 'assets/models/controllers/xbox_elite_controller.glb',
         // Temporary PS5 asset: keep original materials/textures and replace with a higher-quality GLB later.
         ps5: 'assets/models/controllers/white_ps5_controller.glb',
         playstation: 'assets/models/controllers/white_ps5_controller.glb'
@@ -501,50 +518,8 @@ function initializeInputTab() {
         }
     };
     const INPUT_XBOX_DECAL_TUNER_ENABLED = false;
-    // The Xbox GLB exposes one shared mesh/material, so ABXY letters are a tunable model-space helper.
-    // Keep the helper out of camera bounds and disable this flag when final values are no longer needed.
-    const XBOX_BUTTON_DECAL_VISIBLE_DEFAULTS = {
-        position: { x: 1.2, y: 5.35, z: 3.95 },
-        rotation: { x: -Math.PI / 2, y: 0, z: 0 },
-        scale: 1,
-        letterSpacing: 0.16,
-        letterSize: 0.11,
-        surfaceOffset: 0.035,
-        offsets: {
-            a: { x: 0, y: 0, z: 0 },
-            b: { x: 0, y: 0, z: 0 },
-            x: { x: 0, y: 0, z: 0 },
-            y: { x: 0, y: 0, z: 0 }
-        }
-    };
-    const XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS = {
-        position: { x: 0.10, y: 0.18, z: -0.24 },
-        rotation: { x: -1.56, y: 0.67, z: -4.77 },
-        scale: 1,
-        letterSpacing: 0.045,
-        letterSize: 0.08,
-        surfaceOffset: -0.04,
-        offsets: {
-            a: { x: 0, y: 0, z: 0 },
-            b: { x: 0, y: 0, z: 0 },
-            x: { x: 0, y: 0, z: 0 },
-            y: { x: 0, y: 0, z: 0 }
-        }
-    };
-    const XBOX_BUTTON_DECALS = {
-        enabled: true,
-        showDebugAnchor: false,
-        xray: false,
-        position: { ...XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.position },
-        rotation: { ...XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.rotation },
-        scale: XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.scale,
-        letterSpacing: XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.letterSpacing,
-        letterSize: XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.letterSize,
-        surfaceOffset: XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.surfaceOffset,
-        offsets: JSON.parse(JSON.stringify(XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS.offsets))
-    };
     const INPUT_MODEL_MATERIAL_MODE = {
-        xbox: 'darkTintPreserveMaps',
+        xbox: 'preserveOriginal',
         ps5: 'preserveOriginal',
         playstation: 'preserveOriginal'
     };
@@ -573,15 +548,14 @@ function initializeInputTab() {
     let selectedButton = 'A / Cross';
     let profile = {};
     let threeViewer = null;
+    let threeViewerCreatePromise = null;
+    let inputViewerActivationSerial = 0;
     let rotationX = -8;
     let rotationY = 0;
     let isDragging = false;
     let dragStart = { x: 0, y: 0, rx: rotationX, ry: rotationY };
     let isTunerDragging = false;
     let tunerDragStart = { x: 0, y: 0, left: 0, top: 0 };
-    let selectedDecalButton = 'a';
-    let decalGroupReadoutEl = null;
-    let decalReadoutEl = null;
     let lastTimestamp = null;
     let pollingSamples = [];
 
@@ -799,135 +773,6 @@ function initializeInputTab() {
             lastFrame = { distance, radius, target, cameraOffset, rotation };
         };
 
-        const createXboxButtonLabelTexture = (label, color) => {
-            const size = 128;
-            const labelCanvas = document.createElement('canvas');
-            labelCanvas.width = size;
-            labelCanvas.height = size;
-            const context = labelCanvas.getContext('2d');
-            if (!context) return null;
-            context.clearRect(0, 0, size, size);
-            context.font = '700 74px Arial, sans-serif';
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-            context.shadowColor = 'rgba(255, 255, 255, 0.18)';
-            context.shadowBlur = 6;
-            context.fillStyle = color;
-            context.fillText(label, size / 2, size / 2 + 3);
-            const texture = new THREE.CanvasTexture(labelCanvas);
-            texture.colorSpace = THREE.SRGBColorSpace;
-            texture.needsUpdate = true;
-            return texture;
-        };
-
-        const createXboxButtonDecals = () => {
-            if (!XBOX_BUTTON_DECALS.enabled) return null;
-            const group = new THREE.Group();
-            group.name = 'xtweaks_xbox_button_decals';
-            group.visible = XBOX_BUTTON_DECALS.enabled;
-            group.userData.xtweaksExcludeFromBounds = true;
-            const colors = {
-                a: '#4ade80',
-                b: '#ef4444',
-                x: '#60a5fa',
-                y: '#facc15'
-            };
-
-            ['a', 'b', 'x', 'y'].forEach((button) => {
-                const geometry = new THREE.PlaneGeometry(1, 1);
-                const texture = createXboxButtonLabelTexture(button.toUpperCase(), colors[button]);
-                const material = new THREE.MeshBasicMaterial({
-                    name: `xtweaks_xbox_${button}_decal`,
-                    map: texture,
-                    transparent: true,
-                    opacity: 0.92,
-                    depthTest: false,
-                    depthWrite: false,
-                    side: THREE.DoubleSide
-                });
-                const decal = new THREE.Mesh(geometry, material);
-                decal.name = `xtweaks_xbox_${button}_button_decal`;
-                decal.userData.xtweaksDecalButton = button;
-                decal.userData.xtweaksExcludeFromBounds = true;
-                decal.renderOrder = 999;
-                group.add(decal);
-            });
-
-            const anchorMaterial = new THREE.MeshBasicMaterial({
-                name: 'xtweaks_xbox_decal_anchor_material',
-                color: 0xff4fd8,
-                depthTest: false,
-                depthWrite: false,
-                transparent: true,
-                opacity: 0.95
-            });
-            const anchor = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8), anchorMaterial);
-            anchor.name = 'xtweaks_xbox_decal_anchor';
-            anchor.userData.xtweaksExcludeFromBounds = true;
-            anchor.renderOrder = 1000;
-            anchor.visible = Boolean(XBOX_BUTTON_DECALS.showDebugAnchor);
-            group.add(anchor);
-
-            updateXboxButtonDecals(group);
-            return group;
-        };
-
-        const updateXboxButtonDecals = (group = currentModel?.getObjectByName?.('xtweaks_xbox_button_decals')) => {
-            if (!group) return;
-            group.visible = Boolean(XBOX_BUTTON_DECALS.enabled);
-            const xray = Boolean(XBOX_BUTTON_DECALS.xray);
-            group.position.set(
-                XBOX_BUTTON_DECALS.position.x,
-                XBOX_BUTTON_DECALS.position.y,
-                XBOX_BUTTON_DECALS.position.z
-            );
-            group.rotation.set(
-                XBOX_BUTTON_DECALS.rotation.x,
-                XBOX_BUTTON_DECALS.rotation.y,
-                XBOX_BUTTON_DECALS.rotation.z
-            );
-            group.scale.setScalar(XBOX_BUTTON_DECALS.scale);
-            const spacing = XBOX_BUTTON_DECALS.letterSpacing;
-            const positions = {
-                a: { x: 0, y: -spacing, z: XBOX_BUTTON_DECALS.surfaceOffset },
-                b: { x: spacing, y: 0, z: XBOX_BUTTON_DECALS.surfaceOffset },
-                x: { x: -spacing, y: 0, z: XBOX_BUTTON_DECALS.surfaceOffset },
-                y: { x: 0, y: spacing, z: XBOX_BUTTON_DECALS.surfaceOffset }
-            };
-            group.children.forEach((decal) => {
-                const button = decal.userData.xtweaksDecalButton;
-                if (!button) {
-                    decal.visible = Boolean(XBOX_BUTTON_DECALS.showDebugAnchor);
-                    if (decal.material) {
-                        decal.material.depthTest = xray ? false : true;
-                        decal.material.depthWrite = false;
-                        decal.renderOrder = xray ? 1000 : 1;
-                    }
-                    decal.position.set(0, 0, XBOX_BUTTON_DECALS.surfaceOffset);
-                    decal.rotation.set(0, 0, 0);
-                    decal.scale.setScalar(1);
-                    return;
-                }
-                const position = positions[button];
-                if (!position) return;
-                const offset = XBOX_BUTTON_DECALS.offsets?.[button] || { x: 0, y: 0, z: 0 };
-                if (decal.material) {
-                    decal.material.depthTest = xray ? false : true;
-                    decal.material.depthWrite = false;
-                    decal.material.side = xray ? THREE.DoubleSide : THREE.FrontSide;
-                    decal.material.needsUpdate = true;
-                    decal.renderOrder = xray ? 999 : 1;
-                }
-                decal.position.set(
-                    position.x + offset.x,
-                    position.y + offset.y,
-                    position.z + offset.z
-                );
-                decal.rotation.set(0, 0, 0);
-                decal.scale.setScalar(XBOX_BUTTON_DECALS.letterSize);
-            });
-        };
-
         const frameModel = (model, modelKey) => {
             const framingKey = modelKey === 'ps5' ? 'playstation' : modelKey;
             const preset = INPUT_MODEL_FRAMING[framingKey] || INPUT_MODEL_FRAMING.xbox;
@@ -945,8 +790,6 @@ function initializeInputTab() {
                 // and Reset View orbit around the middle of the controller.
                 model.position.sub(center);
                 framedObject.add(model);
-                const decals = createXboxButtonDecals();
-                if (decals) framedObject.add(decals);
             } else {
                 model.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
             }
@@ -990,7 +833,7 @@ function initializeInputTab() {
         };
 
         const isNewControllerAsset = (path = '') => {
-            return path.includes('xbox-controller-black/source/xbox.glb')
+            return path.includes('xbox_elite_controller.glb')
                 || path.includes('white_ps5_controller.glb');
         };
 
@@ -1023,43 +866,6 @@ function initializeInputTab() {
             clearcoat: 0.2,
             clearcoatRoughness: 0.5
         });
-
-        const preserveOriginalMappedMaterial = (material) => {
-            if (!material) return null;
-            const beforeColor = getMaterialColorHex(material);
-            if (material.map) {
-                markBaseColorTexture(material.map);
-                material.userData.xtweaksSuppressedMisplacedXboxAtlas = true;
-                material.map = null;
-            }
-            material.color?.set?.('#111314');
-            markGltfTextureOrientation(material.map);
-            markGltfTextureOrientation(material.normalMap);
-            markGltfTextureOrientation(material.roughnessMap);
-            markGltfTextureOrientation(material.metalnessMap);
-            markGltfTextureOrientation(material.aoMap);
-            markGltfTextureOrientation(material.emissiveMap);
-            markGltfTextureOrientation(material.alphaMap);
-            if ('roughness' in material) material.roughness = 0.42;
-            if ('metalness' in material) material.metalness = 0.08;
-            if ('clearcoat' in material) material.clearcoat = 0.18;
-            if ('clearcoatRoughness' in material) material.clearcoatRoughness = 0.45;
-            if ('envMapIntensity' in material) material.envMapIntensity = 0.85;
-            material.needsUpdate = true;
-            return {
-                beforeColor,
-                afterColor: getMaterialColorHex(material),
-                mapsPreserved: {
-                    map: Boolean(material.map),
-                    normalMap: Boolean(material.normalMap),
-                    roughnessMap: Boolean(material.roughnessMap),
-                    metalnessMap: Boolean(material.metalnessMap),
-                    aoMap: Boolean(material.aoMap),
-                    emissiveMap: Boolean(material.emissiveMap),
-                    alphaMap: Boolean(material.alphaMap)
-                }
-            };
-        };
 
         const logInputMaterialInventory = (model, modelKey, path) => {
             if (loggedInputMaterialInventory.has(modelKey)) return;
@@ -1121,24 +927,23 @@ function initializeInputTab() {
                     const materials = Array.isArray(child.material) ? child.material : [child.material];
                     const repaired = materials.map((material) => {
                         if (material) {
-                            if (materialMode === 'darkTintPreserveMaps') {
-                                const result = preserveOriginalMappedMaterial(material);
-                                if (INPUT_MODEL_DEBUG_MATERIALS) console.info('[Input Model] Xbox material adjusted with maps preserved', {
-                                    path,
-                                    mesh: child.name || '(unnamed mesh)',
-                                    material: material.name || '(unnamed material)',
-                                    colorBefore: result.beforeColor,
-                                    colorAfter: result.afterColor,
-                                    hasMap: result.mapsPreserved.map,
-                                    mapSource: getTextureSourceName(material.map),
-                                    mapsPreserved: result.mapsPreserved,
-                                    action: 'preserveOriginalMappedMaterial'
-                                });
-                                return material;
+                            if (modelKey === 'xbox') {
+                                markBaseColorTexture(material.map);
+                                markGltfTextureOrientation(material.normalMap);
+                                markGltfTextureOrientation(material.roughnessMap);
+                                markGltfTextureOrientation(material.metalnessMap);
+                                markGltfTextureOrientation(material.aoMap);
+                                if (material.emissive?.set) material.emissive.set(0x000000);
+                                if ('emissiveIntensity' in material) material.emissiveIntensity = 0;
+                                if ('toneMapped' in material) material.toneMapped = true;
+                                if ('envMapIntensity' in material) {
+                                    material.envMapIntensity = Math.min(material.envMapIntensity ?? 0.55, 0.55);
+                                }
+                                material.needsUpdate = true;
                             }
-
-                            if (INPUT_MODEL_DEBUG_MATERIALS) console.info('[Input Model] PS5 material preserved', {
+                            if (INPUT_MODEL_DEBUG_MATERIALS) console.info('[Input Model] controller material preserved', {
                                 path,
+                                modelKey,
                                 mesh: child.name || '(unnamed mesh)',
                                 material: material.name || '(unnamed material)',
                                 colorHex: getMaterialColorHex(material),
@@ -1271,6 +1076,10 @@ function initializeInputTab() {
 
         return {
             loadModel,
+            resize,
+            hasModel() {
+                return Boolean(currentModel);
+            },
             updateModelFraming(modelKey) {
                 if (!currentModel || currentModel.userData.xtweaksModelKey !== modelKey) return;
                 applyFramingToObject(currentModel, modelKey);
@@ -1278,10 +1087,6 @@ function initializeInputTab() {
             updateXboxFraming() {
                 if (!currentModel || currentModel.userData.xtweaksModelKey !== 'xbox') return;
                 applyFramingToObject(currentModel, 'xbox');
-            },
-            updateXboxDecals() {
-                if (!currentModel || currentModel.userData.xtweaksModelKey !== 'xbox') return;
-                updateXboxButtonDecals();
             },
             resetView() {
                 const distance = lastFrame?.distance || 5;
@@ -1317,21 +1122,62 @@ function initializeInputTab() {
         };
     };
 
+    const waitForViewerStageSize = async () => {
+        for (let frame = 0; frame < 45; frame += 1) {
+            const rect = stage?.getBoundingClientRect?.();
+            if (page.classList.contains('active') && rect?.width > 16 && rect?.height > 16) return true;
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+        }
+        return false;
+    };
+
     const ensureThreeViewer = async () => {
-        if (threeViewer) return threeViewer;
-        try {
-            threeViewer = await createThreeViewer();
+        if (threeViewer) {
+            threeViewer.resize?.();
             return threeViewer;
+        }
+        if (threeViewerCreatePromise) {
+            try {
+                return await threeViewerCreatePromise;
+            } catch (error) {
+                setViewerFallback(`Three.js viewer failed to initialize - ${error.message || 'unavailable'}`);
+                return null;
+            }
+        }
+        try {
+            threeViewerCreatePromise = (async () => {
+                const hasSize = await waitForViewerStageSize();
+                if (!hasSize) throw new Error('Viewer stage is not visible yet.');
+                const viewer = await createThreeViewer();
+                viewer.resize?.();
+                threeViewer = viewer;
+                return viewer;
+            })();
+            return await threeViewerCreatePromise;
         } catch (error) {
             setViewerFallback(`Three.js viewer failed to initialize - ${error.message || 'unavailable'}`);
             return null;
+        } finally {
+            threeViewerCreatePromise = null;
         }
     };
 
-    const loadActiveModel = async () => {
+    const loadActiveModel = async ({ force = false } = {}) => {
         const viewer = await ensureThreeViewer();
         if (!viewer) return;
+        viewer.resize?.();
+        if (!force && viewer.hasModel?.()) return;
         await viewer.loadModel(activeModel);
+    };
+
+    const activateInputViewer = async ({ force = false } = {}) => {
+        const serial = ++inputViewerActivationSerial;
+        const hasSize = await waitForViewerStageSize();
+        if (!hasSize || serial !== inputViewerActivationSerial) return;
+        const viewer = await ensureThreeViewer();
+        if (!viewer || serial !== inputViewerActivationSerial) return;
+        viewer.resize?.();
+        if (force || !viewer.hasModel?.()) await viewer.loadModel(activeModel);
     };
 
     const resetView = () => {
@@ -1456,358 +1302,13 @@ function initializeInputTab() {
 };`;
     };
 
-    const formatDecalValuesForCopy = () => {
-        const value = (number) => Number(number).toFixed(3).replace(/\.?0+$/, '') || '0';
-        const decals = XBOX_BUTTON_DECALS;
-        return `const INPUT_XBOX_DECAL_TUNER_ENABLED = ${INPUT_XBOX_DECAL_TUNER_ENABLED};
-const XBOX_BUTTON_DECALS = {
-    enabled: ${decals.enabled},
-    showDebugAnchor: ${decals.showDebugAnchor},
-    xray: ${decals.xray},
-    position: { x: ${value(decals.position.x)}, y: ${value(decals.position.y)}, z: ${value(decals.position.z)} },
-    rotation: { x: ${value(decals.rotation.x)}, y: ${value(decals.rotation.y)}, z: ${value(decals.rotation.z)} },
-    scale: ${value(decals.scale)},
-    letterSpacing: ${value(decals.letterSpacing)},
-    letterSize: ${value(decals.letterSize)},
-    surfaceOffset: ${value(decals.surfaceOffset)},
-    offsets: {
-        a: { x: ${value(decals.offsets.a.x)}, y: ${value(decals.offsets.a.y)}, z: ${value(decals.offsets.a.z)} },
-        b: { x: ${value(decals.offsets.b.x)}, y: ${value(decals.offsets.b.y)}, z: ${value(decals.offsets.b.z)} },
-        x: { x: ${value(decals.offsets.x.x)}, y: ${value(decals.offsets.x.y)}, z: ${value(decals.offsets.x.z)} },
-        y: { x: ${value(decals.offsets.y.x)}, y: ${value(decals.offsets.y.y)}, z: ${value(decals.offsets.y.z)} }
-    }
-};`;
-    };
-
-    const getDecalTuneValue = (path) => {
-        return path.split('.').reduce((value, key) => value?.[key], XBOX_BUTTON_DECALS);
-    };
-
-    const setDecalTuneValue = (path, value) => {
-        const keys = path.split('.');
-        const lastKey = keys.pop();
-        const target = keys.reduce((object, key) => object?.[key], XBOX_BUTTON_DECALS);
-        if (!target || !(lastKey in target)) return false;
-        target[lastKey] = Number(value);
-        return true;
-    };
-
-    const updateDecalReadout = () => {
-        const text = formatDecalValuesForCopy();
-        if (decalGroupReadoutEl) {
-            const value = (number) => Number(number).toFixed(3).replace(/\.?0+$/, '') || '0';
-            const decals = XBOX_BUTTON_DECALS;
-            decalGroupReadoutEl.textContent = `pos ${value(decals.position.x)}, ${value(decals.position.y)}, ${value(decals.position.z)} | rot ${value(decals.rotation.x)}, ${value(decals.rotation.y)}, ${value(decals.rotation.z)} | scale ${value(decals.scale)} | spacing ${value(decals.letterSpacing)} | size ${value(decals.letterSize)} | x-ray ${decals.xray ? 'on' : 'off'} | anchor ${decals.showDebugAnchor ? 'on' : 'off'}`;
-        }
-        if (decalReadoutEl) decalReadoutEl.textContent = text;
-        return text;
-    };
-
-    const applyXboxDecalPreset = (preset) => {
-        XBOX_BUTTON_DECALS.enabled = true;
-        XBOX_BUTTON_DECALS.showDebugAnchor = false;
-        XBOX_BUTTON_DECALS.xray = true;
-        XBOX_BUTTON_DECALS.position = { ...preset.position };
-        XBOX_BUTTON_DECALS.rotation = { ...preset.rotation };
-        XBOX_BUTTON_DECALS.scale = preset.scale;
-        XBOX_BUTTON_DECALS.letterSpacing = preset.letterSpacing;
-        XBOX_BUTTON_DECALS.letterSize = preset.letterSize;
-        XBOX_BUTTON_DECALS.surfaceOffset = preset.surfaceOffset;
-        XBOX_BUTTON_DECALS.offsets = JSON.parse(JSON.stringify(preset.offsets));
-        if (decalVisibleToggle) decalVisibleToggle.checked = true;
-        syncDecalTuner();
-        if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
-    };
-
-    const resetXboxDecalsToVisibleDefaults = () => {
-        applyXboxDecalPreset(XBOX_BUTTON_DECAL_VISIBLE_DEFAULTS);
-        console.info('[INPUT 3D] Xbox decals reset to visible tuner defaults:', formatDecalValuesForCopy());
-    };
-
-    const snapXboxDecalsNearFaceButtons = () => {
-        applyXboxDecalPreset(XBOX_BUTTON_DECAL_FACE_BUTTON_DEFAULTS);
-        console.info('[INPUT 3D] Xbox decals snapped near face buttons:', formatDecalValuesForCopy());
-    };
-
-    const syncDecalTuneField = (path) => {
-        const value = getDecalTuneValue(path);
-        xboxTuner?.querySelectorAll(`[data-xbox-decal-setting="${path}"], [data-xbox-decal-setting-number="${path}"]`).forEach((input) => {
-            input.value = value;
-        });
-    };
-
-    const syncDecalTuner = () => {
-        if (!INPUT_XBOX_DECAL_TUNER_ENABLED) {
-            if (decalTunerPanel) decalTunerPanel.hidden = true;
-            return;
-        }
-        if (decalTunerPanel) decalTunerPanel.hidden = false;
-        if (decalSelectedEl) decalSelectedEl.value = selectedDecalButton;
-        if (decalVisibleToggle) decalVisibleToggle.checked = Boolean(XBOX_BUTTON_DECALS.enabled);
-        const debugAnchorToggle = document.getElementById('input-xbox-debug-anchor');
-        if (debugAnchorToggle) debugAnchorToggle.checked = Boolean(XBOX_BUTTON_DECALS.showDebugAnchor);
-        const xrayToggle = document.getElementById('input-xbox-xray-decals');
-        if (xrayToggle) xrayToggle.checked = Boolean(XBOX_BUTTON_DECALS.xray);
-        [
-            'position.x',
-            'position.y',
-            'position.z',
-            'rotation.x',
-            'rotation.y',
-            'rotation.z',
-            'scale',
-            'letterSpacing',
-            'letterSize',
-            'surfaceOffset',
-            'offsets.a.x',
-            'offsets.a.y',
-            'offsets.a.z',
-            'offsets.b.x',
-            'offsets.b.y',
-            'offsets.b.z',
-            'offsets.x.x',
-            'offsets.x.y',
-            'offsets.x.z',
-            'offsets.y.x',
-            'offsets.y.y',
-            'offsets.y.z'
-        ].forEach(syncDecalTuneField);
-        updateDecalReadout();
-    };
-
-    const applyDecalTuneValue = (path, value) => {
-        const number = Number(value);
-        if (!Number.isFinite(number)) return;
-        if (!setDecalTuneValue(path, number)) return;
-        syncDecalTuneField(path);
-        const text = updateDecalReadout();
-        console.info('[INPUT 3D] Xbox decal tuner values:', text);
-        if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
-    };
-
-    const nudgeXboxDecalGroup = (axis, amount) => {
-        XBOX_BUTTON_DECALS.position[axis] += amount;
-        syncDecalTuneField(`position.${axis}`);
-        const text = updateDecalReadout();
-        console.info('[INPUT 3D] Xbox decal group nudged:', text);
-        if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
-    };
-
-    const installXboxDecalTunerControls = () => {
-        if (!decalTunerPanel) return;
-        if (!INPUT_XBOX_DECAL_TUNER_ENABLED) {
-            decalTunerPanel.hidden = true;
-            return;
-        }
-
-        decalTunerPanel.hidden = false;
-        const subhead = decalTunerPanel.querySelector('.input-tuner-subhead span');
-        if (subhead) subhead.textContent = 'ABXY Decal Debug Tuner';
-        const oldGrid = decalTunerPanel.querySelector('.input-tuner-grid');
-        if (oldGrid) oldGrid.hidden = true;
-
-        const groupFields = [
-            { path: 'position.x', label: 'group x', min: -10, max: 10, step: 0.05 },
-            { path: 'position.y', label: 'group y', min: -10, max: 10, step: 0.05 },
-            { path: 'position.z', label: 'group z', min: -10, max: 10, step: 0.05 },
-            { path: 'rotation.x', label: 'rotation x', min: -6.28, max: 6.28, step: 0.01 },
-            { path: 'rotation.y', label: 'rotation y', min: -6.28, max: 6.28, step: 0.01 },
-            { path: 'rotation.z', label: 'rotation z', min: -6.28, max: 6.28, step: 0.01 },
-            { path: 'scale', label: 'scale', min: 0.01, max: 5, step: 0.01 },
-            { path: 'letterSpacing', label: 'letter spacing', min: 0.01, max: 5, step: 0.01 },
-            { path: 'letterSize', label: 'letter size', min: 0.01, max: 3, step: 0.01 },
-            { path: 'surfaceOffset', label: 'surface offset', min: -0.5, max: 0.5, step: 0.005 }
-        ];
-        const letterFields = [
-            { path: 'offsets.a.x', label: 'A offset x', min: -0.35, max: 0.35, step: 0.005 },
-            { path: 'offsets.a.y', label: 'A offset y', min: -0.35, max: 0.35, step: 0.005 },
-            { path: 'offsets.a.z', label: 'A offset z', min: -0.12, max: 0.12, step: 0.001 },
-            { path: 'offsets.b.x', label: 'B offset x', min: -0.35, max: 0.35, step: 0.005 },
-            { path: 'offsets.b.y', label: 'B offset y', min: -0.35, max: 0.35, step: 0.005 },
-            { path: 'offsets.b.z', label: 'B offset z', min: -0.12, max: 0.12, step: 0.001 },
-            { path: 'offsets.x.x', label: 'X offset x', min: -0.35, max: 0.35, step: 0.005 },
-            { path: 'offsets.x.y', label: 'X offset y', min: -0.35, max: 0.35, step: 0.005 },
-            { path: 'offsets.x.z', label: 'X offset z', min: -0.12, max: 0.12, step: 0.001 },
-            { path: 'offsets.y.x', label: 'Y offset x', min: -0.35, max: 0.35, step: 0.005 },
-            { path: 'offsets.y.y', label: 'Y offset y', min: -0.35, max: 0.35, step: 0.005 },
-            { path: 'offsets.y.z', label: 'Y offset z', min: -0.12, max: 0.12, step: 0.001 }
-        ];
-
-        const createSectionTitle = (text) => {
-            const title = document.createElement('div');
-            title.textContent = text;
-            title.style.margin = '12px 0 8px';
-            title.style.fontSize = '11px';
-            title.style.fontWeight = '800';
-            title.style.letterSpacing = '0.08em';
-            title.style.color = 'rgba(255,255,255,0.82)';
-            return title;
-        };
-
-        const createFieldGrid = (fields) => {
-            const grid = document.createElement('div');
-            grid.className = 'input-tuner-grid';
-            grid.dataset.xboxDecalGenerated = 'true';
-            fields.forEach((field) => {
-                const label = document.createElement('label');
-                const labelText = document.createElement('span');
-                const range = document.createElement('input');
-                const number = document.createElement('input');
-                labelText.textContent = field.label;
-                range.type = 'range';
-                range.min = field.min;
-                range.max = field.max;
-                range.step = field.step;
-                range.dataset.xboxDecalSetting = field.path;
-                number.type = 'number';
-                number.min = field.min;
-                number.max = field.max;
-                number.step = field.step;
-                number.dataset.xboxDecalSettingNumber = field.path;
-                label.append(labelText, range, number);
-                grid.appendChild(label);
-            });
-            return grid;
-        };
-
-        decalGroupReadoutEl = document.createElement('div');
-        decalGroupReadoutEl.style.margin = '8px 0 10px';
-        decalGroupReadoutEl.style.padding = '8px';
-        decalGroupReadoutEl.style.border = '1px solid rgba(255,255,255,0.1)';
-        decalGroupReadoutEl.style.borderRadius = '6px';
-        decalGroupReadoutEl.style.background = 'rgba(255,255,255,0.05)';
-        decalGroupReadoutEl.style.color = 'rgba(255,255,255,0.82)';
-        decalGroupReadoutEl.style.fontSize = '11px';
-        decalGroupReadoutEl.style.lineHeight = '1.35';
-
-        const createNudgeGrid = (moves) => {
-            const grid = document.createElement('div');
-            grid.style.display = 'grid';
-            grid.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
-            grid.style.gap = '6px';
-            grid.style.margin = '8px 0 10px';
-            moves.forEach(([text, axis, amount]) => {
-                const button = document.createElement('button');
-                button.className = 'input-tuner-action';
-                button.type = 'button';
-                button.textContent = text;
-                button.addEventListener('click', () => nudgeXboxDecalGroup(axis, amount));
-                grid.appendChild(button);
-            });
-            return grid;
-        };
-
-        const coarseNudgeGrid = createNudgeGrid([
-            ['Coarse Down', 'y', -0.5],
-            ['Coarse Up', 'y', 0.5],
-            ['Coarse Left', 'x', -0.5],
-            ['Coarse Right', 'x', 0.5],
-            ['Coarse Forward', 'z', 0.5],
-            ['Coarse Back', 'z', -0.5]
-        ]);
-        const fineNudgeGrid = createNudgeGrid([
-            ['Fine Down', 'y', -0.05],
-            ['Fine Up', 'y', 0.05],
-            ['Fine Left', 'x', -0.05],
-            ['Fine Right', 'x', 0.05],
-            ['Fine Forward', 'z', 0.05],
-            ['Fine Back', 'z', -0.05]
-        ]);
-
-        const presetGrid = document.createElement('div');
-        presetGrid.style.display = 'flex';
-        presetGrid.style.flexWrap = 'wrap';
-        presetGrid.style.gap = '6px';
-        presetGrid.style.margin = '8px 0 10px';
-        const anchorLabel = document.createElement('label');
-        anchorLabel.style.display = 'inline-flex';
-        anchorLabel.style.alignItems = 'center';
-        anchorLabel.style.gap = '6px';
-        anchorLabel.style.fontSize = '11px';
-        anchorLabel.style.color = 'rgba(255,255,255,0.78)';
-        const anchorCheckbox = document.createElement('input');
-        anchorCheckbox.type = 'checkbox';
-        anchorCheckbox.id = 'input-xbox-debug-anchor';
-        anchorCheckbox.checked = Boolean(XBOX_BUTTON_DECALS.showDebugAnchor);
-        anchorCheckbox.addEventListener('change', () => {
-            XBOX_BUTTON_DECALS.showDebugAnchor = Boolean(anchorCheckbox.checked);
-            updateDecalReadout();
-            if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
-        });
-        const anchorText = document.createElement('span');
-        anchorText.textContent = 'Show Debug Anchor';
-        anchorLabel.append(anchorCheckbox, anchorText);
-        const xrayLabel = document.createElement('label');
-        xrayLabel.style.display = 'inline-flex';
-        xrayLabel.style.alignItems = 'center';
-        xrayLabel.style.gap = '6px';
-        xrayLabel.style.fontSize = '11px';
-        xrayLabel.style.color = 'rgba(255,255,255,0.78)';
-        const xrayCheckbox = document.createElement('input');
-        xrayCheckbox.type = 'checkbox';
-        xrayCheckbox.id = 'input-xbox-xray-decals';
-        xrayCheckbox.checked = Boolean(XBOX_BUTTON_DECALS.xray);
-        xrayCheckbox.addEventListener('change', () => {
-            XBOX_BUTTON_DECALS.xray = Boolean(xrayCheckbox.checked);
-            updateDecalReadout();
-            if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
-        });
-        const xrayText = document.createElement('span');
-        xrayText.textContent = 'X-Ray Decals';
-        xrayLabel.append(xrayCheckbox, xrayText);
-        const snapButton = document.createElement('button');
-        snapButton.className = 'input-tuner-action';
-        snapButton.type = 'button';
-        snapButton.textContent = 'Snap Near Xbox Face Buttons';
-        snapButton.addEventListener('click', snapXboxDecalsNearFaceButtons);
-        const resetVisibleButton = document.createElement('button');
-        resetVisibleButton.className = 'input-tuner-action';
-        resetVisibleButton.type = 'button';
-        resetVisibleButton.textContent = 'Reset ABXY Visible';
-        resetVisibleButton.addEventListener('click', resetXboxDecalsToVisibleDefaults);
-        presetGrid.append(snapButton, resetVisibleButton, xrayLabel, anchorLabel);
-
-        const groupTitle = createSectionTitle('ABXY GROUP POSITION');
-        const groupGrid = createFieldGrid(groupFields);
-        const fineTitle = createSectionTitle('PER-LETTER FINE TUNE');
-        const letterGrid = createFieldGrid(letterFields);
-
-        decalReadoutEl = document.createElement('pre');
-        decalReadoutEl.style.whiteSpace = 'pre-wrap';
-        decalReadoutEl.style.margin = '10px 0 0';
-        decalReadoutEl.style.maxHeight = '150px';
-        decalReadoutEl.style.overflow = 'auto';
-        decalReadoutEl.style.fontSize = '10px';
-        decalReadoutEl.style.lineHeight = '1.35';
-        decalReadoutEl.style.color = 'rgba(255,255,255,0.72)';
-        decalReadoutEl.style.background = 'rgba(255,255,255,0.04)';
-        decalReadoutEl.style.border = '1px solid rgba(255,255,255,0.08)';
-        decalReadoutEl.style.borderRadius = '6px';
-        decalReadoutEl.style.padding = '8px';
-
-        const copyButton = decalTunerPanel.querySelector('#input-copy-decal-values');
-        if (copyButton) {
-            decalTunerPanel.insertBefore(groupTitle, copyButton);
-            decalTunerPanel.insertBefore(decalGroupReadoutEl, copyButton);
-            decalTunerPanel.insertBefore(coarseNudgeGrid, copyButton);
-            decalTunerPanel.insertBefore(fineNudgeGrid, copyButton);
-            decalTunerPanel.insertBefore(presetGrid, copyButton);
-            decalTunerPanel.insertBefore(groupGrid, copyButton);
-            decalTunerPanel.insertBefore(fineTitle, copyButton);
-            decalTunerPanel.insertBefore(letterGrid, copyButton);
-            decalTunerPanel.insertBefore(decalReadoutEl, copyButton);
-        } else {
-            decalTunerPanel.append(groupTitle, decalGroupReadoutEl, coarseNudgeGrid, fineNudgeGrid, presetGrid, groupGrid, fineTitle, letterGrid, decalReadoutEl);
-        }
-    };
-
     const setActiveModel = (model) => {
         activeModel = model === 'ps5' ? 'ps5' : 'xbox';
         page.querySelectorAll('[data-input-model]').forEach((btn) => {
             btn.classList.toggle('active', btn.dataset.inputModel === activeModel);
         });
         setXboxTunerVisibleForModel();
-        loadActiveModel();
+        if (page.classList.contains('active')) loadActiveModel({ force: true });
     };
 
     page.querySelectorAll('[data-input-model]').forEach((btn) => {
@@ -1817,12 +1318,16 @@ const XBOX_BUTTON_DECALS = {
     document.querySelectorAll('.nav-item').forEach((item) => {
         item.addEventListener('click', () => {
             if (item.dataset.page !== 'input' && xboxTuner) xboxTuner.hidden = true;
+            if (item.dataset.page === 'input') activateInputViewer();
         });
     });
 
-    document.getElementById('input-reset-view')?.addEventListener('click', resetView);
+    const inputPageObserver = new MutationObserver(() => {
+        if (page.classList.contains('active')) activateInputViewer();
+    });
+    inputPageObserver.observe(page, { attributes: true, attributeFilter: ['class'] });
 
-    installXboxDecalTunerControls();
+    document.getElementById('input-reset-view')?.addEventListener('click', resetView);
 
     xboxTuneToggle?.addEventListener('click', () => {
         if (!INPUT_XBOX_DECAL_TUNER_ENABLED) return;
@@ -1830,7 +1335,6 @@ const XBOX_BUTTON_DECALS = {
         xboxTuner.hidden = !xboxTuner.hidden;
         if (!xboxTuner.hidden) {
             syncXboxTuner();
-            syncDecalTuner();
         }
     });
 
@@ -1880,22 +1384,6 @@ const XBOX_BUTTON_DECALS = {
         input.addEventListener('change', () => applyXboxTunerValue(path, input.value));
     });
 
-    decalSelectedEl?.addEventListener('change', () => {
-        selectedDecalButton = decalSelectedEl.value || 'a';
-        syncDecalTuner();
-    });
-
-    decalVisibleToggle?.addEventListener('change', () => {
-        XBOX_BUTTON_DECALS.enabled = Boolean(decalVisibleToggle.checked);
-        if (activeModel === 'xbox') threeViewer?.updateXboxDecals?.();
-    });
-
-    xboxTuner?.querySelectorAll('[data-xbox-decal-setting], [data-xbox-decal-setting-number]').forEach((input) => {
-        const path = input.dataset.xboxDecalSetting || input.dataset.xboxDecalSettingNumber;
-        input.addEventListener('input', () => applyDecalTuneValue(path, input.value));
-        input.addEventListener('change', () => applyDecalTuneValue(path, input.value));
-    });
-
     xboxResetSlidersBtn?.addEventListener('click', () => {
         if (getActiveTuningKey() === 'playstation') {
             INPUT_MODEL_FRAMING.playstation = JSON.parse(JSON.stringify(defaultPlayStationFraming));
@@ -1919,21 +1407,6 @@ const XBOX_BUTTON_DECALS = {
         }
         window.setTimeout(() => {
             xboxCopyValuesBtn.textContent = 'Copy Values';
-        }, 1200);
-    });
-
-    decalCopyValuesBtn?.addEventListener('click', async () => {
-        const text = formatDecalValuesForCopy();
-        const copied = await copyTextWithFallback(text);
-
-        if (copied) {
-            decalCopyValuesBtn.textContent = 'Copied';
-        } else {
-            console.info('[INPUT 3D] Xbox decal values:', text);
-            decalCopyValuesBtn.textContent = 'Logged';
-        }
-        window.setTimeout(() => {
-            decalCopyValuesBtn.textContent = 'Copy Decal Values';
         }, 1200);
     });
 
@@ -2069,7 +1542,6 @@ const XBOX_BUTTON_DECALS = {
 
     refreshAssignment();
     syncXboxTuner();
-    syncDecalTuner();
     setXboxTunerVisibleForModel();
     setActiveModel(activeModel);
     updateGamepadState();
