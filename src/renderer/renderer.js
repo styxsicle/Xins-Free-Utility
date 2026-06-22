@@ -28,6 +28,8 @@ function initializeApp() {
     if (INPUT_PAGE_ENABLED) initializeInputTab();
     initializeAiTweaker();
     initializeGamingPage();
+    initializeSystemPage();
+    initializeMemoryPage();
     initializeGameTunePage();
     initializeNetworkCards();
     initializeDnsOptimizer();
@@ -92,6 +94,17 @@ function _integrateGamingTopBar() {
     bar.classList.remove('net-integrated');
     bar.classList.add('gaming-integrated');
 }
+
+// Publish the resting (non-integrated) .top-bar height so the System/Memory filter
+// bars can sticky-dock right below the translucent sticky header (--xt-topbar-h).
+function updateTopBarHeightVar() {
+    const bar = document.querySelector('.top-bar');
+    if (!bar || bar.classList.contains('net-integrated') || bar.classList.contains('gaming-integrated')) return;
+    const h = Math.round(bar.getBoundingClientRect().height);
+    if (h > 0) document.documentElement.style.setProperty('--xt-topbar-h', `${h}px`);
+}
+window.addEventListener('resize', updateTopBarHeightVar);
+window.addEventListener('DOMContentLoaded', updateTopBarHeightVar);
 
 function initializeNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
@@ -177,6 +190,9 @@ function initializeNavigation() {
             document.body.classList.remove('gaming-page-active');
             document.body.classList.remove('game-tune-active');
             _restoreNetTopBar();
+            updateTopBarHeightVar();
+            if (targetPage === 'system') scheduleSysMemCardsOnEntry('page-system', { source: 'page-enter' });
+            else if (targetPage === 'memory') scheduleSysMemCardsOnEntry('page-memory', { source: 'page-enter' });
         }
     }
 
@@ -4365,6 +4381,219 @@ function initializeGamingPage() {
     if (page.classList.contains('active')) scheduleGamingCardsOnEntry({ source: 'page-enter' });
 }
 
+// ── System & Memory: card reveal motion (mirrors Network/Gaming entrance) ──
+const SYSMEM_ENTRY_MOTION = {
+    duration: 620,
+    stagger: 55,
+    slideY: 14,
+    blur: 5,
+    opacity: 0,
+    scale: 0.985,
+    easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
+};
+const sysMemMotionState = {
+    'page-system': { lastRun: 0, request: 0 },
+    'page-memory': { lastRun: 0, request: 0 }
+};
+
+function getSysMemEntryCards(page) {
+    return Array.from(page.querySelectorAll('.sys-pcard, .mem-pcard')).filter(card => {
+        if (!card || card.style.display === 'none') return false;
+        const rect = card.getBoundingClientRect();
+        return rect.width >= 8 && rect.height >= 8;
+    });
+}
+
+function animateSysMemCardsOnEntry(pageId) {
+    const page = document.getElementById(pageId);
+    if (!page?.classList.contains('active')) return 0;
+    const items = getSysMemEntryCards(page);
+    items.forEach(item => {
+        if (item._sysMemEntryAnimation) { item._sysMemEntryAnimation.cancel(); item._sysMemEntryAnimation = null; }
+        clearEntryCardShine(item);
+        item.style.removeProperty('opacity');
+        item.style.removeProperty('transform');
+        item.style.removeProperty('filter');
+    });
+    if (items[0]) items[0].offsetHeight;
+    let started = 0;
+    items.forEach((item, index) => {
+        applyEntryCardShine(item, index, SYSMEM_ENTRY_MOTION.stagger);
+        const animation = item.animate([
+            {
+                opacity: SYSMEM_ENTRY_MOTION.opacity,
+                transform: `translate3d(0, ${SYSMEM_ENTRY_MOTION.slideY}px, 0) scale(${SYSMEM_ENTRY_MOTION.scale})`,
+                filter: `blur(${SYSMEM_ENTRY_MOTION.blur}px)`
+            },
+            { opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)', filter: 'blur(0px)' }
+        ], {
+            duration: SYSMEM_ENTRY_MOTION.duration,
+            delay: index * SYSMEM_ENTRY_MOTION.stagger,
+            easing: SYSMEM_ENTRY_MOTION.easing,
+            fill: 'both'
+        });
+        item.style.willChange = 'transform, opacity, filter';
+        item._sysMemEntryAnimation = animation;
+        animation.finished.catch(() => {}).finally(() => {
+            if (item._sysMemEntryAnimation === animation) {
+                animation.cancel();
+                item._sysMemEntryAnimation = null;
+                item.style.removeProperty('will-change');
+                item.style.removeProperty('opacity');
+                item.style.removeProperty('transform');
+                item.style.removeProperty('filter');
+            }
+        });
+        started++;
+    });
+    return started;
+}
+
+function scheduleSysMemCardsOnEntry(pageId, options = {}) {
+    const page = document.getElementById(pageId);
+    if (!page) return;
+    const state = sysMemMotionState[pageId] || (sysMemMotionState[pageId] = { lastRun: 0, request: 0 });
+    const requestId = ++state.request;
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (!page.classList.contains('active')) return;
+            if (options.source === 'tab-click' && requestId !== state.request) return;
+            const now = performance.now();
+            if (options.source !== 'page-enter' && now - state.lastRun < 220) return;
+            state.lastRun = now;
+            animateSysMemCardsOnEntry(pageId);
+        });
+    });
+}
+
+// Pointer-following aurora + safe (visual-only) action buttons for System/Memory pcards.
+function enhanceSysMemCards(page, btnSelector) {
+    page.querySelectorAll('.sys-pcard, .mem-pcard').forEach(card => {
+        if (card.dataset.sysmemHover === '1') return;
+        card.dataset.sysmemHover = '1';
+        card.addEventListener('pointermove', (e) => {
+            const r = card.getBoundingClientRect();
+            card.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
+            card.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
+        });
+    });
+    // These buttons are presentation-only (the toggles/sliders apply on their own
+    // change events, and the .tweak-btn.apply buttons are wired by initializeTweaks).
+    // Keep them safe: focus the relevant control and surface a local notification.
+    page.querySelectorAll(btnSelector).forEach(btn => {
+        if (btn.dataset.safeWired === '1') return;
+        btn.dataset.safeWired = '1';
+        btn.addEventListener('click', () => {
+            const card = btn.closest('.toggle-card, .slider-card, .tweak-card');
+            const title = card?.querySelector('.pcard-title')?.textContent?.trim() || 'This control';
+            const slider = card?.querySelector('input[type="range"]');
+            const toggle = card?.querySelector('input[type="checkbox"]');
+            if (slider) {
+                slider.focus();
+                showNotification('info', 'Adjust to apply', `Use the ${title} slider to set your preferred value.`);
+            } else if (toggle) {
+                toggle.focus();
+                showNotification('info', title, `${title} is ${toggle.checked ? 'enabled' : 'disabled'} locally.`);
+            } else {
+                showNotification('info', title, `${title} is ready.`);
+            }
+        });
+    });
+}
+
+function makeSysMemFilter(opts) {
+    const { page, pageId, tabs, prefix, validFilters, descriptions } = opts;
+    const catAttr = `[data-${prefix}-cat]`;
+    const activeClass = `${prefix}-filter-active`;
+    const filterKey = `${prefix}Filter`;
+    const countEl = page.querySelector(`[data-${prefix}-count]`);
+
+    const applyFilter = (filter, opts2 = {}) => {
+        const activeFilter = validFilters.includes(filter) ? filter : 'all';
+
+        let visible = 0;
+        page.querySelectorAll(catAttr).forEach(card => {
+            const cats = (card.dataset[`${prefix}Cat`] || '').split(' ').filter(Boolean);
+            const isVisible = activeFilter === 'all' || cats.includes(activeFilter);
+            card.style.display = isVisible ? '' : 'none';
+            if (isVisible) visible++;
+        });
+
+        page.querySelectorAll(`[data-${prefix}-section]`).forEach(section => {
+            const heading = section.querySelector(`.${prefix}-section-h2`);
+            const subtext = section.querySelector(`.${prefix}-section-desc`);
+            if (heading) heading.textContent = descriptions[activeFilter].heading;
+            if (subtext) subtext.textContent = descriptions[activeFilter].subtext;
+        });
+
+        if (countEl) countEl.textContent = `${visible} tool${visible === 1 ? '' : 's'}`;
+
+        tabs.forEach(tab => {
+            tab.classList.toggle(activeClass, tab.dataset[filterKey] === activeFilter);
+        });
+
+        if (opts2.animate) scheduleSysMemCardsOnEntry(pageId, { source: 'tab-click' });
+    };
+
+    return applyFilter;
+}
+
+function initializeSystemPage() {
+    const page = document.getElementById('page-system');
+    const tabs = page?.querySelectorAll('.sys-filter-tab');
+    if (!page || !tabs?.length || page.dataset.sysInitialized === 'true') return;
+    page.dataset.sysInitialized = 'true';
+
+    const filterDescriptions = {
+        all: { heading: 'Recommended Optimizations', subtext: 'Safe local tools for Windows responsiveness, startup behavior, and background services.' },
+        toggles: { heading: 'Quick System Switches', subtext: 'Fast Windows toggles for common background features and services.' },
+        performance: { heading: 'Performance Controls', subtext: 'Tune visual effects, scheduling, and responsiveness settings.' },
+        startup: { heading: 'Startup Behavior', subtext: 'Adjust boot timing and startup-related Windows behavior.' },
+        advanced: { heading: 'Advanced System Tools', subtext: 'Deeper local system controls for users who want extra tuning.' }
+    };
+
+    const applyFilter = makeSysMemFilter({
+        page, pageId: 'page-system', tabs, prefix: 'sys',
+        validFilters: ['all', 'toggles', 'performance', 'startup', 'advanced'],
+        descriptions: filterDescriptions
+    });
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => applyFilter(tab.dataset.sysFilter, { animate: true }));
+    });
+
+    enhanceSysMemCards(page, '.sys-card-btn');
+    applyFilter('all');
+}
+
+function initializeMemoryPage() {
+    const page = document.getElementById('page-memory');
+    const tabs = page?.querySelectorAll('.mem-filter-tab');
+    if (!page || !tabs?.length || page.dataset.memInitialized === 'true') return;
+    page.dataset.memInitialized = 'true';
+
+    const filterDescriptions = {
+        all: { heading: 'Recommended Optimizations', subtext: 'Local memory tools for cache cleanup, compression, page file tuning, and system stability.' },
+        toggles: { heading: 'Quick Memory Switches', subtext: 'Fast toggles for memory services, cache behavior, and RAM features.' },
+        ram: { heading: 'RAM Management', subtext: 'Tools for compression, cache behavior, and active memory responsiveness.' },
+        pagefile: { heading: 'Page File Tuning', subtext: 'Adjust virtual memory ranges and paging behavior safely.' },
+        advanced: { heading: 'Advanced Memory Tools', subtext: 'Extra memory controls for cache priority, page priority, and advanced tuning.' }
+    };
+
+    const applyFilter = makeSysMemFilter({
+        page, pageId: 'page-memory', tabs, prefix: 'mem',
+        validFilters: ['all', 'toggles', 'ram', 'pagefile', 'advanced'],
+        descriptions: filterDescriptions
+    });
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => applyFilter(tab.dataset.memFilter, { animate: true }));
+    });
+
+    enhanceSysMemCards(page, '.mem-card-btn');
+    applyFilter('all');
+}
+
 const GAMING_CARD_DESCRIPTIONS = {
     'gaming-game-bar': 'Control the Xbox Game Bar overlay and background capture behavior.',
     'gaming-game-mode': 'Tune Windows Game Mode behavior for smoother gaming sessions.',
@@ -4376,6 +4605,10 @@ function enhanceToggleCards() {
     const cards = document.querySelectorAll('.toggle-card[data-toggle]');
     cards.forEach(card => {
         if (card.dataset.enhanced === '1') return;
+        // System & Memory cards ship their own premium pcard markup (icon, tags,
+        // status, action button) and are wired in initializeSystemPage/Memory.
+        // Skip them so this generic enhancer doesn't overwrite that structure.
+        if (card.classList.contains('sys-pcard') || card.classList.contains('mem-pcard')) return;
         card.dataset.enhanced = '1';
 
         const id = card.dataset.toggle || '';

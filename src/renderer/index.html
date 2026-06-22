@@ -1515,190 +1515,406 @@
                 </div>
 
                 <div id="page-system" class="page">
-                    <div class="page-header">
-                        <h1>System Tweaks</h1>
-                        <p class="page-subtitle">General Windows optimizations for better performance</p>
-                    </div>
-
-                    <div class="controls-section">
-                        <h3 class="section-title">Quick Toggles</h3>
-                        <div class="toggles-grid">
-                            <div class="toggle-card" data-toggle="sys-cortana">
-                                <div class="toggle-info">
-                                    <h4>Cortana</h4>
-                                    <p>Windows assistant</p>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" data-setting="cortana-enabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="toggle-card" data-toggle="sys-telemetry">
-                                <div class="toggle-info">
-                                    <h4>Telemetry</h4>
-                                    <p>Diagnostic data</p>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" data-setting="telemetry-enabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="toggle-card" data-toggle="sys-background-apps">
-                                <div class="toggle-info">
-                                    <h4>Background Apps</h4>
-                                    <p>Run apps in background</p>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" data-setting="background-apps-enabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="toggle-card" data-toggle="sys-search-indexing">
-                                <div class="toggle-info">
-                                    <h4>Search Indexing</h4>
-                                    <p>File indexing service</p>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" checked data-setting="search-indexing-enabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
+                    <!-- ══ HERO ══ -->
+                    <div class="sys-hero">
+                        <div class="sys-hero-bg" aria-hidden="true">
+                            <div class="sys-hero-wave1"></div>
+                            <div class="sys-hero-wave2"></div>
                         </div>
-                    </div>
-
-                    <div class="controls-section">
-                        <h3 class="section-title">System Sliders</h3>
-                        <div class="sliders-grid">
-                            <div class="slider-card" data-slider="sys-visual-effects">
-                                <div class="slider-header">
-                                    <span class="slider-label">Visual Effects Level</span>
-                                    <span class="slider-value" id="visual-effects-value">Performance</span>
-                                </div>
-                                <input type="range" class="custom-slider" id="visual-effects-slider" min="1" max="4"
-                                    step="1" value="1" data-setting="visual-effects">
-                                <div class="slider-marks">
-                                    <span>Performance</span>
-                                    <span>Balanced</span>
-                                    <span>Best</span>
-                                </div>
+                        <div class="sys-hero-body">
+                            <div class="sys-hero-left">
+                                <span class="sys-hero-eyebrow">CURATED SYSTEM TUNING</span>
+                                <h1 class="sys-hero-title">System Tweaks</h1>
+                                <p class="sys-hero-sub">Core Windows optimizations for smoother everyday performance and lower background overhead.</p>
                             </div>
-                            <div class="slider-card" data-slider="sys-processor-scheduling">
-                                <div class="slider-header">
-                                    <span class="slider-label">Processor Scheduling</span>
-                                    <span class="slider-value" id="proc-sched-value">Programs</span>
-                                </div>
-                                <input type="range" class="custom-slider" id="proc-sched-slider" min="1" max="2"
-                                    step="1" value="1" data-setting="proc-scheduling">
-                                <div class="slider-marks">
-                                    <span>Programs</span>
-                                    <span>Background</span>
-                                </div>
-                            </div>
-                            <div class="slider-card" data-slider="sys-menu-delay">
-                                <div class="slider-header">
-                                    <span class="slider-label">Menu Show Delay</span>
-                                    <span class="slider-value" id="menu-delay-value">0ms</span>
-                                </div>
-                                <input type="range" class="custom-slider" id="menu-delay-slider" min="0" max="400"
-                                    step="50" value="0" data-setting="menu-delay">
-                                <div class="slider-marks">
-                                    <span>0ms</span>
-                                    <span>200ms</span>
-                                    <span>400ms</span>
-                                </div>
-                            </div>
-                            <div class="slider-card" data-slider="sys-boot-timeout">
-                                <div class="slider-header">
-                                    <span class="slider-label">Boot Menu Timeout</span>
-                                    <span class="slider-value" id="boot-timeout-value">3s</span>
-                                </div>
-                                <input type="range" class="custom-slider" id="boot-timeout-slider" min="0" max="30"
-                                    step="1" value="3" data-setting="boot-timeout">
-                                <div class="slider-marks">
-                                    <span>0s</span>
-                                    <span>15s</span>
-                                    <span>30s</span>
+                            <div class="sys-hero-right">
+                                <div class="sys-hero-pill">
+                                    <span class="sys-pill-dot"></span>
+                                    System profile local
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="controls-section">
-                        <h3 class="section-title">Advanced Tweaks</h3>
-                        <div class="tweaks-grid">
-                            <div class="tweak-card" data-tweak="optimize-ssd">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <rect x="2" y="2" width="20" height="8" rx="2" />
-                                            <rect x="2" y="14" width="20" height="8" rx="2" />
-                                            <path d="M6 6h.01M6 18h.01" />
+                    <!-- ══ FILTER BAR ══ -->
+                    <div class="sys-filter-bar">
+                        <div class="sys-filter-tabs" id="sys-filter-tabs">
+                            <button class="sys-filter-tab sys-filter-active" type="button" data-sys-filter="all">All Tools</button>
+                            <button class="sys-filter-tab" type="button" data-sys-filter="toggles">Quick Toggles</button>
+                            <button class="sys-filter-tab" type="button" data-sys-filter="performance">Performance</button>
+                            <button class="sys-filter-tab" type="button" data-sys-filter="startup">Startup</button>
+                            <button class="sys-filter-tab" type="button" data-sys-filter="advanced">Advanced</button>
+                        </div>
+                        <span class="sys-sort-label">Sort by: <b>Recommended</b></span>
+                    </div>
+
+                    <!-- ══ TOOLS SECTION ══ -->
+                    <div class="sys-section" data-sys-section="main">
+                        <div class="sys-section-top">
+                            <div class="sys-section-head-left">
+                                <span class="sys-eyebrow-sm">CURATED TOOLS</span>
+                                <h2 class="sys-section-h2">Recommended Optimizations</h2>
+                                <p class="sys-section-desc">Safe local tools for Windows responsiveness, startup behavior, and background services.</p>
+                            </div>
+                            <div class="sys-section-head-right">
+                                <span class="sys-meta-pill" data-sys-count>12 tools</span>
+                                <span class="sys-meta-pill">Local only</span>
+                            </div>
+                        </div>
+                        <div class="sys-pcard-grid">
+                            <div class="toggle-card sys-pcard" data-toggle="sys-cortana" data-sys-cat="toggles">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
-                                        <h4>SSD Optimization</h4>
-                                        <p>Optimize settings for SSD drives</p>
-                                    </div>
+                                    <span class="pcard-cat-pill">Quick Toggle</span>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn apply">Apply</button>
-                                    <button class="tweak-btn revert">Revert</button>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Cortana</h4>
+                                    <p class="pcard-desc">Disable the Windows assistant background service to reduce unused background activity.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Background</span>
+                                    <span class="pcard-tag">Local</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" data-setting="cortana-enabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <button class="pcard-btn-primary sys-card-btn" type="button" data-action="toggle-cortana">Apply</button>
                                 </div>
                             </div>
 
-                            <div class="tweak-card" data-tweak="disable-fast-startup">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <div class="toggle-card sys-pcard" data-toggle="sys-telemetry" data-sys-cat="toggles">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12 3v18M3 12h18"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Quick Toggle</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Telemetry</h4>
+                                    <p class="pcard-desc">Reduce diagnostic data services and background reporting where supported.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Privacy</span>
+                                    <span class="pcard-tag">Local</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" data-setting="telemetry-enabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <button class="pcard-btn-primary sys-card-btn" type="button" data-action="toggle-telemetry">Apply</button>
+                                </div>
+                            </div>
+
+                            <div class="toggle-card sys-pcard" data-toggle="sys-background-apps" data-sys-cat="toggles">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3l-4 4-4-4"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Quick Toggle</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Background Apps</h4>
+                                    <p class="pcard-desc">Limit background app activity to reduce idle CPU and memory usage.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Background</span>
+                                    <span class="pcard-tag">Local</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" data-setting="background-apps-enabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <button class="pcard-btn-primary sys-card-btn" type="button" data-action="toggle-background">Apply</button>
+                                </div>
+                            </div>
+
+                            <div class="toggle-card sys-pcard" data-toggle="sys-search-indexing" data-sys-cat="toggles">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Quick Toggle</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Search Indexing</h4>
+                                    <p class="pcard-desc">Control Windows file indexing for better responsiveness on lower-end systems.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Indexing</span>
+                                    <span class="pcard-tag">Local</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" checked data-setting="search-indexing-enabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <button class="pcard-btn-primary sys-card-btn" type="button" data-action="toggle-search">Apply</button>
+                                </div>
+                            </div>
+
+                            <div class="slider-card sys-pcard sys-slider-pcard" data-slider="sys-visual-effects" data-sys-cat="performance">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Performance</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Visual Effects Level</h4>
+                                    <p class="pcard-desc">Balance Windows animations and visual effects against speed and responsiveness.</p>
+                                    <div class="pcard-slider-wrap">
+                                        <input type="range" class="custom-slider" id="visual-effects-slider" min="1" max="4" step="1" value="1" data-setting="visual-effects">
+                                        <div class="slider-value-display" id="visual-effects-value">Performance</div>
+                                    </div>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Performance</span>
+                                    <span class="pcard-tag">Live</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Live</span>
+                                    </div>
+                                    <button class="pcard-btn-primary sys-card-btn" type="button" data-action="apply-visual">Configure</button>
+                                </div>
+                            </div>
+
+                            <div class="slider-card sys-pcard sys-slider-pcard" data-slider="sys-processor-scheduling" data-sys-cat="performance">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Performance</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Processor Scheduling</h4>
+                                    <p class="pcard-desc">Choose whether Windows prioritizes foreground apps or background services.</p>
+                                    <div class="pcard-slider-wrap">
+                                        <input type="range" class="custom-slider" id="proc-sched-slider" min="1" max="2" step="1" value="1" data-setting="proc-scheduling">
+                                        <div class="slider-value-display" id="proc-sched-value">Programs</div>
+                                    </div>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">CPU</span>
+                                    <span class="pcard-tag">Live</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Live</span>
+                                    </div>
+                                    <button class="pcard-btn-primary sys-card-btn" type="button" data-action="apply-proc">Configure</button>
+                                </div>
+                            </div>
+
+                            <div class="slider-card sys-pcard sys-slider-pcard" data-slider="sys-menu-delay" data-sys-cat="performance">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Performance</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Menu Show Delay</h4>
+                                    <p class="pcard-desc">Tune how quickly Windows menus open after hovering or clicking.</p>
+                                    <div class="pcard-slider-wrap">
+                                        <input type="range" class="custom-slider" id="menu-delay-slider" min="0" max="400" step="50" value="0" data-setting="menu-delay">
+                                        <div class="slider-value-display" id="menu-delay-value">0ms</div>
+                                    </div>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Responsiveness</span>
+                                    <span class="pcard-tag">Live</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Live</span>
+                                    </div>
+                                    <button class="pcard-btn-primary sys-card-btn" type="button" data-action="apply-menu">Configure</button>
+                                </div>
+                            </div>
+
+                            <div class="slider-card sys-pcard sys-slider-pcard" data-slider="sys-boot-timeout" data-sys-cat="startup">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Startup</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Boot Menu Timeout</h4>
+                                    <p class="pcard-desc">Adjust how long the Windows boot menu waits before continuing startup.</p>
+                                    <div class="pcard-slider-wrap">
+                                        <input type="range" class="custom-slider" id="boot-timeout-slider" min="0" max="30" step="1" value="3" data-setting="boot-timeout">
+                                        <div class="slider-value-display" id="boot-timeout-value">3s</div>
+                                    </div>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Startup</span>
+                                    <span class="pcard-tag">Live</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Live</span>
+                                    </div>
+                                    <button class="pcard-btn-primary sys-card-btn" type="button" data-action="apply-boot">Configure</button>
+                                </div>
+                            </div>
+
+                            <div class="tweak-card sys-pcard sys-tweak-pcard" data-tweak="optimize-ssd" data-sys-cat="advanced">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="2" y="2" width="20" height="8" rx="2" /><rect x="2" y="14" width="20" height="8" rx="2" /><path d="M6 6h.01M6 18h.01" />
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Advanced</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">SSD Optimization</h4>
+                                    <p class="pcard-desc">Keep storage behavior optimized for SSD responsiveness and safe maintenance.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Storage</span>
+                                    <span class="pcard-tag">Safe</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Safe</span>
+                                    </div>
+                                    <button class="pcard-btn-primary sys-card-btn" type="button" data-action="apply-ssd">Apply</button>
+                                </div>
+                            </div>
+
+                            <div class="tweak-card sys-pcard sys-tweak-pcard" data-tweak="disable-fast-startup" data-sys-cat="startup advanced">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <polygon points="5 3 19 12 5 21 5 3" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
-                                        <h4>Disable Fast Startup</h4>
-                                        <p>Clean boot every time for stability</p>
-                                    </div>
+                                    <span class="pcard-cat-pill">Advanced</span>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn apply">Apply</button>
-                                    <button class="tweak-btn revert">Revert</button>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Disable Fast Startup</h4>
+                                    <p class="pcard-desc">Force a clean boot every time for more predictable startup behavior and stability.</p>
                                 </div>
-                            </div>
-
-                            <div class="tweak-card" data-tweak="bcdedit-tweaks">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                                        </svg>
-                                    </div>
-                                    <div class="tweak-info">
-                                        <h4>Boot Configuration</h4>
-                                        <p>Optimize boot configuration for performance</p>
-                                    </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Startup</span>
+                                    <span class="pcard-tag">Safe</span>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn apply">Apply</button>
-                                    <button class="tweak-btn revert">Revert</button>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Safe</span>
+                                    </div>
+                                    <button class="pcard-btn-primary tweak-btn apply">Apply</button>
                                 </div>
                             </div>
 
-                            <div class="tweak-card" data-tweak="disable-windows-tips">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <circle cx="12" cy="12" r="10" />
-                                            <path d="M12 16v-4M12 8h.01" />
+                            <div class="tweak-card sys-pcard sys-tweak-pcard" data-tweak="bcdedit-tweaks" data-sys-cat="startup advanced">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
-                                        <h4>Disable Windows Tips</h4>
-                                        <p>Stop Windows tips and suggestions</p>
-                                    </div>
+                                    <span class="pcard-cat-pill">Advanced</span>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn apply">Apply</button>
-                                    <button class="tweak-btn revert">Revert</button>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Boot Configuration</h4>
+                                    <p class="pcard-desc">Apply local boot configuration tweaks for a leaner, more responsive startup.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Boot</span>
+                                    <span class="pcard-tag">Advanced</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Admin</span>
+                                    </div>
+                                    <button class="pcard-btn-primary tweak-btn apply">Apply</button>
+                                </div>
+                            </div>
+
+                            <div class="tweak-card sys-pcard sys-tweak-pcard" data-tweak="disable-windows-tips" data-sys-cat="advanced">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Advanced</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Disable Windows Tips</h4>
+                                    <p class="pcard-desc">Stop Windows tips, suggestions, and promotional notifications for a quieter desktop.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">UI</span>
+                                    <span class="pcard-tag">Local</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Local</span>
+                                    </div>
+                                    <button class="pcard-btn-primary tweak-btn apply">Apply</button>
                                 </div>
                             </div>
                         </div>
@@ -1707,189 +1923,406 @@
                 </div>
 
                 <div id="page-memory" class="page">
-                    <div class="page-header">
-                        <h1>Memory Tweaks</h1>
-                        <p class="page-subtitle">Optimize RAM and memory management</p>
-                    </div>
-
-                    <div class="controls-section">
-                        <h3 class="section-title">Quick Toggles</h3>
-                        <div class="toggles-grid">
-                            <div class="toggle-card" data-toggle="mem-superfetch">
-                                <div class="toggle-info">
-                                    <h4>Superfetch/SysMain</h4>
-                                    <p>Preload applications</p>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" data-setting="superfetch-enabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="toggle-card" data-toggle="mem-prefetch">
-                                <div class="toggle-info">
-                                    <h4>Prefetch</h4>
-                                    <p>Cache app data</p>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" data-setting="prefetch-enabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="toggle-card" data-toggle="mem-hibernation">
-                                <div class="toggle-info">
-                                    <h4>Hibernation</h4>
-                                    <p>hiberfil.sys storage</p>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" data-setting="hibernation-enabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="toggle-card" data-toggle="mem-memory-compression">
-                                <div class="toggle-info">
-                                    <h4>Memory Compression</h4>
-                                    <p>Compress RAM data</p>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" checked data-setting="memory-compression-enabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
+                    <!-- ══ HERO ══ -->
+                    <div class="mem-hero">
+                        <div class="mem-hero-bg" aria-hidden="true">
+                            <div class="mem-hero-wave1"></div>
+                            <div class="mem-hero-wave2"></div>
                         </div>
-                    </div>
-
-                    <div class="controls-section">
-                        <h3 class="section-title">Memory Sliders</h3>
-                        <div class="sliders-grid">
-                            <div class="slider-card" data-slider="mem-page-file-min">
-                                <div class="slider-header">
-                                    <span class="slider-label">Page File Min Size</span>
-                                    <span class="slider-value" id="pagefile-min-value">4096 MB</span>
-                                </div>
-                                <input type="range" class="custom-slider" id="pagefile-min-slider" min="1024"
-                                    max="16384" step="1024" value="4096" data-setting="pagefile-min">
-                                <div class="slider-marks">
-                                    <span>1 GB</span>
-                                    <span>8 GB</span>
-                                    <span>16 GB</span>
-                                </div>
+                        <div class="mem-hero-body">
+                            <div class="mem-hero-left">
+                                <span class="mem-hero-eyebrow">CURATED MEMORY TUNING</span>
+                                <h1 class="mem-hero-title">Memory Tweaks</h1>
+                                <p class="mem-hero-sub">Optimize RAM behavior, cache usage, page file settings, and memory responsiveness.</p>
                             </div>
-                            <div class="slider-card" data-slider="mem-page-file-max">
-                                <div class="slider-header">
-                                    <span class="slider-label">Page File Max Size</span>
-                                    <span class="slider-value" id="pagefile-max-value">8192 MB</span>
-                                </div>
-                                <input type="range" class="custom-slider" id="pagefile-max-slider" min="2048"
-                                    max="32768" step="1024" value="8192" data-setting="pagefile-max">
-                                <div class="slider-marks">
-                                    <span>2 GB</span>
-                                    <span>16 GB</span>
-                                    <span>32 GB</span>
-                                </div>
-                            </div>
-                            <div class="slider-card" data-slider="mem-large-system-cache">
-                                <div class="slider-header">
-                                    <span class="slider-label">Large System Cache</span>
-                                    <span class="slider-value" id="large-cache-value">Disabled</span>
-                                </div>
-                                <input type="range" class="custom-slider" id="large-cache-slider" min="0" max="1"
-                                    step="1" value="0" data-setting="large-cache">
-                                <div class="slider-marks">
-                                    <span>Disabled</span>
-                                    <span>Enabled</span>
-                                </div>
-                            </div>
-                            <div class="slider-card" data-slider="mem-io-page-priority">
-                                <div class="slider-header">
-                                    <span class="slider-label">I/O Page Priority</span>
-                                    <span class="slider-value" id="io-priority-value">Normal</span>
-                                </div>
-                                <input type="range" class="custom-slider" id="io-priority-slider" min="1" max="5"
-                                    step="1" value="3" data-setting="io-priority">
-                                <div class="slider-marks">
-                                    <span>Low</span>
-                                    <span>Normal</span>
-                                    <span>High</span>
+                            <div class="mem-hero-right">
+                                <div class="mem-hero-pill">
+                                    <span class="mem-pill-dot"></span>
+                                    Memory profile local
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="controls-section">
-                        <h3 class="section-title">Advanced Tweaks</h3>
-                        <div class="tweaks-grid">
-                            <div class="tweak-card" data-tweak="disable-superfetch">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <rect x="4" y="4" width="16" height="16" rx="2" />
-                                            <rect x="8" y="8" width="8" height="8" rx="1" />
-                                            <path d="M4 12h2m12 0h2M12 4v2m0 12v2" />
+                    <!-- ══ FILTER BAR ══ -->
+                    <div class="mem-filter-bar">
+                        <div class="mem-filter-tabs" id="mem-filter-tabs">
+                            <button class="mem-filter-tab mem-filter-active" type="button" data-mem-filter="all">All Tools</button>
+                            <button class="mem-filter-tab" type="button" data-mem-filter="toggles">Quick Toggles</button>
+                            <button class="mem-filter-tab" type="button" data-mem-filter="ram">RAM</button>
+                            <button class="mem-filter-tab" type="button" data-mem-filter="pagefile">Page File</button>
+                            <button class="mem-filter-tab" type="button" data-mem-filter="advanced">Advanced</button>
+                        </div>
+                        <span class="mem-sort-label">Sort by: <b>Recommended</b></span>
+                    </div>
+
+                    <!-- ══ TOOLS SECTION ══ -->
+                    <div class="mem-section" data-mem-section="main">
+                        <div class="mem-section-top">
+                            <div class="mem-section-head-left">
+                                <span class="mem-eyebrow-sm">CURATED TOOLS</span>
+                                <h2 class="mem-section-h2">Recommended Optimizations</h2>
+                                <p class="mem-section-desc">Local memory tools for cache cleanup, compression, page file tuning, and system stability.</p>
+                            </div>
+                            <div class="mem-section-head-right">
+                                <span class="mem-meta-pill" data-mem-count>12 tools</span>
+                                <span class="mem-meta-pill">Local only</span>
+                            </div>
+                        </div>
+                        <div class="mem-pcard-grid">
+                            <div class="toggle-card mem-pcard" data-toggle="mem-superfetch" data-mem-cat="toggles ram">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="12" cy="10" r="1"/><circle cx="15" cy="10" r="1"/>
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
-                                        <h4>Disable Superfetch/SysMain</h4>
-                                        <p>Stop preloading apps for more available RAM</p>
-                                    </div>
+                                    <span class="pcard-cat-pill">Quick Toggle</span>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn apply">Apply</button>
-                                    <button class="tweak-btn revert">Revert</button>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Superfetch/SysMain</h4>
+                                    <p class="pcard-desc">Control application preloading to reduce unnecessary memory activity on some systems.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Preload</span>
+                                    <span class="pcard-tag">Local</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" data-setting="superfetch-enabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <button class="pcard-btn-primary mem-card-btn" type="button" data-action="toggle-superfetch">Apply</button>
                                 </div>
                             </div>
 
-                            <div class="tweak-card" data-tweak="disable-prefetch">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <div class="toggle-card mem-pcard" data-toggle="mem-prefetch" data-mem-cat="toggles ram">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Quick Toggle</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Prefetch</h4>
+                                    <p class="pcard-desc">Manage cached app launch data used by Windows to speed up repeated launches.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Cache</span>
+                                    <span class="pcard-tag">Local</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" data-setting="prefetch-enabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <button class="pcard-btn-primary mem-card-btn" type="button" data-action="toggle-prefetch">Apply</button>
+                                </div>
+                            </div>
+
+                            <div class="toggle-card mem-pcard" data-toggle="mem-hibernation" data-mem-cat="toggles pagefile">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Quick Toggle</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Hibernation</h4>
+                                    <p class="pcard-desc">Control hiberfil.sys storage usage and hibernation behavior.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Storage</span>
+                                    <span class="pcard-tag">Local</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" data-setting="hibernation-enabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <button class="pcard-btn-primary mem-card-btn" type="button" data-action="toggle-hibernation">Apply</button>
+                                </div>
+                            </div>
+
+                            <div class="toggle-card mem-pcard" data-toggle="mem-memory-compression" data-mem-cat="toggles ram">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-shine" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M4 4h16v16H4z"/><path d="M9 9h6v6H9z"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Quick Toggle</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Memory Compression</h4>
+                                    <p class="pcard-desc">Enable RAM compression to keep more data in memory before paging to disk.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">RAM</span>
+                                    <span class="pcard-tag">Local</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" checked data-setting="memory-compression-enabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <button class="pcard-btn-primary mem-card-btn" type="button" data-action="toggle-compression">Apply</button>
+                                </div>
+                            </div>
+
+                            <div class="slider-card mem-pcard mem-slider-pcard" data-slider="mem-page-file-min" data-mem-cat="pagefile">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Page File</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Page File Min Size</h4>
+                                    <p class="pcard-desc">Set the lower virtual memory range used when Windows needs extra paging space.</p>
+                                    <div class="pcard-slider-wrap">
+                                        <input type="range" class="custom-slider" id="pagefile-min-slider" min="1024" max="16384" step="1024" value="4096" data-setting="pagefile-min">
+                                        <div class="slider-value-display" id="pagefile-min-value">4096 MB</div>
+                                    </div>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Virtual Memory</span>
+                                    <span class="pcard-tag">Live</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Live</span>
+                                    </div>
+                                    <button class="pcard-btn-primary mem-card-btn" type="button" data-action="apply-pagemin">Configure</button>
+                                </div>
+                            </div>
+
+                            <div class="slider-card mem-pcard mem-slider-pcard" data-slider="mem-page-file-max" data-mem-cat="pagefile">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Page File</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Page File Max Size</h4>
+                                    <p class="pcard-desc">Set the upper virtual memory range to control how large paging can grow.</p>
+                                    <div class="pcard-slider-wrap">
+                                        <input type="range" class="custom-slider" id="pagefile-max-slider" min="2048" max="32768" step="1024" value="8192" data-setting="pagefile-max">
+                                        <div class="slider-value-display" id="pagefile-max-value">8192 MB</div>
+                                    </div>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Virtual Memory</span>
+                                    <span class="pcard-tag">Live</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Live</span>
+                                    </div>
+                                    <button class="pcard-btn-primary mem-card-btn" type="button" data-action="apply-pagemax">Configure</button>
+                                </div>
+                            </div>
+
+                            <div class="slider-card mem-pcard mem-slider-pcard" data-slider="mem-large-system-cache" data-mem-cat="ram">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">RAM</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Large System Cache</h4>
+                                    <p class="pcard-desc">Tune whether Windows favors a larger system file cache or normal desktop behavior.</p>
+                                    <div class="pcard-slider-wrap">
+                                        <input type="range" class="custom-slider" id="large-cache-slider" min="0" max="1" step="1" value="0" data-setting="large-cache">
+                                        <div class="slider-value-display" id="large-cache-value">Disabled</div>
+                                    </div>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Cache</span>
+                                    <span class="pcard-tag">Live</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Live</span>
+                                    </div>
+                                    <button class="pcard-btn-primary mem-card-btn" type="button" data-action="apply-cache">Configure</button>
+                                </div>
+                            </div>
+
+                            <div class="slider-card mem-pcard mem-slider-pcard" data-slider="mem-io-page-priority" data-mem-cat="pagefile">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M3 12h4l3 8 4-16 3 8h4"/>
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Page File</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">I/O Page Priority</h4>
+                                    <p class="pcard-desc">Adjust paging priority behavior for disk and memory operations.</p>
+                                    <div class="pcard-slider-wrap">
+                                        <input type="range" class="custom-slider" id="io-priority-slider" min="1" max="5" step="1" value="3" data-setting="io-priority">
+                                        <div class="slider-value-display" id="io-priority-value">Normal</div>
+                                    </div>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Paging</span>
+                                    <span class="pcard-tag">Live</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Live</span>
+                                    </div>
+                                    <button class="pcard-btn-primary mem-card-btn" type="button" data-action="apply-iopriority">Configure</button>
+                                </div>
+                            </div>
+
+                            <div class="tweak-card mem-pcard mem-tweak-pcard" data-tweak="disable-superfetch" data-mem-cat="ram advanced">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="4" y="4" width="16" height="16" rx="2" /><rect x="8" y="8" width="8" height="8" rx="1" /><path d="M4 12h2m12 0h2M12 4v2m0 12v2" />
+                                        </svg>
+                                    </div>
+                                    <span class="pcard-cat-pill">Advanced</span>
+                                </div>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Disable Superfetch/SysMain</h4>
+                                    <p class="pcard-desc">Stop application preloading entirely to keep more RAM free on systems that prefer it.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">RAM</span>
+                                    <span class="pcard-tag">Advanced</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Admin</span>
+                                    </div>
+                                    <button class="pcard-btn-primary tweak-btn apply">Apply</button>
+                                </div>
+                            </div>
+
+                            <div class="tweak-card mem-pcard mem-tweak-pcard" data-tweak="disable-prefetch" data-mem-cat="ram advanced">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
-                                        <h4>Disable Prefetch</h4>
-                                        <p>Stop Windows from prefetching applications</p>
-                                    </div>
+                                    <span class="pcard-cat-pill">Advanced</span>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn apply">Apply</button>
-                                    <button class="tweak-btn revert">Revert</button>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Disable Prefetch</h4>
+                                    <p class="pcard-desc">Stop Windows from caching app launch data when you prefer minimal disk activity.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Cache</span>
+                                    <span class="pcard-tag">Advanced</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Admin</span>
+                                    </div>
+                                    <button class="pcard-btn-primary tweak-btn apply">Apply</button>
                                 </div>
                             </div>
 
-                            <div class="tweak-card" data-tweak="disable-hibernation">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <div class="tweak-card mem-pcard mem-tweak-pcard" data-tweak="disable-hibernation" data-mem-cat="pagefile advanced">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
-                                        <h4>Disable Hibernation</h4>
-                                        <p>Free up disk space used by hiberfil.sys</p>
-                                    </div>
+                                    <span class="pcard-cat-pill">Advanced</span>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn apply">Apply</button>
-                                    <button class="tweak-btn revert">Revert</button>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Disable Hibernation</h4>
+                                    <p class="pcard-desc">Remove hiberfil.sys to free disk space when hibernation is not needed.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Storage</span>
+                                    <span class="pcard-tag">Advanced</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Admin</span>
+                                    </div>
+                                    <button class="pcard-btn-primary tweak-btn apply">Apply</button>
                                 </div>
                             </div>
 
-                            <div class="tweak-card" data-tweak="optimize-pagefile">
-                                <div class="tweak-header">
-                                    <div class="tweak-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                            <polyline points="14 2 14 8 20 8" />
+                            <div class="tweak-card mem-pcard mem-tweak-pcard" data-tweak="optimize-pagefile" data-mem-cat="pagefile advanced">
+                                <span class="tc-aurora" aria-hidden="true"></span>
+                                <span class="tc-accent" aria-hidden="true"></span>
+                                <div class="pcard-top">
+                                    <div class="pcard-icon-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
                                         </svg>
                                     </div>
-                                    <div class="tweak-info">
-                                        <h4>Optimize Page File</h4>
-                                        <p>Set optimal page file size based on RAM</p>
-                                    </div>
+                                    <span class="pcard-cat-pill">Advanced</span>
                                 </div>
-                                <div class="tweak-actions">
-                                    <button class="tweak-btn apply">Apply</button>
-                                    <button class="tweak-btn revert">Revert</button>
+                                <div class="pcard-body">
+                                    <h4 class="pcard-title">Optimize Page File</h4>
+                                    <p class="pcard-desc">Apply a recommended page file size based on installed RAM for balanced paging.</p>
+                                </div>
+                                <div class="pcard-tags">
+                                    <span class="pcard-tag">Page File</span>
+                                    <span class="pcard-tag">Advanced</span>
+                                </div>
+                                <div class="pcard-foot">
+                                    <div class="pcard-status">
+                                        <span class="tc-status-dot active"></span>
+                                        <span class="pcard-status-text">Admin</span>
+                                    </div>
+                                    <button class="pcard-btn-primary tweak-btn apply">Apply</button>
                                 </div>
                             </div>
                         </div>
