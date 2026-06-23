@@ -11,6 +11,23 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Montserrat:wght@800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script>
+      // Apply the persisted theme/accent before first paint so the entire app is
+      // themed from startup (no default-theme flash). renderer.js re-applies
+      // authoritatively once the Settings module initializes.
+      (function () {
+        try {
+          var s = JSON.parse(localStorage.getItem('xtweaks-settings-v1') || '{}');
+          var themes = ['xins-premium', 'obsidian', 'silver-mist', 'frost-glass'];
+          var finishes = ['pearl', 'graphite', 'chrome'];
+          var root = document.documentElement;
+          root.dataset.theme = themes.indexOf(s.theme) >= 0 ? s.theme : 'xins-premium';
+          root.dataset.accentFinish = finishes.indexOf(s.accentFinish) >= 0 ? s.accentFinish : 'pearl';
+        } catch (e) {
+          document.documentElement.dataset.theme = 'xins-premium';
+        }
+      })();
+    </script>
     <script type="importmap">
         {
             "imports": {

@@ -95,6 +95,19 @@ function _integrateGamingTopBar() {
     bar.classList.add('gaming-integrated');
 }
 
+// System & Memory: move the global top bar under the hero (above the filter/tab
+// bar) so they get the same search/action bar as Gaming/Network. Reuses the
+// generic 'net-integrated' styling (no network-specific or body-scoped rules).
+function _integratePageTopBar(pageId, filterSelector) {
+    const bar = document.querySelector('.top-bar');
+    const page = document.getElementById(pageId);
+    const filterBar = page && page.querySelector(filterSelector);
+    if (!bar || !page || !filterBar || bar.parentElement === page) return;
+    page.insertBefore(bar, filterBar);
+    bar.classList.remove('gaming-integrated');
+    bar.classList.add('net-integrated');
+}
+
 // Publish the resting (non-integrated) .top-bar height so the System/Memory filter
 // bars can sticky-dock right below the translucent sticky header (--xt-topbar-h).
 function updateTopBarHeightVar() {
@@ -189,10 +202,16 @@ function initializeNavigation() {
             document.body.classList.remove('net-page-active');
             document.body.classList.remove('gaming-page-active');
             document.body.classList.remove('game-tune-active');
-            _restoreNetTopBar();
-            updateTopBarHeightVar();
-            if (targetPage === 'system') scheduleSysMemCardsOnEntry('page-system', { source: 'page-enter' });
-            else if (targetPage === 'memory') scheduleSysMemCardsOnEntry('page-memory', { source: 'page-enter' });
+            if (targetPage === 'system') {
+                _integratePageTopBar('page-system', '.sys-filter-bar');
+                scheduleSysMemCardsOnEntry('page-system', { source: 'page-enter' });
+            } else if (targetPage === 'memory') {
+                _integratePageTopBar('page-memory', '.mem-filter-bar');
+                scheduleSysMemCardsOnEntry('page-memory', { source: 'page-enter' });
+            } else {
+                _restoreNetTopBar();
+                updateTopBarHeightVar();
+            }
         }
     }
 
@@ -414,28 +433,30 @@ function initializeSettingsPage() {
         });
     });
 
-    page.querySelectorAll('[data-settings-choice-group]').forEach((choice) => {
-        choice.addEventListener('click', () => {
-            const group = choice.dataset.settingsChoiceGroup;
-            const value = choice.dataset.settingsValue;
-            if (!group || !value) return;
-            if (group === 'theme') {
-                updateSettings({ theme: value }, {
-                    title: 'Theme Saved',
-                    message: `${themeLabels[value] || 'Theme'} selected.`
-                });
-            } else if (group === 'accent') {
-                updateSettings({ accentFinish: value }, {
-                    title: 'Accent Finish Saved',
-                    message: `${choice.textContent.trim()} selected.`
-                });
-            } else if (group === 'navigationStyle') {
-                updateSettings({ navigationStyle: value }, {
-                    title: 'Navigation Style Updated',
-                    message: `${choice.textContent.trim()} enabled for this session.`
-                });
-            }
-        });
+    // Delegated so a click anywhere on a choice card (theme/accent/nav) registers,
+    // regardless of which decorative child was hit — fixes the theme-card hitbox.
+    page.addEventListener('click', (event) => {
+        const choice = event.target.closest('[data-settings-choice-group]');
+        if (!choice || !page.contains(choice)) return;
+        const group = choice.dataset.settingsChoiceGroup;
+        const value = choice.dataset.settingsValue;
+        if (!group || !value) return;
+        if (group === 'theme') {
+            updateSettings({ theme: value }, {
+                title: 'Theme Saved',
+                message: `${themeLabels[value] || 'Theme'} selected.`
+            });
+        } else if (group === 'accent') {
+            updateSettings({ accentFinish: value }, {
+                title: 'Accent Finish Saved',
+                message: `${choice.textContent.trim()} selected.`
+            });
+        } else if (group === 'navigationStyle') {
+            updateSettings({ navigationStyle: value }, {
+                title: 'Navigation Style Updated',
+                message: `${choice.textContent.trim()} enabled for this session.`
+            });
+        }
     });
 
     page.querySelectorAll('.settings-select[data-settings-key]').forEach((select) => {
