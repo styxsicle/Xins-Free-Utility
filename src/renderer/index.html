@@ -250,7 +250,7 @@
                 </div>
 
                 <div class="page-body">
-                <div id="page-dashboard" class="page active">
+                <div id="page-dashboard" class="page active dash-entered">
                     <section class="hero glass" id="hero-card">
                         <div class="hero-bg-orbs" aria-hidden="true">
                             <span class="orb o1"></span>
@@ -1000,7 +1000,7 @@
                                     </div>
                                     <div class="tweak-info">
                                         <h4>Hardware GPU Scheduling</h4>
-                                        <p>Enable hardware-accelerated GPU scheduling</p>
+                                        <p>Offloads frame queue management to the GPU, cutting CPU overhead and reducing input latency at high frame rates.</p>
                                     </div>
                                 </div>
                                 <div class="tweak-actions">
@@ -1020,7 +1020,7 @@
                                     </div>
                                     <div class="tweak-info">
                                         <h4>Game Priority Boost</h4>
-                                        <p>Set high GPU and CPU priority for games</p>
+                                        <p>Raises scheduling priority for active game processes, ensuring consistent frame delivery over background system tasks.</p>
                                     </div>
                                 </div>
                                 <div class="tweak-actions">
@@ -1041,7 +1041,7 @@
                                     </div>
                                     <div class="tweak-info">
                                         <h4>Optimize Visual Effects</h4>
-                                        <p>Reduce Windows visual effects for performance</p>
+                                        <p>Strips compositor animations and non-essential effects to free CPU cycles for game rendering and reduce frame-time variance.</p>
                                     </div>
                                 </div>
                                 <div class="tweak-actions">
@@ -1062,7 +1062,7 @@
                                     </div>
                                     <div class="tweak-info">
                                         <h4>HPET Optimization</h4>
-                                        <p>Disable HPET and dynamic tick for lower latency</p>
+                                        <p>Disables the High Precision Event Timer and dynamic tick to reduce interrupt frequency and tighten CPU scheduling for consistent frame pacing.</p>
                                     </div>
                                 </div>
                                 <div class="tweak-actions">
@@ -2676,73 +2676,183 @@
                 </div>
 
                 <div id="page-cleanup" class="page">
-                    <div class="page-header">
-                        <h1>System Cleanup</h1>
-                        <p class="page-subtitle">Clean temporary files and free up disk space</p>
-                    </div>
 
-                    <div class="cleanup-grid">
-                        <div class="cleanup-card" data-cleanup="temp">
-                            <div class="cleanup-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                    <polyline points="14 2 14 8 20 8" />
-                                    <line x1="9" y1="15" x2="15" y2="15" />
-                                </svg>
-                            </div>
-                            <h4>Temp Files</h4>
-                            <p>Clean temporary files from Windows and user folders</p>
-                            <button class="cleanup-btn">Clean</button>
+                    <!-- ── Hero Header ──────────────────────────────────── -->
+                    <div class="cu-hero">
+                        <div class="cu-hero-left">
+                            <span class="cu-eyebrow">MAINTENANCE BAY</span>
+                            <h1 class="cu-title">System Cleanup</h1>
+                            <p class="cu-subtitle">Safely clear temporary files, caches, and system junk to keep your machine lean and responsive.</p>
                         </div>
-
-                        <div class="cleanup-card" data-cleanup="prefetch">
-                            <div class="cleanup-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                                </svg>
+                        <div class="cu-hero-right">
+                            <div class="cu-status-cluster">
+                                <div class="cu-status-row">
+                                    <span class="cu-status-dot-safe"></span>
+                                    <span class="cu-status-label">Safe Mode Active</span>
+                                </div>
+                                <div class="cu-status-row">
+                                    <span class="cu-status-key">Last cleanup</span>
+                                    <span class="cu-status-val">Not recorded</span>
+                                </div>
+                                <div class="cu-status-row">
+                                    <span class="cu-status-key">Selected tasks</span>
+                                    <span class="cu-status-val">Manual</span>
+                                </div>
                             </div>
-                            <h4>Prefetch Files</h4>
-                            <p>Clear Windows prefetch cache</p>
-                            <button class="cleanup-btn">Clean</button>
-                        </div>
-
-                        <div class="cleanup-card" data-cleanup="dns">
-                            <div class="cleanup-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-                                    <path d="M22 12A10 10 0 0 0 12 2v10z" />
-                                </svg>
-                            </div>
-                            <h4>DNS Cache</h4>
-                            <p>Flush DNS resolver cache</p>
-                            <button class="cleanup-btn">Clean</button>
-                        </div>
-
-                        <div class="cleanup-card" data-cleanup="recycle">
-                            <div class="cleanup-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path
-                                        d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                </svg>
-                            </div>
-                            <h4>Recycle Bin</h4>
-                            <p>Empty the recycle bin</p>
-                            <button class="cleanup-btn">Clean</button>
-                        </div>
-
-                        <div class="cleanup-card" data-cleanup="windows-update">
-                            <div class="cleanup-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                    <polyline points="7 10 12 15 17 10" />
-                                    <line x1="12" y1="15" x2="12" y2="3" />
-                                </svg>
-                            </div>
-                            <h4>Windows Update</h4>
-                            <p>Clear Windows Update download cache</p>
-                            <button class="cleanup-btn">Clean</button>
                         </div>
                     </div>
+
+                    <!-- ── Cleanup Pipeline ─────────────────────────────── -->
+                    <div class="cu-pipeline" aria-hidden="true">
+                        <div class="cu-pipe-step cu-pipe-active">
+                            <div class="cu-pipe-node"></div>
+                            <span class="cu-pipe-label">Scan</span>
+                        </div>
+                        <div class="cu-pipe-track"></div>
+                        <div class="cu-pipe-step">
+                            <div class="cu-pipe-node"></div>
+                            <span class="cu-pipe-label">Review</span>
+                        </div>
+                        <div class="cu-pipe-track"></div>
+                        <div class="cu-pipe-step">
+                            <div class="cu-pipe-node"></div>
+                            <span class="cu-pipe-label">Clean</span>
+                        </div>
+                        <div class="cu-pipe-track"></div>
+                        <div class="cu-pipe-step">
+                            <div class="cu-pipe-node"></div>
+                            <span class="cu-pipe-label">Verify</span>
+                        </div>
+                    </div>
+
+                    <!-- ── Safe Cleanup Queue ───────────────────────────── -->
+                    <div class="cu-group cu-group-safe">
+                        <div class="cu-group-hd">
+                            <span class="cu-group-name">Safe Cleanup Queue</span>
+                            <span class="cu-group-tag">Low risk · Fast</span>
+                        </div>
+                        <div class="cu-queue">
+                            <div class="cleanup-card" data-cleanup="temp">
+                                <div class="cu-card-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                        <line x1="9" y1="15" x2="15" y2="15" />
+                                    </svg>
+                                </div>
+                                <div class="cu-card-body">
+                                    <h4 class="cu-card-title">Temp Files</h4>
+                                    <p class="cu-card-desc">Clean temporary files from Windows and user folders</p>
+                                </div>
+                                <div class="cu-card-actions">
+                                    <span class="cu-card-status">Ready</span>
+                                    <button class="cleanup-btn">Clean</button>
+                                </div>
+                            </div>
+
+                            <div class="cleanup-card" data-cleanup="dns">
+                                <div class="cu-card-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+                                        <path d="M22 12A10 10 0 0 0 12 2v10z" />
+                                    </svg>
+                                </div>
+                                <div class="cu-card-body">
+                                    <h4 class="cu-card-title">DNS Cache</h4>
+                                    <p class="cu-card-desc">Flush DNS resolver cache</p>
+                                </div>
+                                <div class="cu-card-actions">
+                                    <span class="cu-card-status">Ready</span>
+                                    <button class="cleanup-btn">Clean</button>
+                                </div>
+                            </div>
+
+                            <div class="cleanup-card" data-cleanup="recycle">
+                                <div class="cu-card-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                    </svg>
+                                </div>
+                                <div class="cu-card-body">
+                                    <h4 class="cu-card-title">Recycle Bin</h4>
+                                    <p class="cu-card-desc">Empty the recycle bin</p>
+                                </div>
+                                <div class="cu-card-actions">
+                                    <span class="cu-card-status">Ready</span>
+                                    <button class="cleanup-btn">Clean</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── System Cache ─────────────────────────────────── -->
+                    <div class="cu-group cu-group-cache">
+                        <div class="cu-group-hd">
+                            <span class="cu-group-name">System Cache</span>
+                            <span class="cu-group-tag">Windows background caches</span>
+                        </div>
+                        <div class="cu-queue cu-queue-2col">
+                            <div class="cleanup-card" data-cleanup="prefetch">
+                                <div class="cu-card-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                                    </svg>
+                                </div>
+                                <div class="cu-card-body">
+                                    <h4 class="cu-card-title">Prefetch Files</h4>
+                                    <p class="cu-card-desc">Clear Windows prefetch cache</p>
+                                </div>
+                                <div class="cu-card-actions">
+                                    <span class="cu-card-status">Ready</span>
+                                    <button class="cleanup-btn">Clean</button>
+                                </div>
+                            </div>
+
+                            <div class="cleanup-card" data-cleanup="windows-update">
+                                <div class="cu-card-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                        <polyline points="7 10 12 15 17 10" />
+                                        <line x1="12" y1="15" x2="12" y2="3" />
+                                    </svg>
+                                </div>
+                                <div class="cu-card-body">
+                                    <h4 class="cu-card-title">Windows Update</h4>
+                                    <p class="cu-card-desc">Clear Windows Update download cache</p>
+                                </div>
+                                <div class="cu-card-actions">
+                                    <span class="cu-card-status">Ready</span>
+                                    <button class="cleanup-btn">Clean</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Recent Activity Log ──────────────────────────── -->
+                    <div class="cu-log">
+                        <div class="cu-log-hd">
+                            <span class="cu-log-title">Recent Activity</span>
+                            <span class="cu-log-hint">This session only</span>
+                        </div>
+                        <div class="cu-log-body">
+                            <div class="cu-log-row">
+                                <span class="cu-log-dot cu-dot-idle"></span>
+                                <span class="cu-log-msg">System ready — no cleanup performed this session</span>
+                                <span class="cu-log-time">—</span>
+                            </div>
+                            <div class="cu-log-row">
+                                <span class="cu-log-dot cu-dot-idle"></span>
+                                <span class="cu-log-msg">Temp Files · Not scanned</span>
+                                <span class="cu-log-time">Waiting</span>
+                            </div>
+                            <div class="cu-log-row">
+                                <span class="cu-log-dot cu-dot-idle"></span>
+                                <span class="cu-log-msg">DNS Cache · Not scanned</span>
+                                <span class="cu-log-time">Waiting</span>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div id="page-about" class="page">
@@ -3270,101 +3380,60 @@
             <div class="ai-welcome-ambient" aria-hidden="true"></div>
             <div class="ai-welcome-modal" id="ai-welcome-modal">
 
-                <!-- SVG main visual (inlined so CSS can target internal groups) -->
-                <svg class="ai-welcome-svg-asset" xmlns="http://www.w3.org/2000/svg"
-                     viewBox="0 0 340 358" overflow="hidden"
-                     font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-                     aria-hidden="true">
-                  <defs>
-                    <clipPath id="aiw-cardClip">
-                      <rect x="0" y="0" width="340" height="358" rx="20" ry="20"/>
-                    </clipPath>
-                    <radialGradient id="aiw-orbGrad" cx="35%" cy="30%" r="70%">
-                      <stop offset="0%" stop-color="#2a2a2a"/>
-                      <stop offset="100%" stop-color="#111111"/>
-                    </radialGradient>
-                    <filter id="aiw-sparkleGlow" x="-60%" y="-60%" width="220%" height="220%">
-                      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
-                      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                    </filter>
-                  </defs>
-
-                  <!-- Card background -->
-                  <rect x="0" y="0" width="340" height="358" rx="20" ry="20" fill="#111111"/>
-
-                  <!-- Background stars (SMIL, indefinite loop) -->
-                  <g clip-path="url(#aiw-cardClip)">
-                    <circle cx="28"  cy="42"  r="1.2" fill="white"><animate attributeName="opacity" values="0;0.4;0"  dur="2.8s" begin="-1.2s" repeatCount="indefinite"/></circle>
-                    <circle cx="310" cy="30"  r="0.9" fill="white"><animate attributeName="opacity" values="0;0.3;0"  dur="3.4s" begin="-0.5s" repeatCount="indefinite"/></circle>
-                    <circle cx="55"  cy="310" r="1.0" fill="white"><animate attributeName="opacity" values="0;0.35;0" dur="2.5s" begin="-2.1s" repeatCount="indefinite"/></circle>
-                    <circle cx="295" cy="260" r="1.3" fill="white"><animate attributeName="opacity" values="0;0.45;0" dur="3.1s" begin="-0.8s" repeatCount="indefinite"/></circle>
-                    <circle cx="18"  cy="200" r="0.8" fill="white"><animate attributeName="opacity" values="0;0.25;0" dur="4.0s" begin="-3.0s" repeatCount="indefinite"/></circle>
-                    <circle cx="320" cy="150" r="1.1" fill="white"><animate attributeName="opacity" values="0;0.4;0"  dur="2.2s" begin="-1.7s" repeatCount="indefinite"/></circle>
-                    <circle cx="170" cy="20"  r="0.8" fill="white"><animate attributeName="opacity" values="0;0.3;0"  dur="3.3s" begin="-1.0s" repeatCount="indefinite"/></circle>
-                    <circle cx="42"  cy="380" r="0.7" fill="white"><animate attributeName="opacity" values="0;0.2;0"  dur="4.2s" begin="-0.6s" repeatCount="indefinite"/></circle>
-                    <circle cx="300" cy="380" r="1.2" fill="white"><animate attributeName="opacity" values="0;0.45;0" dur="2.4s" begin="-3.5s" repeatCount="indefinite"/></circle>
-                    <circle cx="220" cy="55"  r="0.9" fill="white"><animate attributeName="opacity" values="0;0.3;0"  dur="3.8s" begin="-2.8s" repeatCount="indefinite"/></circle>
-                    <circle cx="100" cy="80"  r="1.0" fill="white"><animate attributeName="opacity" values="0;0.35;0" dur="2.7s" begin="-1.4s" repeatCount="indefinite"/></circle>
-                  </g>
-
-                  <!-- Floating sparkle accents (SMIL, indefinite loop) -->
-                  <text x="22"  y="52"  fill="white" font-size="10" opacity="0">✦<animate attributeName="opacity" values="0;0.35;0.35;0" dur="3.2s" begin="-1s"   repeatCount="indefinite"/></text>
-                  <text x="298" y="45"  fill="white" font-size="10" opacity="0">✦<animate attributeName="opacity" values="0;0.35;0.35;0" dur="2.8s" begin="-0.4s" repeatCount="indefinite"/></text>
-                  <text x="316" y="148" fill="white" font-size="9"  opacity="0">✦<animate attributeName="opacity" values="0;0.3;0.3;0"   dur="3.6s" begin="-2s"   repeatCount="indefinite"/></text>
-                  <text x="10"  y="145" fill="white" font-size="7"  opacity="0">✦<animate attributeName="opacity" values="0;0.25;0.25;0" dur="4s"   begin="-1.5s" repeatCount="indefinite"/></text>
-
-                  <!-- ORB GROUP — entrance + glow via CSS; ring/star loop via SMIL -->
-                  <g class="ai-svg-orb">
-                    <!-- Orbit ring (SMIL rotate, indefinite) -->
-                    <g class="ai-svg-ring">
-                      <animateTransform attributeName="transform" type="rotate" values="0 170 108;360 170 108" dur="4s" repeatCount="indefinite"/>
-                      <circle cx="170" cy="108" r="58" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-                      <path d="M 170,50 A 58,58 0 0,1 228,108" fill="none" stroke="white" stroke-opacity="0.6" stroke-width="1.5" stroke-linecap="round"/>
-                      <circle cx="228" cy="108" r="3" fill="white" opacity="0.9"/>
-                      <circle cx="170" cy="50"  r="2" fill="white" opacity="0.5"/>
-                    </g>
-                    <!-- Orb sphere -->
-                    <circle class="ai-svg-orb-sphere" cx="170" cy="108" r="40"
-                            fill="url(#aiw-orbGrad)" stroke="rgba(255,255,255,0.07)" stroke-width="0.5"/>
-                    <!-- Sparkle icon (SMIL scale, indefinite) -->
-                    <g class="ai-svg-star-icon" filter="url(#aiw-sparkleGlow)" transform="translate(152,90)">
-                      <g>
-                        <animateTransform attributeName="transform" type="scale"
-                          values="1 1;1.12 1.12;1 1" dur="3s" repeatCount="indefinite"
-                          calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
-                        <path d="M18 2C18 2 19.5 12 18 18C18 18 27 16.5 33 18C33 18 24 19.5 18 18C18 18 19.5 24 18 33C18 33 16.5 24 18 18C18 18 9 19.5 3 18C3 18 12 16.5 18 18C18 18 16.5 12 18 2Z" fill="white"/>
-                        <path d="M27 6C27 6 27.75 9 27 11.25C27 11.25 29.25 10.5 31.5 11.25C31.5 11.25 29.25 12 27 11.25C27 11.25 27.75 13.5 27 15.75C27 15.75 26.25 13.5 27 11.25C27 11.25 24.75 12 22.5 11.25C22.5 11.25 24.75 10.5 27 11.25C27 11.25 26.25 9 27 6Z" fill="white" opacity="0.6"/>
+                <!-- Orb visual -->
+                <div class="ai-welcome-orb-section" aria-hidden="true">
+                  <div class="ai-orb-wrap" id="ai-orb-wrap">
+                    <canvas class="ai-orb-canvas" id="ai-orb-canvas" width="220" height="220"></canvas>
+                    <svg class="ai-orb-svg" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" overflow="visible">
+                      <defs>
+                        <radialGradient id="aiOrb-coreGlow" cx="50%" cy="50%" r="50%">
+                          <stop class="aiOrb-cg0"   offset="0%"   stop-color="#ffffff" stop-opacity="0.12"/>
+                          <stop class="aiOrb-cg60"  offset="60%"  stop-color="#ffffff" stop-opacity="0.03"/>
+                          <stop class="aiOrb-cg100" offset="100%" stop-color="#0a0a0f" stop-opacity="0"/>
+                        </radialGradient>
+                        <filter id="aiOrb-lineGlow" x="-60%" y="-60%" width="220%" height="220%">
+                          <feGaussianBlur stdDeviation="1.8" result="blur"/>
+                          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                        </filter>
+                        <filter id="aiOrb-dotGlow" x="-200%" y="-200%" width="500%" height="500%">
+                          <feGaussianBlur stdDeviation="3" result="blur"/>
+                          <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                        </filter>
+                        <clipPath id="aiOrb-innerClip"><circle cx="80" cy="80" r="46"/></clipPath>
+                        <radialGradient id="aiOrb-sphereSheen" cx="38%" cy="28%" r="55%">
+                          <stop class="aiOrb-ss0" offset="0%"  stop-color="rgba(255,255,255,0.06)"/>
+                          <stop offset="100%" stop-color="transparent"/>
+                        </radialGradient>
+                      </defs>
+                      <circle class="ai-orb-glow-disc"    cx="80" cy="80" r="70"/>
+                      <circle class="ai-orb-sphere-base"  cx="80" cy="80" r="46" stroke-width="0.5"/>
+                      <circle class="ai-orb-sphere-sheen" cx="80" cy="80" r="46" fill="url(#aiOrb-sphereSheen)" clip-path="url(#aiOrb-innerClip)"/>
+                      <g class="ai-orb-crosshair" filter="url(#aiOrb-lineGlow)" opacity="0.7">
+                        <line class="ai-orb-line-main" x1="56" y1="80" x2="104" y2="80"  stroke-width="0.8"/>
+                        <line class="ai-orb-line-main" x1="80" y1="56" x2="80"  y2="104" stroke-width="0.8"/>
+                        <line class="ai-orb-line-diag" x1="62" y1="62" x2="98"  y2="98"  stroke-width="0.5"/>
+                        <line class="ai-orb-line-diag" x1="98" y1="62" x2="62"  y2="98"  stroke-width="0.5"/>
                       </g>
-                    </g>
-                  </g>
-
-                  <!-- PAGINATION DOTS — entrance + pulse via CSS -->
-                  <g class="ai-svg-dots">
-                    <circle class="ai-svg-dot" cx="161" cy="192" r="3" fill="#888888"/>
-                    <circle class="ai-svg-dot" cx="170" cy="192" r="3" fill="#555555"/>
-                    <circle class="ai-svg-dot" cx="179" cy="192" r="3" fill="#333333"/>
-                  </g>
-
-                  <!-- TITLE — entrance via CSS -->
-                  <g class="ai-svg-title">
-                    <text x="170" y="225" text-anchor="middle" fill="white" font-size="21" font-weight="700" letter-spacing="-0.3">Welcome to AI Tweaker</text>
-                  </g>
-
-                  <!-- SUBTITLE — entrance via CSS -->
-                  <g class="ai-svg-subtitle">
-                    <text text-anchor="middle" fill="#aaaaaa" font-size="13.5">
-                      <tspan x="170" y="258">Your personal optimization assistant for</tspan>
-                      <tspan x="170" dy="19">gaming performance, latency reduction,</tspan>
-                      <tspan x="170" dy="19">cleanup, and deep system tuning.</tspan>
-                    </text>
-                  </g>
-
-                  <!-- BADGE — entrance via CSS -->
-                  <g class="ai-svg-badge">
-                    <text x="170" y="332" text-anchor="middle" fill="#555555" font-size="11" letter-spacing="0.3">Private. On-device. Built into XTweaks.</text>
-                  </g>
-
-                </svg>
+                      <circle class="ai-orb-center-dot" cx="80" cy="80" r="2.5" opacity="0.9" filter="url(#aiOrb-dotGlow)"/>
+                      <g id="aiOrb-orbit-group">
+                        <circle class="ai-orb-ring-outer" cx="80" cy="80" r="66" fill="none" stroke-width="0.6" stroke-dasharray="4 8"/>
+                        <circle id="aiOrb-travel-dot"  class="ai-orb-travel-dot" cx="146" cy="80" r="3"   filter="url(#aiOrb-dotGlow)"/>
+                        <path   id="aiOrb-trail-arc"   class="ai-orb-trail"      fill="none" stroke-width="1" stroke-linecap="round" filter="url(#aiOrb-lineGlow)"/>
+                      </g>
+                      <g id="aiOrb-inner-orbit">
+                        <circle class="ai-orb-ring-inner" cx="80" cy="80" r="54" fill="none" stroke-width="0.5"/>
+                        <circle id="aiOrb-inner-dot" class="ai-orb-inner-dot" cx="134" cy="80" r="1.8" filter="url(#aiOrb-dotGlow)"/>
+                      </g>
+                      <circle class="ai-orb-ring-subtle" cx="80" cy="80" r="72" fill="none" stroke-width="0.5"/>
+                    </svg>
+                  </div>
+                </div>
+                <!-- Text content -->
+                <div class="ai-welcome-content">
+                  <h1 class="ai-welcome-title">Welcome to AI Tweaker</h1>
+                  <p class="ai-welcome-sub">Your personal optimization assistant for gaming performance, latency reduction, cleanup, and deep system tuning.</p>
+                  <p class="ai-welcome-tag">Private. On-device. Built into XTweaks.</p>
+                </div>
 
                 <!-- Footer controls -->
                 <div class="ai-welcome-footer">

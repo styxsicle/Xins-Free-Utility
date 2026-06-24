@@ -149,6 +149,12 @@ function initializeNavigation() {
             }
         });
 
+        // Force-close the AI welcome overlay when leaving the AI Tweaker page so it
+        // doesn't remain open (pointer-events: all) and block clicks on other pages.
+        if (targetPage !== 'ai-tweaker') {
+            window.forceCloseAiWelcome?.();
+        }
+
         if (targetPage === 'ai-tweaker') {
             document.body.classList.add('ai-tweaker-active');
             document.body.classList.remove('net-page-active');
@@ -211,6 +217,14 @@ function initializeNavigation() {
             } else {
                 _restoreNetTopBar();
                 updateTopBarHeightVar();
+                if (targetPage === 'dashboard') {
+                    const dashPage = document.getElementById('page-dashboard');
+                    if (dashPage) {
+                        dashPage.classList.remove('dash-entered');
+                        void dashPage.offsetWidth;
+                        dashPage.classList.add('dash-entered');
+                    }
+                }
             }
         }
     }
@@ -3983,6 +3997,46 @@ const TOGGLE_DETAILS = {
         impact: 'Medium',
         category: 'Memory',
         body: 'Lets the OS squeeze inactive memory pages so more apps can stay live without spilling to disk. Multitaskers feel it most.'
+    },
+    'gpu-scheduling': {
+        impact: 'High',
+        category: 'Performance',
+        body: 'Hands frame scheduling off to the GPU\'s own hardware queue, lifting that overhead off the driver and CPU. At high frame rates, frame pacing tightens and input latency drops measurably.'
+    },
+    'game-priority': {
+        impact: 'High',
+        category: 'Performance',
+        body: 'Moves active game processes to High scheduling priority so the CPU dispatcher keeps them fed even at peak load. Background tasks yield — the foreground stops competing.'
+    },
+    'optimize-visual-effects': {
+        impact: 'Medium',
+        category: 'Performance',
+        body: 'Strips DWM animations, transparency, and shadow passes from the compositor. Every render cycle the effects pipeline was using comes back to your frame budget.'
+    },
+    'disable-hpet': {
+        impact: 'High',
+        category: 'Latency',
+        body: 'Bypasses the High Precision Event Timer and dynamic-tick scheduling. Interrupt frequency drops, timer resolution tightens, and the CPU spends fewer cycles answering the clock.'
+    },
+    'optimize-ssd': {
+        impact: 'Medium',
+        category: 'Storage',
+        body: 'Confirms TRIM, AHCI, and write-caching settings are healthy for SSD workloads. Predictable storage latency and fewer background maintenance spikes during active sessions.'
+    },
+    'disable-fast-startup': {
+        impact: 'Medium',
+        category: 'Startup',
+        body: 'Forces a clean cold boot instead of reading a hybrid sleep image. Driver state resets fully, stale kernel sessions clear, and startup behavior stays predictable across reboots.'
+    },
+    'bcdedit-tweaks': {
+        impact: 'High',
+        category: 'Boot',
+        body: 'Edits the Boot Configuration Database to tune kernel timeouts, timer resolution, and partition alignment. Effects are low-level and persist from POST through to desktop session start.'
+    },
+    'disable-windows-tips': {
+        impact: 'Low',
+        category: 'UI',
+        body: 'Shuts off the tips engine and consumer experience suggestion service. No more unsolicited prompts or lock-screen ads — the shell stays quiet unless you ask for something.'
     }
 };
 
@@ -4110,9 +4164,10 @@ function ensureTooltip() {
 
 function showTooltipFor(card) {
     const tt = ensureTooltip();
-    const id = card.dataset.toggle || card.dataset.networkCard || '';
+    const id = card.dataset.toggle || card.dataset.networkCard || card.dataset.tweak || '';
     const category = card.dataset.cat || 'default';
     const isGpuCard = card.dataset.gpuCard === '1';
+    const isTweakCard = card.dataset.tweakCard === '1';
     const isNetPcard = card.classList.contains('net-pcard');
     const isNetAdvCard = card.classList.contains('net-adv-card');
     const isNetworkPlaceholder = !!card.dataset.networkCard && !isNetPcard && !isNetAdvCard;
@@ -4129,10 +4184,14 @@ function showTooltipFor(card) {
         detail = TOGGLE_DETAILS[id] || NETWORK_DETAILS[id] || { impact: 'Medium', category: 'Tweak', body: 'Refines a system behavior to favor responsiveness over background activity.' };
     }
 
-    // Pcards use .pcard-title; adv-cards use .adv-card-titles h4; toggle-cards use .tc-titles h4
+    // Pcards use .pcard-title; adv-cards use .adv-card-titles h4 or .tweak-info h4; toggle-cards use .tc-titles h4
     const title = isGpuCard
         ? (card.querySelector('.gpu-card-title')?.textContent || '')
-        : (card.querySelector('.tc-titles h4')?.textContent || card.querySelector('.pcard-title')?.textContent || card.querySelector('.adv-card-titles h4')?.textContent || '');
+        : (card.querySelector('.tc-titles h4')?.textContent
+           || card.querySelector('.tweak-info h4')?.textContent
+           || card.querySelector('.pcard-title')?.textContent
+           || card.querySelector('.adv-card-titles h4')?.textContent
+           || '');
     const isOn = card.classList.contains('on');
 
     // Network pcards and adv-cards get a silver tooltip; everything else keeps its cat color
@@ -4147,6 +4206,11 @@ function showTooltipFor(card) {
         tt.querySelector('.tt-state-text').textContent = 'Coming soon';
         tt.querySelector('.tt-hint').textContent = 'Placeholder · not yet active';
         tt.classList.remove('is-on', 'is-ready');
+    } else if (isTweakCard) {
+        tt.querySelector('.tt-state-text').textContent = 'Ready';
+        tt.querySelector('.tt-hint').textContent = 'Click Apply to activate';
+        tt.classList.remove('is-on');
+        tt.classList.add('is-ready');
     } else if (isNetPcard) {
         tt.querySelector('.tt-state-text').textContent = 'Ready';
         tt.querySelector('.tt-hint').textContent = detail.hint || 'Click to run';
@@ -4255,6 +4319,7 @@ function clearGamingEntryCardAnimations(items = []) {
         }
         clearEntryCardShine(item);
         item.style.removeProperty('will-change');
+        item.style.removeProperty('pointer-events');
         item.style.removeProperty('opacity');
         item.style.removeProperty('transform');
         item.style.removeProperty('filter');
@@ -4268,13 +4333,13 @@ function animateGamingCardsOnEntry() {
     const targetItems = getGamingEntryCards(page).filter(Boolean);
     clearGamingEntryCardAnimations(targetItems);
     if (targetItems[0]) targetItems[0].offsetHeight;
-    console.log('Gaming entry animation fired', targetItems.length);
 
     const started = [];
     targetItems.forEach((item, index) => {
         const rect = item.getBoundingClientRect();
         if (rect.width < 8 || rect.height < 8) return;
         applyEntryCardShine(item, index, GAMING_ENTRY_MOTION.stagger);
+        item.style.pointerEvents = 'none';
 
         const animation = item.animate([
             {
@@ -4296,6 +4361,9 @@ function animateGamingCardsOnEntry() {
 
         item.style.willChange = 'transform, opacity, filter';
         item._gamingWaapiAnimation = animation;
+        setTimeout(() => {
+            if (item._gamingWaapiAnimation === animation) item.style.removeProperty('pointer-events');
+        }, index * GAMING_ENTRY_MOTION.stagger);
         animation.finished
             .catch(() => {})
             .finally(() => {
@@ -4303,6 +4371,7 @@ function animateGamingCardsOnEntry() {
                     animation.cancel();
                     item._gamingWaapiAnimation = null;
                     item.style.removeProperty('will-change');
+                    item.style.removeProperty('pointer-events');
                     item.style.removeProperty('opacity');
                     item.style.removeProperty('transform');
                     item.style.removeProperty('filter');
@@ -4384,6 +4453,7 @@ function initializeGamingPage() {
             tab.classList.remove('is-activating');
             void tab.offsetWidth;
             tab.classList.add('is-activating');
+            tab.addEventListener('animationend', () => tab.classList.remove('is-activating'), { once: true });
             scheduleGamingCardsOnEntry({ source: 'tab-click' });
         });
     });
@@ -4398,6 +4468,23 @@ function initializeGamingPage() {
     });
 
     applyFilter('all');
+
+    page.querySelectorAll('.gaming-adv-card').forEach(card => {
+        if (card.dataset.tooltipWired === '1') return;
+        card.dataset.tooltipWired = '1';
+        card.dataset.tweakCard = '1';
+        card.dataset.cat = 'gaming';
+        let showTimer;
+        card.addEventListener('mouseenter', () => {
+            clearTimeout(showTimer);
+            showTimer = setTimeout(() => showTooltipFor(card), 220);
+        });
+        card.addEventListener('mouseleave', () => {
+            clearTimeout(showTimer);
+            hideTooltip();
+        });
+    });
+
     window.animateGamingCardsOnEntry = animateGamingCardsOnEntry;
     if (page.classList.contains('active')) scheduleGamingCardsOnEntry({ source: 'page-enter' });
 }
@@ -4432,6 +4519,8 @@ function animateSysMemCardsOnEntry(pageId) {
     items.forEach(item => {
         if (item._sysMemEntryAnimation) { item._sysMemEntryAnimation.cancel(); item._sysMemEntryAnimation = null; }
         clearEntryCardShine(item);
+        item.style.removeProperty('will-change');
+        item.style.removeProperty('pointer-events');
         item.style.removeProperty('opacity');
         item.style.removeProperty('transform');
         item.style.removeProperty('filter');
@@ -4440,6 +4529,7 @@ function animateSysMemCardsOnEntry(pageId) {
     let started = 0;
     items.forEach((item, index) => {
         applyEntryCardShine(item, index, SYSMEM_ENTRY_MOTION.stagger);
+        item.style.pointerEvents = 'none';
         const animation = item.animate([
             {
                 opacity: SYSMEM_ENTRY_MOTION.opacity,
@@ -4455,11 +4545,15 @@ function animateSysMemCardsOnEntry(pageId) {
         });
         item.style.willChange = 'transform, opacity, filter';
         item._sysMemEntryAnimation = animation;
+        setTimeout(() => {
+            if (item._sysMemEntryAnimation === animation) item.style.removeProperty('pointer-events');
+        }, index * SYSMEM_ENTRY_MOTION.stagger);
         animation.finished.catch(() => {}).finally(() => {
             if (item._sysMemEntryAnimation === animation) {
                 animation.cancel();
                 item._sysMemEntryAnimation = null;
                 item.style.removeProperty('will-change');
+                item.style.removeProperty('pointer-events');
                 item.style.removeProperty('opacity');
                 item.style.removeProperty('transform');
                 item.style.removeProperty('filter');
@@ -4585,6 +4679,22 @@ function initializeSystemPage() {
 
     enhanceSysMemCards(page, '.sys-card-btn');
     applyFilter('all');
+
+    page.querySelectorAll('.sys-tweak-pcard').forEach(card => {
+        if (card.dataset.tooltipWired === '1') return;
+        card.dataset.tooltipWired = '1';
+        card.dataset.tweakCard = '1';
+        card.dataset.cat = 'system';
+        let showTimer;
+        card.addEventListener('mouseenter', () => {
+            clearTimeout(showTimer);
+            showTimer = setTimeout(() => showTooltipFor(card), 220);
+        });
+        card.addEventListener('mouseleave', () => {
+            clearTimeout(showTimer);
+            hideTooltip();
+        });
+    });
 }
 
 function initializeMemoryPage() {
@@ -5146,6 +5256,19 @@ function initializeGpuPage() {
             card.dataset.hoverBody = c.hoverBody || c.desc;
 
             const impactLower = (c.impact || 'medium').toLowerCase();
+
+            // Inject real detected data into info-badge card descriptions
+            let liveDesc = c.desc;
+            if (c.badge === 'info') {
+                const titleLower = c.title.toLowerCase();
+                if (titleLower.includes('vram') && gpu.vram) {
+                    liveDesc = `${gpu.vram} detected on your ${VENDOR_NAME[v]} GPU. VRAM capacity determines texture quality headroom and memory-pressure tolerance.`;
+                } else if (titleLower.includes('driver') && gpu.driverVersion) {
+                    const dateStr = gpu.driverDate ? ` (${gpu.driverDate})` : '';
+                    liveDesc = `Driver ${gpu.driverVersion}${dateStr} installed. Confirms driver currency and aids regression isolation when performance changes.`;
+                }
+            }
+
             const btnText = c.badge === 'info' ? 'Read Only' : 'Coming Soon';
 
             card.innerHTML = `
@@ -5154,7 +5277,7 @@ function initializeGpuPage() {
                     <div class="gpu-card-icon gpu-card-icon--${v}">${iconSvg(c.icon)}</div>
                     <div class="gpu-card-body">
                         <h4 class="gpu-card-title">${c.title}</h4>
-                        <p class="gpu-card-desc">${c.desc}</p>
+                        <p class="gpu-card-desc">${liveDesc}</p>
                     </div>
                 </div>
                 <div class="gpu-card-foot">
@@ -7324,6 +7447,8 @@ function initializeAiTweaker() {
             modal.style.removeProperty('transform');
             modal.style.removeProperty('filter');
             modal.style.removeProperty('will-change');
+            modal.style.removeProperty('pointer-events');
+            modal.style.removeProperty('visibility');
         }
 
         function setModalCardStartState() {
@@ -7491,6 +7616,14 @@ function initializeAiTweaker() {
 
         loadModalMotionSettings();
         window.replayAiWelcomeModalMotion = replayAiModalMotionPreview;
+        // Called by activatePage when navigating away from AI Tweaker — no animation,
+        // just kill all open-state classes and stale inline styles immediately.
+        window.forceCloseAiWelcome = function() {
+            if (!overlay) return;
+            overlay.classList.remove('is-open', 'is-closing', 'ai-card-waapi-entering', 'ai-motion-reset');
+            if (cardMotionAnimation) { cardMotionAnimation.cancel(); cardMotionAnimation = null; }
+            clearModalCardInlineState();
+        };
 
         continueBtn.addEventListener('click', closeWelcome);
         overlay.addEventListener('click', (e) => {
@@ -7659,6 +7792,132 @@ function initializeAiTweaker() {
 
             window.addEventListener('resize', () => { if (wRafId) resizeWCanvas(); });
         }
+
+        // ── AI welcome card orb — exact port from reference (SPEED/particles/floatOrb)
+        const aipOrbWrap = document.getElementById('ai-orb-wrap');
+        const aipCanvas  = document.getElementById('ai-orb-canvas');
+        if (aipOrbWrap && aipCanvas && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            const aipCtx = aipCanvas.getContext('2d');
+            const AIP_W = aipCanvas.width, AIP_H = aipCanvas.height;
+            const AIP_CX = AIP_W / 2, AIP_CY = AIP_H / 2;
+
+            const AIP_SPEED = {
+                orbitOuter:    0.0015,
+                orbitInner:    0.0022,
+                trailLength:   1.2,
+                float:         0.3,
+                floatDist:     4,
+                particleDrift: 0.28,
+                particlePulse: 0.18,
+            };
+
+            function aipRand(a, b) { return a + Math.random() * (b - a); }
+
+            const aipTravelDot = document.getElementById('aiOrb-travel-dot');
+            const aipInnerDot  = document.getElementById('aiOrb-inner-dot');
+            const aipTrailArc  = document.getElementById('aiOrb-trail-arc');
+            const AIP_R = 66, AIP_RI = 54;
+
+            let aipParticles = [];
+            function aipInitParticles() {
+                const isFrost  = document.documentElement.dataset.theme === 'frost-glass';
+                const color    = isFrost ? 'rgba(15,40,80,0.9)' : '#ffffff';
+                const alphaMin = isFrost ? 0.08 : 0.1;
+                const alphaMax = isFrost ? 0.35 : 0.5;
+                aipParticles = [];
+                for (let i = 0; i < 38; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist  = aipRand(30, 95);
+                    aipParticles.push({
+                        x: AIP_CX + Math.cos(angle) * dist,
+                        y: AIP_CY + Math.sin(angle) * dist,
+                        baseX: AIP_CX + Math.cos(angle) * dist,
+                        baseY: AIP_CY + Math.sin(angle) * dist,
+                        r:     aipRand(0.4, 1.4),
+                        alpha: aipRand(alphaMin, alphaMax),
+                        speed: aipRand(0.0004, 0.0012),
+                        phase: Math.random() * Math.PI * 2,
+                        drift: aipRand(2, 6),
+                        color,
+                    });
+                }
+            }
+
+            let aipT = 0;
+            function aipDrawParticles() {
+                aipCtx.clearRect(0, 0, AIP_W, AIP_H);
+                aipT += 0.016;
+                for (const p of aipParticles) {
+                    const wobble  = Math.sin(aipT * p.speed * AIP_SPEED.particleDrift * 3000 + p.phase);
+                    const wobble2 = Math.cos(aipT * p.speed * AIP_SPEED.particleDrift * 2400 + p.phase);
+                    p.x = p.baseX + wobble  * p.drift;
+                    p.y = p.baseY + wobble2 * p.drift;
+                    const pulse = 0.5 + 0.5 * Math.sin(aipT * p.speed * AIP_SPEED.particlePulse * 3000 + p.phase);
+                    aipCtx.beginPath();
+                    aipCtx.arc(p.x, p.y, p.r * (0.8 + 0.4 * pulse), 0, Math.PI * 2);
+                    aipCtx.fillStyle   = p.color;
+                    aipCtx.globalAlpha = p.alpha * (0.5 + 0.5 * pulse);
+                    aipCtx.fill();
+                }
+                aipCtx.globalAlpha = 1;
+            }
+
+            function aipArcPath(cx, cy, r, s, e) {
+                const x1 = cx + r * Math.cos(s), y1 = cy + r * Math.sin(s);
+                const x2 = cx + r * Math.cos(e), y2 = cy + r * Math.sin(e);
+                const diff = ((e - s) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+                return `M ${x1} ${y1} A ${r} ${r} 0 ${diff > Math.PI ? 1 : 0} 1 ${x2} ${y2}`;
+            }
+
+            let aipOrbitAngle = 0, aipInnerAngle = Math.PI;
+            function aipAnimateSVG() {
+                aipOrbitAngle += AIP_SPEED.orbitOuter;
+                aipInnerAngle -= AIP_SPEED.orbitInner;
+                if (aipTravelDot) {
+                    aipTravelDot.setAttribute('cx', 80 + AIP_R  * Math.cos(aipOrbitAngle));
+                    aipTravelDot.setAttribute('cy', 80 + AIP_R  * Math.sin(aipOrbitAngle));
+                }
+                if (aipTrailArc) {
+                    aipTrailArc.setAttribute('d', aipArcPath(80, 80, AIP_R, aipOrbitAngle - AIP_SPEED.trailLength, aipOrbitAngle));
+                }
+                if (aipInnerDot) {
+                    aipInnerDot.setAttribute('cx', 80 + AIP_RI * Math.cos(aipInnerAngle));
+                    aipInnerDot.setAttribute('cy', 80 + AIP_RI * Math.sin(aipInnerAngle));
+                }
+            }
+
+            let aipFloatT = 0;
+            function aipFloatOrb() {
+                aipFloatT += 0.016;
+                aipOrbWrap.style.transform = `translateY(${Math.sin(aipFloatT * AIP_SPEED.float) * AIP_SPEED.floatDist}px)`;
+            }
+
+            let aipRafId = null;
+            function aipLoop() {
+                aipDrawParticles();
+                aipAnimateSVG();
+                aipFloatOrb();
+                aipRafId = requestAnimationFrame(aipLoop);
+            }
+
+            const aipObs = new MutationObserver(() => {
+                if (overlay.classList.contains('is-open')) {
+                    if (!aipRafId) {
+                        aipT = 0; aipFloatT = 0;
+                        aipOrbitAngle = 0; aipInnerAngle = Math.PI;
+                        aipInitParticles();
+                        aipRafId = requestAnimationFrame(aipLoop);
+                    }
+                } else {
+                    if (aipRafId) {
+                        cancelAnimationFrame(aipRafId);
+                        aipRafId = null;
+                        aipOrbWrap.style.transform = '';
+                    }
+                }
+            });
+            aipObs.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+        }
     }
 
     // Focus mode
@@ -7732,6 +7991,7 @@ function clearNetworkEntryCardAnimations(items = []) {
         }
         clearEntryCardShine(item);
         item.style.removeProperty('will-change');
+        item.style.removeProperty('pointer-events');
         item.style.removeProperty('opacity');
         item.style.removeProperty('transform');
         item.style.removeProperty('filter');
@@ -7751,6 +8011,7 @@ function animateNetworkCardsOnEntry() {
         const rect = item.getBoundingClientRect();
         if (rect.width < 8 || rect.height < 8) return;
         applyEntryCardShine(item, index, NETWORK_ENTRY_MOTION.stagger);
+        item.style.pointerEvents = 'none';
 
         const animation = item.animate([
             {
@@ -7772,6 +8033,9 @@ function animateNetworkCardsOnEntry() {
 
         item.style.willChange = 'transform, opacity, filter';
         item._networkEntryAnimation = animation;
+        setTimeout(() => {
+            if (item._networkEntryAnimation === animation) item.style.removeProperty('pointer-events');
+        }, index * NETWORK_ENTRY_MOTION.stagger);
         animation.finished
             .catch(() => {})
             .finally(() => {
@@ -7779,6 +8043,7 @@ function animateNetworkCardsOnEntry() {
                     animation.cancel();
                     item._networkEntryAnimation = null;
                     item.style.removeProperty('will-change');
+                    item.style.removeProperty('pointer-events');
                     item.style.removeProperty('opacity');
                     item.style.removeProperty('transform');
                     item.style.removeProperty('filter');
