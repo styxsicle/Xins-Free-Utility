@@ -6579,10 +6579,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('page-gaming')?.classList.contains('active')) {
             scheduleGamingCardsOnEntry({ source: 'page-enter' });
         }
-        if (document.getElementById('page-dashboard')?.classList.contains('active')) {
-            scheduleDashboardCardsOnEntry({ source: 'page-enter' });
-        }
+        // Dashboard initial-load animation is anchored to window.load below
+        // to avoid running during the black/unpainted window phase.
     }, 0);
+});
+
+// Dashboard cold-launch entrance: delay until after first real paint.
+// window.load fires after all resources are parsed; the extra 380 ms gives
+// Electron time to composite the first visible frame before the animation starts.
+// Navigation-triggered replays go through activatePage → scheduleDashboardCardsOnEntry
+// and are unaffected by this block.
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        scheduleDashboardCardsOnEntry({ source: 'page-enter' });
+    }, 380);
 });
 
 // ── GPU Page ──────────────────────────────────────────────────
