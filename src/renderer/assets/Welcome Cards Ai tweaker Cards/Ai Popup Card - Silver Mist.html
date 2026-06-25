@@ -251,6 +251,14 @@ function floatOrb() {
 }
 function loop() { drawParticles(); animateSVG(); floatOrb(); requestAnimationFrame(loop); }
 loop();
+
+// ── Notify parent page when user interacts with card controls ─────
+document.querySelector('.btn').addEventListener('click', () => {
+  window.parent.postMessage({ type: 'ai-welcome-continue' }, '*');
+});
+document.getElementById('dontShow').addEventListener('change', function () {
+  window.parent.postMessage({ type: 'ai-welcome-dismiss', checked: this.checked }, '*');
+});
 </script>
 </body>
 </html>
