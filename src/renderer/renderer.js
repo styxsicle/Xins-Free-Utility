@@ -4895,6 +4895,7 @@ function initializeProcessReducer() {
     let _confirmResolve = null;
     let _scanTimers = [];
     let _prxPollInterval = null;
+    let _prxAppsLiveInterval = null;
 
     // ── Category icon SVGs (inline, no downloads) ──
     const CAT_ICONS = {
@@ -5460,7 +5461,7 @@ function initializeProcessReducer() {
                         <span class="pr-proc-name">${displayName}</span>
                         ${isVerified ? '<span class="pr-proc-verified">Verified</span>' : ''}
                     </div>
-                    <div class="pr-proc-detail">${p.processName || ''}</div>
+                    <div class="pr-proc-detail">${p.processName || ''}${p.pid != null ? `<span class="pr-proc-pid"> · PID ${p.pid}</span>` : ''}</div>
                 </div>
                 <div class="pr-proc-cpu-wrap">
                     <span class="pr-proc-cpu-val">—</span>
@@ -5494,20 +5495,30 @@ function initializeProcessReducer() {
             return row;
         };
 
+        console.log(`[ProcGroups] total: ${processes.length} | safe: ${safeProcs.length} | review: ${revProcs.length}`);
+
         if (safeList && safeProcs.length) {
-            safeProcs.forEach((p, i) => {
+            safeProcs.forEach(p => {
                 const row = makeRow(p, true);
                 safeList.appendChild(row);
-                setTimeout(() => row.classList.add('pr-revealed'), 36 * i);
+                requestAnimationFrame(() => row.classList.add('pr-revealed'));
             });
         }
         if (reviewList && revProcs.length) {
-            revProcs.forEach((p, i) => {
+            revProcs.forEach(p => {
                 const row = makeRow(p, false);
                 reviewList.appendChild(row);
-                setTimeout(() => row.classList.add('pr-revealed'), 36 * (i + safeProcs.length));
+                requestAnimationFrame(() => row.classList.add('pr-revealed'));
             });
         }
+
+        // Debug: confirm scroll container is actually overflowing
+        setTimeout(() => {
+            if (scrollEl) {
+                const rows = scrollEl.querySelectorAll('.pr-process-row').length;
+                console.log(`[ProcGroups] scrollHeight: ${scrollEl.scrollHeight} | clientHeight: ${scrollEl.clientHeight} | rows in DOM: ${rows}`);
+            }
+        }, 100);
 
         // Show/hide groups based on content — no empty-box waste
         if (safeGroupEl)      safeGroupEl.style.display      = safeProcs.length ? '' : 'none';
@@ -5537,6 +5548,11 @@ function initializeProcessReducer() {
                 revProcs.length  ? `<span class="prx-res-pill prx-res-pill-review">${revProcs.length} review</span>` : '',
                 `<span class="prx-res-pill prx-res-pill-protected">protected hidden</span>`,
             ].join('');
+        }
+        const sourceEl = document.getElementById('prx-scan-source');
+        if (sourceEl) {
+            const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            sourceEl.textContent = `Live scan from this PC · refreshed at ${ts}`;
         }
     }
 
@@ -5919,7 +5935,59 @@ function initializeProcessReducer() {
     });
 
     // ── Tab panel switcher ──
+    async function refreshLiveProcessStats() {
+        if (!prProcesses.length) return;
+        try {
+            const raw = await window.electronAPI?.getLiveProcessStats?.();
+            if (!raw || !Array.isArray(raw)) return;
+            // Build map: processName key → summed RAM across all instances with same name
+            const liveMap = new Map();
+            for (const p of raw) {
+                const key = (p.Name || '').toLowerCase().replace(/\s+/g, '');
+                if (!key) continue;
+                const prev = liveMap.get(key);
+                const ram = typeof p.RAM_MB === 'number' ? p.RAM_MB : 0;
+                liveMap.set(key, { pid: p.Id, ramMB: (prev?.ramMB || 0) + ram });
+            }
+            // Update prProcesses data model
+            prProcesses = prProcesses.filter(p => liveMap.has(p.processName));
+            prProcesses.forEach(p => {
+                const live = liveMap.get(p.processName);
+                if (live) p.ramMB = live.ramMB;
+            });
+            // Update DOM in-place — no rebuild, no flash, scroll stays put
+            document.querySelectorAll('#page-process-reducer .pr-process-row').forEach(row => {
+                const procName = row.dataset.proc;
+                if (!procName) return;
+                const live = liveMap.get(procName);
+                if (!live) {
+                    // Process ended — fade out and remove
+                    row.style.transition = 'opacity 0.3s';
+                    row.style.opacity = '0';
+                    setTimeout(() => row.remove(), 320);
+                } else {
+                    // Update RAM bar and value only
+                    const ramMB  = live.ramMB;
+                    const ramPct = Math.min(100, Math.round((ramMB / 1500) * 100));
+                    const ramVal  = row.querySelector('.pr-proc-ram-val');
+                    const ramFill = row.querySelector('.pr-proc-ram-fill');
+                    if (ramVal)  ramVal.textContent  = `${ramMB} MB`;
+                    if (ramFill) ramFill.style.width  = `${ramPct}%`;
+                }
+            });
+            // Update timestamp only (no full pills rebuild)
+            const sourceEl = document.getElementById('prx-scan-source');
+            if (sourceEl) {
+                const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                sourceEl.textContent = `Live scan from this PC · refreshed at ${ts}`;
+            }
+        } catch { /* silent — don't disrupt UI on transient PS error */ }
+    }
+
     function switchPrxTab(name) {
+        // Always stop the live refresh; restart below only when landing on Apps
+        if (_prxAppsLiveInterval) { clearInterval(_prxAppsLiveInterval); _prxAppsLiveInterval = null; }
+
         const panels = ['overview', 'apps', 'history'];
         panels.forEach(n => {
             const panel = document.getElementById(`prx-panel-${n}`);
@@ -5928,7 +5996,32 @@ function initializeProcessReducer() {
         page.querySelectorAll('.prx-filter-tab').forEach(t => {
             t.classList.toggle('prx-filter-active', t.dataset.prxTab === name);
         });
+        // Re-enforce results visibility when returning to Apps tab if scan data exists
+        if (name === 'apps' && prProcesses.length > 0) {
+            if (resultsEl) resultsEl.hidden = false;
+            const appsEmpty = document.getElementById('prx-apps-empty');
+            if (appsEmpty) appsEmpty.style.display = 'none';
+            // Start 3-second live refresh while user is on Apps tab
+            _prxAppsLiveInterval = setInterval(refreshLiveProcessStats, 3000);
+        }
     }
+
+    // Wheel handler: when hovering the row list, scroll the card first.
+    // preventDefault (non-passive) prevents the outer .content from also scrolling
+    // when the card still has rows to reveal — matches the user's expectation that
+    // the card is the scroll target. Once the card hits top/bottom, the event is
+    // left un-prevented and outer page scroll takes over naturally.
+    (function () {
+        const sc = document.querySelector('#prx-panel-apps .prx-results-scroll');
+        if (!sc) return;
+        sc.addEventListener('wheel', e => {
+            const atTop    = sc.scrollTop <= 0 && e.deltaY < 0;
+            const atBottom = sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 1 && e.deltaY > 0;
+            if (atTop || atBottom) return;   // at boundary — let outer page scroll
+            e.preventDefault();              // card has more rows — scroll card only
+            sc.scrollTop += e.deltaY;
+        }, { passive: false });
+    }());
 
     document.getElementById('prx-filter-tabs')?.addEventListener('click', e => {
         const tab = e.target.closest('[data-prx-tab]');

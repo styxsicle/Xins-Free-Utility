@@ -13921,25 +13921,33 @@ body.settings-nav-hidden .sidebar {
 .pr-empty-title { font-size: 15px; font-weight: 700; color: var(--text-primary); opacity: 0.4; }
 .pr-empty-sub { font-size: 13px; color: var(--text-secondary); opacity: 0.46; max-width: 360px; }
 
-/* ── Results card — glass container, [hidden] must win ── */
-.pr-results {
+/* ── Results card — glass container with bounded height so card scroll is self-contained ── */
+#page-process-reducer .pr-results {
   display: flex; flex-direction: column;
   background: rgba(255,255,255,0.028);
   border: 1px solid rgba(255,255,255,0.09);
   border-radius: 14px;
   overflow: hidden;
+  max-height: min(560px, 55vh);
+  min-height: 280px;
 }
 #pr-results[hidden], #prx-apps-empty[hidden] { display: none !important; }
-/* ── Results card header ── */
+/* ── Results card header — fixed, not scrollable ── */
 .prx-results-hdr {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 11px 13px 10px; border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+  padding: 11px 13px 10px; border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex: 0 0 auto; gap: 10px;
 }
+.prx-results-hdr-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .prx-results-hdr-title {
   font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
   color: rgba(255,255,255,0.48);
 }
-.prx-results-pills { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.prx-scan-source {
+  font-size: 9.5px; color: rgba(255,255,255,0.26); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.prx-results-pills { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
 .prx-res-pill {
   padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;
   border: 1px solid transparent;
@@ -13947,16 +13955,23 @@ body.settings-nav-hidden .sidebar {
 .prx-res-pill-safe     { color: #4ade80;               border-color: rgba(74,222,128,0.25);  background: rgba(74,222,128,0.07);  }
 .prx-res-pill-review   { color: rgba(255,185,75,0.95); border-color: rgba(255,185,75,0.25);  background: rgba(255,185,75,0.07);  }
 .prx-res-pill-protected{ color: rgba(255,255,255,0.36);border-color: rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); }
-/* ── Scroll container ── */
-.prx-results-scroll {
-  overflow-y: auto; max-height: 440px;
-  padding: 8px; display: flex; flex-direction: column; gap: 8px;
-  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.12) transparent;
+/* ── Scroll body — owns the overflow; page scroll coexists via normal bubbling ── */
+#page-process-reducer .prx-results-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: min(460px, 45vh);
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 8px 6px 8px 8px;
+  display: flex; flex-direction: column; gap: 8px;
+  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.32) rgba(255,255,255,0.06);
 }
-.prx-results-scroll::-webkit-scrollbar { width: 5px; }
-.prx-results-scroll::-webkit-scrollbar-track { background: transparent; }
-.prx-results-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
-.prx-results-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+#page-process-reducer .prx-results-scroll::-webkit-scrollbar { width: 6px; }
+#page-process-reducer .prx-results-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+#page-process-reducer .prx-results-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.28); border-radius: 3px; min-height: 32px; }
+#page-process-reducer .prx-results-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.48); }
+#page-process-reducer .prx-results-scroll::-webkit-scrollbar-button { display: none; }
 
 /* ── Zero rows message ── */
 .prx-zero-rows-msg {
@@ -13964,7 +13979,7 @@ body.settings-nav-hidden .sidebar {
   font-size: 12.5px; color: rgba(255,255,255,0.38); line-height: 1.55;
 }
 /* ── Process Group ── */
-.pr-group { border: 1px solid var(--panel-border); border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--panel-bg) 32%, transparent); }
+.pr-group { flex-shrink: 0; border: 1px solid var(--panel-border); border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--panel-bg) 32%, transparent); }
 .pr-group-header { display: flex; align-items: center; gap: 9px; padding: 11px 18px; background: color-mix(in srgb, var(--panel-bg-strong) 32%, transparent); border-bottom: 1px solid var(--panel-border); }
 .pr-group-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .pr-group-dot.safe      { background: #4ade80; box-shadow: 0 0 7px rgba(74,222,128,0.55); }
@@ -14036,6 +14051,7 @@ body.settings-nav-hidden .sidebar {
 .pr-proc-name { font-size: 13.5px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pr-proc-verified { font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px; padding: 1px 6px; border-radius: 4px; flex-shrink: 0; white-space: nowrap; background: color-mix(in srgb, var(--accent-primary) 14%, transparent); border: 1px solid var(--accent-border); color: var(--accent-primary); }
 .pr-proc-detail { font-size: 11px; color: var(--text-secondary); opacity: 0.52; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr-proc-pid { opacity: 0.7; font-size: 10px; }
 .pr-proc-cpu-wrap { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
 .pr-proc-cpu-val { font-size: 12.5px; font-weight: 700; color: var(--text-secondary); }
 .pr-proc-cpu-bar { width: 100%; height: 3px; border-radius: 99px; background: color-mix(in srgb, var(--panel-bg-strong) 70%, transparent); overflow: hidden; }
