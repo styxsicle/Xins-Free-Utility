@@ -15161,6 +15161,89 @@ body.settings-nav-hidden .sidebar {
 .prx-module-card.prx-mc-applied .prx-mc-title::after { content: ' ✓'; color: #4ade80; font-size: 10px; }
 .prx-module-card.prx-mc-failed { border-color: rgba(248,113,113,0.30); }
 .prx-module-card.prx-mc-failed .prx-mc-title::after { content: ' ✕'; color: #f87171; font-size: 10px; }
+.prx-mc-review-btn {
+  padding: 4px 11px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.055); color: rgba(255,255,255,0.50);
+  font-size: 10.5px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.prx-mc-review-btn:hover:not(:disabled) { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.72); }
+
+/* ── Process Review Popup ── */
+.prx-proc-review-ov {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.60); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.prx-proc-review-ov[hidden] { display: none !important; }
+.prx-proc-review-card {
+  position: relative; width: min(480px, 100%);
+  background: linear-gradient(158deg, rgba(28,30,42,0.98) 0%, rgba(14,16,24,0.99) 100%);
+  border: 1px solid rgba(255,255,255,0.10); border-radius: 18px;
+  padding: 24px 22px 20px;
+  box-shadow: 0 28px 80px rgba(0,0,0,0.65), inset 0 0 0 1px rgba(255,255,255,0.04);
+  display: flex; flex-direction: column; gap: 14px;
+  animation: prx-review-in 0.18s ease-out;
+}
+@keyframes prx-review-in { from { opacity: 0; transform: scale(0.97) translateY(6px); } to { opacity: 1; transform: none; } }
+.prx-proc-review-x {
+  position: absolute; top: 14px; right: 14px; width: 26px; height: 26px;
+  border-radius: 50%; background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.09); color: rgba(255,255,255,0.45);
+  font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.prx-proc-review-x:hover { background: rgba(255,255,255,0.13); color: rgba(255,255,255,0.82); }
+.prx-proc-review-hdr { display: flex; align-items: center; gap: 12px; padding-right: 32px; }
+.prx-proc-review-icon-wrap .pr-proc-icon { width: 40px; height: 40px; border-radius: 10px; }
+.prx-proc-review-title-col { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.prx-proc-review-name {
+  font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.92);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.prx-proc-review-status-pill {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 700; padding: 2px 8px;
+  border-radius: 5px; border: 1px solid transparent; width: fit-content;
+}
+.prx-proc-review-status-safe      { color: #4ade80; background: rgba(74,222,128,0.10); border-color: rgba(74,222,128,0.28); }
+.prx-proc-review-status-review    { color: #fbbf24; background: rgba(251,191,36,0.10); border-color: rgba(251,191,36,0.28); }
+.prx-proc-review-status-protected { color: #f87171; background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.22); }
+.prx-proc-review-dl {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 0;
+  background: rgba(255,255,255,0.025); border-radius: 10px;
+  padding: 12px 14px; border: 1px solid rgba(255,255,255,0.06);
+}
+.prx-proc-review-row { display: contents; }
+.prx-proc-review-dl dt {
+  font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.28); display: flex; align-items: center;
+}
+.prx-proc-review-dl dd {
+  font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.72);
+  margin: 0; display: flex; align-items: center; word-break: break-all;
+}
+.prx-proc-review-reason {
+  font-size: 11.5px; color: rgba(255,255,255,0.44); line-height: 1.55; margin: 0;
+  padding: 10px 12px; border-left: 2px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.018); border-radius: 0 8px 8px 0;
+}
+.prx-proc-review-foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.prx-proc-review-btn-sec {
+  padding: 7px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.055); color: rgba(255,255,255,0.55);
+  font-size: 11.5px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.prx-proc-review-btn-sec:hover { background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.80); }
+.prx-proc-review-btn-primary {
+  padding: 7px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.22);
+  background: linear-gradient(180deg, #ffffff 0%, #e9edf2 48%, #cfd5dd 100%);
+  color: #0a0c12; font-size: 11.5px; font-weight: 700; cursor: pointer;
+  transition: filter 0.15s, opacity 0.15s;
+}
+.prx-proc-review-btn-primary:hover:not(:disabled) { filter: brightness(1.06); }
+.prx-proc-review-btn-primary:disabled { opacity: 0.50; cursor: default; }
 
 /* ── Live Process Snapshot card (Apps tab) ── */
 .prx-snapshot {

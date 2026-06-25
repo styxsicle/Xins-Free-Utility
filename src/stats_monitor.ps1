@@ -47,14 +47,28 @@ while($true) {
             }
         } catch {}
 
+        # 6. Process / thread / handle counters (pre-computed perf counters — fast, single-instance CIM)
+        $procCount   = 0
+        $threadCount = 0
+        $handleCount = 0
+        try {
+            $sysPerfObj  = Get-CimInstance -ClassName Win32_PerfFormattedData_PerfOS_System  -ErrorAction SilentlyContinue
+            if ($sysPerfObj) { $procCount = [int]$sysPerfObj.Processes; $threadCount = [int]$sysPerfObj.Threads }
+            $objPerfObj  = Get-CimInstance -ClassName Win32_PerfFormattedData_PerfOS_Objects -ErrorAction SilentlyContinue
+            if ($objPerfObj)  { $handleCount = [int]$objPerfObj.HandleCount }
+        } catch {}
+
         # Construct JSON output
         $result = @{
-            cpu = $cpu
-            mem = $memUsage
-            disk = $disk
-            netUp = $netUp
-            netDown = $netDown
-            gpu = $gpu
+            cpu         = $cpu
+            mem         = $memUsage
+            disk        = $disk
+            netUp       = $netUp
+            netDown     = $netDown
+            gpu         = $gpu
+            procCount   = $procCount
+            threadCount = $threadCount
+            handleCount = $handleCount
         } | ConvertTo-Json -Compress
 
         Write-Output "STATS_DATA:$result"

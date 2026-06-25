@@ -2978,6 +2978,9 @@
                             </div>
                         </div>
 
+                        <!-- Background Optimization Module Cards -->
+                        <div class="prx-module-cards-section" id="prx-module-cards"></div>
+
                         <!-- Post-scan status bar (hidden until first scan) -->
                         <div class="prx-last-scan-bar" id="prx-last-scan-bar" hidden>
                             <span class="pr-status-dot" id="pr-status-dot"></span>
@@ -2989,6 +2992,54 @@
 
                     <!-- ── Apps Tab Panel ── -->
                     <div class="prx-tab-panel prx-tab-hidden" id="prx-panel-apps">
+
+                        <!-- Live CPU / Process Snapshot card (always visible on this tab) -->
+                        <div class="prx-snapshot" id="prx-snapshot">
+                            <div class="prx-snap-titlerow">
+                                <span class="prx-snap-title">Live Process Snapshot</span>
+                                <span class="prx-live-pill"><span class="prx-live-dot" aria-hidden="true"></span>LIVE</span>
+                            </div>
+                            <div class="prx-snap-main">
+                                <div class="prx-snap-stat">
+                                    <span class="prx-snap-val" id="snap-cpu">—</span>
+                                    <span class="prx-snap-lbl">CPU Load</span>
+                                </div>
+                                <div class="prx-snap-sep" aria-hidden="true"></div>
+                                <div class="prx-snap-stat">
+                                    <span class="prx-snap-val" id="snap-procs">—</span>
+                                    <span class="prx-snap-lbl">Processes</span>
+                                </div>
+                                <div class="prx-snap-sep" aria-hidden="true"></div>
+                                <div class="prx-snap-stat">
+                                    <span class="prx-snap-val" id="snap-uptime">—</span>
+                                    <span class="prx-snap-lbl">Uptime</span>
+                                </div>
+                                <div class="prx-snap-sep" aria-hidden="true"></div>
+                                <div class="prx-snap-stat">
+                                    <span class="prx-snap-val" id="snap-mem">—</span>
+                                    <span class="prx-snap-lbl">Memory</span>
+                                </div>
+                            </div>
+                            <div class="prx-snap-spark-wrap">
+                                <svg class="prx-snap-sparkline" viewBox="0 0 200 26" preserveAspectRatio="none" aria-hidden="true">
+                                    <polygon class="prx-spark-fill" id="snap-spark-fill" points=""/>
+                                    <polyline class="prx-spark-line" id="snap-spark-line" points="" fill="none"/>
+                                </svg>
+                            </div>
+                            <div class="prx-snap-detail-row">
+                                <span class="prx-snap-cpu-name" id="snap-cpu-model">—</span>
+                                <div class="prx-snap-pills">
+                                    <span class="prx-snap-pill" id="snap-cores">—</span>
+                                    <span class="prx-snap-pill" id="snap-clock">—</span>
+                                    <span class="prx-snap-pill" id="snap-threads">—</span>
+                                    <span class="prx-snap-pill" id="snap-handles">—</span>
+                                </div>
+                            </div>
+                            <div class="prx-snap-footer">
+                                <span class="prx-snap-note">Live readout from this PC. Counts may differ slightly from Task Manager as Windows processes start and stop continuously.</span>
+                                <span class="prx-snap-time" id="snap-time"></span>
+                            </div>
+                        </div>
 
                         <!-- Empty state (shown before first scan) -->
                         <div class="prx-apps-empty" id="prx-apps-empty">
@@ -3006,43 +3057,55 @@
                             <button class="prx-apps-open-btn" id="prx-apps-open-btn" type="button">Open AI Process Reducer</button>
                         </div>
 
-                        <!-- Process groups (shown after scan) -->
+                        <!-- Results card (shown after scan) -->
                         <div class="pr-results" id="pr-results" hidden>
 
-                            <div class="pr-group" id="pr-group-safe">
-                                <div class="pr-group-header">
-                                    <span class="pr-group-dot safe" aria-hidden="true"></span>
-                                    <span class="pr-group-title">Safe to Close</span>
-                                    <span class="pr-group-count" id="pr-safe-count">0</span>
+                            <div class="prx-results-hdr">
+                                <div class="prx-results-hdr-left">
+                                    <span class="prx-results-hdr-title">Detected Apps</span>
+                                    <span class="prx-scan-source" id="prx-scan-source"></span>
                                 </div>
-                                <div class="pr-table-header" aria-hidden="true">
-                                    <span></span><span>Process</span><span>CPU</span><span>Memory</span><span>Category</span><span>Actions</span>
-                                </div>
-                                <div class="pr-process-list" id="pr-safe-list"></div>
+                                <div class="prx-results-pills" id="prx-results-pills"></div>
                             </div>
 
-                            <div class="pr-group" id="pr-group-review">
-                                <div class="pr-group-header">
-                                    <span class="pr-group-dot review" aria-hidden="true"></span>
-                                    <span class="pr-group-title">Review First</span>
-                                    <span class="pr-group-count" id="pr-review-count">0</span>
-                                </div>
-                                <div class="pr-table-header" aria-hidden="true">
-                                    <span></span><span>Process</span><span>CPU</span><span>Memory</span><span>Category</span><span>Actions</span>
-                                </div>
-                                <div class="pr-process-list" id="pr-review-list"></div>
-                            </div>
+                            <div class="prx-results-scroll">
 
-                            <div class="pr-group" id="pr-group-protected">
-                                <div class="pr-group-header">
-                                    <span class="pr-group-dot protected" aria-hidden="true"></span>
-                                    <span class="pr-group-title">Protected — Windows Core &amp; Drivers</span>
-                                    <span class="pr-group-count">Hidden</span>
+                                <div class="pr-group" id="pr-group-safe">
+                                    <div class="pr-group-header">
+                                        <span class="pr-group-dot safe" aria-hidden="true"></span>
+                                        <span class="pr-group-title">Safe to Close</span>
+                                        <span class="pr-group-count" id="pr-safe-count">0</span>
+                                    </div>
+                                    <div class="pr-table-header" aria-hidden="true">
+                                        <span></span><span>Process</span><span>CPU</span><span>Memory</span><span>Category</span><span>Actions</span>
+                                    </div>
+                                    <div class="pr-process-list" id="pr-safe-list"></div>
                                 </div>
-                                <div class="pr-process-info-row">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                    System services, security processes, and drivers are never surfaced or modified by Process Reducer.
+
+                                <div class="pr-group" id="pr-group-review">
+                                    <div class="pr-group-header">
+                                        <span class="pr-group-dot review" aria-hidden="true"></span>
+                                        <span class="pr-group-title">Review First</span>
+                                        <span class="pr-group-count" id="pr-review-count">0</span>
+                                    </div>
+                                    <div class="pr-table-header" aria-hidden="true">
+                                        <span></span><span>Process</span><span>CPU</span><span>Memory</span><span>Category</span><span>Actions</span>
+                                    </div>
+                                    <div class="pr-process-list" id="pr-review-list"></div>
                                 </div>
+
+                                <div class="pr-group" id="pr-group-protected">
+                                    <div class="pr-group-header">
+                                        <span class="pr-group-dot protected" aria-hidden="true"></span>
+                                        <span class="pr-group-title">Protected — Windows Core &amp; Drivers</span>
+                                        <span class="pr-group-count">Hidden</span>
+                                    </div>
+                                    <div class="pr-process-info-row">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                        System services, security processes, and drivers are never surfaced or modified by Process Reducer.
+                                    </div>
+                                </div>
+
                             </div>
 
                         </div>
@@ -3164,6 +3227,13 @@
                                 <div class="prx-modal-state prx-hidden" id="prx-state-results">
                                     <h2 class="prx-modal-title">AI Process Reducer</h2>
                                     <p class="prx-modal-sub" id="prx-results-sub">Scan complete — review your optimization plan</p>
+                                    <div class="prx-scan-meta">
+                                        <span class="prx-scan-time" id="prx-scan-time"></span>
+                                        <button class="prx-refresh-btn" id="prx-refresh-btn" type="button" title="Run a fresh scan">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                            Refresh
+                                        </button>
+                                    </div>
                                     <div class="prx-ba-wrap">
                                         <div class="prx-ba-col">
                                             <span class="prx-ba-label" id="prx-ba-label-before">Current</span>
@@ -3179,7 +3249,7 @@
                                             <span class="prx-ba-mem" id="prx-ba-after-mem">est. after close</span>
                                         </div>
                                     </div>
-                                    <p class="prx-tm-note">Task Manager count may differ slightly — Windows processes start/stop continuously, and scanning can briefly spawn helper processes.</p>
+                                    <p class="prx-tm-note">Task Manager count may differ slightly — Windows processes start/stop continuously, and XTweaks scanning or applying settings can briefly spawn PowerShell helper processes.</p>
                                     <div class="prx-stats-row">
                                         <div class="prx-stat-item">
                                             <span class="prx-stat-val" id="prx-freed-ram">—</span>

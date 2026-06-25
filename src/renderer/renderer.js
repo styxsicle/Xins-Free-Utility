@@ -5028,6 +5028,8 @@ function initializeProcessReducer() {
         { id: 'disable-game-bar',        title: 'Game Bar Background Cut',        desc: 'Disables Game Bar background capture and recording overhead.',                      badge: 'restart',   checked: true  },
         { id: 'disable-xbox-services',   title: 'Xbox DVR Background Services',   desc: 'Disables Xbox DVR overlay, GameBar nexus, and background capture hooks.',          badge: 'restart',   checked: true  },
         { id: 'disable-background-apps', title: 'Background App Suppression',     desc: 'Prevents UWP apps from running background tasks when not in use.',                  badge: 'restart',   checked: true  },
+        { id: 'disable-edge-background', title: 'Edge Background Guard',          desc: 'Stops Edge Startup Boost and background extension activity from staying active after Edge closes.', badge: 'restart', checked: true  },
+        { id: 'disable-widgets',         title: 'Widgets Background Cut',          desc: 'Turns off Windows Widgets background presence and taskbar widget activity.',              badge: 'restart',   checked: true  },
         // ── Telemetry & Content ────────────────────────────────────────────────
         { _group: 'Telemetry & Content' },
         { id: 'disable-telemetry',    title: 'Telemetry Silence',              desc: 'Disables Windows feedback prompts, tailored experiences, and diagnostic UI noise.', badge: 'immediate', checked: true  },
@@ -5046,7 +5048,8 @@ function initializeProcessReducer() {
         { id: 'disable-voice-activation',   title: 'Voice Activation Silence', desc: 'Disables background voice activation listeners for all apps.',                   badge: 'restart',   checked: false },
         // ── Review First ───────────────────────────────────────────────────────
         { _group: 'Review First' },
-        { id: 'quiet-windows-update', title: 'Windows Update Quiet Mode',  desc: 'Sets active hours (8am–10pm) so Windows defers auto-restart during the day. Does not disable security updates.', badge: 'review', checked: false },
+        { id: 'quiet-windows-update',    title: 'Windows Update Quiet Mode',    desc: 'Sets active hours (8am–10pm) so Windows defers auto-restart during the day. Does not disable security updates.', badge: 'review', checked: false },
+        { id: 'disable-teams-startup',   title: 'Teams / Chat Startup Quiet',   desc: 'Reviews Teams/Chat startup behavior so it does not relaunch in the background unless the user wants it.', badge: 'review', checked: false },
         { id: null, title: 'Cloud Sync Quiet Mode',   desc: 'Limits cloud sync startup behavior. Review first — may interrupt active sync.',                  badge: 'review', checked: false, disabled: true },
         { id: null, title: 'Sensor Activity Guard',   desc: 'Reduces background location and sensor polling. Review first — affects all apps.',                badge: 'review', checked: false, disabled: true },
         { id: null, title: 'WebDAV Background Guard', desc: 'WebClient service management requires administrator access — coming in a future update.',         badge: 'soon',   checked: false, disabled: true },
@@ -5478,9 +5481,7 @@ function initializeProcessReducer() {
             `;
             row.appendChild(rest);
 
-            row.querySelector('.edit-btn')?.addEventListener('click', () => {
-                showNotification('info', displayName, `${p.processName || ''} · ${p.category || 'Unknown'} · ${ramText}`);
-            });
+            row.querySelector('.edit-btn')?.addEventListener('click', () => openProcReview(p));
             row.querySelector('.ignore-btn')?.addEventListener('click', () => {
                 ignoredProcs.add(p.processName);
                 row.style.transition = 'opacity 0.2s';
@@ -5585,6 +5586,104 @@ function initializeProcessReducer() {
             if (closeBtn) { closeBtn.disabled = false; closeBtn.textContent = 'Safe Close'; }
             showNotification('error', 'Error', 'Could not reach the process manager.');
         }
+    }
+
+    function openProcReview(p) {
+        // Singleton overlay — created once, reused each open
+        let ov = document.getElementById('prx-proc-review-ov');
+        if (!ov) {
+            ov = document.createElement('div');
+            ov.id = 'prx-proc-review-ov';
+            ov.className = 'prx-proc-review-ov';
+            ov.setAttribute('hidden', '');
+            ov.innerHTML = `
+                <div class="prx-proc-review-card" role="dialog" aria-modal="true">
+                    <button class="prx-proc-review-x" id="prx-proc-review-x" type="button" aria-label="Close">✕</button>
+                    <div class="prx-proc-review-hdr">
+                        <div class="prx-proc-review-icon-wrap" id="prx-proc-review-icon"></div>
+                        <div class="prx-proc-review-title-col">
+                            <span class="prx-proc-review-name" id="prx-proc-review-name"></span>
+                            <span class="prx-proc-review-status-pill" id="prx-proc-review-status"></span>
+                        </div>
+                    </div>
+                    <dl class="prx-proc-review-dl" id="prx-proc-review-dl"></dl>
+                    <p class="prx-proc-review-reason" id="prx-proc-review-reason"></p>
+                    <div class="prx-proc-review-foot" id="prx-proc-review-foot"></div>
+                </div>`;
+            document.body.appendChild(ov);
+            const closeOv = () => ov.setAttribute('hidden', '');
+            document.getElementById('prx-proc-review-x').addEventListener('click', closeOv);
+            ov.addEventListener('click', e => { if (e.target === ov) closeOv(); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape' && !ov.hasAttribute('hidden')) closeOv(); });
+        }
+
+        const isProtected = !p.safeToClose && (
+            p.category === 'System / Windows' ||
+            p.category === 'Driver / Hardware' ||
+            p.category === 'Anti-Cheat' ||
+            p.category === 'Antivirus'
+        );
+        const status    = p.safeToClose ? 'Safe to Close' : isProtected ? 'Protected' : 'Review First';
+        const statusKey = p.safeToClose ? 'safe'          : isProtected ? 'protected' : 'review';
+        const reason    = p.safeToClose
+            ? 'This looks like a low-risk helper or updater process. It can be included in Safe Reduce to free up memory.'
+            : isProtected
+            ? 'Windows core services, drivers, antivirus, and system-critical tasks are protected and cannot be closed here.'
+            : 'This app is active or user-facing. XTweaks will not close it automatically. You can ignore it or manually review it.';
+        const ramText = p.ramMB != null ? `${p.ramMB} MB` : '—';
+
+        document.getElementById('prx-proc-review-name').textContent = p.name || p.processName || 'Unknown';
+        const statusEl = document.getElementById('prx-proc-review-status');
+        statusEl.textContent = status;
+        statusEl.className   = `prx-proc-review-status-pill prx-proc-review-status-${statusKey}`;
+        document.getElementById('prx-proc-review-icon').innerHTML = buildIconCell(p.name || p.processName, p.category).outerHTML;
+        document.getElementById('prx-proc-review-reason').textContent = reason;
+
+        const dl = document.getElementById('prx-proc-review-dl');
+        dl.innerHTML = [
+            ['Process',  p.processName || '—'],
+            ['PID',      p.pid != null ? String(p.pid) : '—'],
+            ['Memory',   ramText],
+            ['Category', p.category || 'Unknown'],
+            ['Status',   status],
+        ].map(([k, v]) => `<div class="prx-proc-review-row"><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+
+        const foot = document.getElementById('prx-proc-review-foot');
+        foot.innerHTML = '';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'prx-proc-review-btn-sec';
+        closeBtn.textContent = 'Close'; closeBtn.type = 'button';
+        closeBtn.addEventListener('click', () => ov.setAttribute('hidden', ''));
+        foot.appendChild(closeBtn);
+
+        if (!isProtected) {
+            const ignBtn = document.createElement('button');
+            ignBtn.className = 'prx-proc-review-btn-sec';
+            ignBtn.textContent = 'Ignore'; ignBtn.type = 'button';
+            ignBtn.addEventListener('click', () => {
+                ignoredProcs.add(p.processName);
+                const rowEl = document.querySelector(`#page-process-reducer .pr-process-row[data-proc="${p.processName}"]`);
+                if (rowEl) { rowEl.style.transition = 'opacity 0.2s'; rowEl.style.opacity = '0'; setTimeout(() => rowEl.remove(), 220); }
+                ov.setAttribute('hidden', '');
+            });
+            foot.appendChild(ignBtn);
+        }
+
+        if (p.safeToClose && p.pid != null) {
+            const reduceBtn = document.createElement('button');
+            reduceBtn.className = 'prx-proc-review-btn-primary';
+            reduceBtn.textContent = 'Safe Reduce'; reduceBtn.type = 'button';
+            reduceBtn.addEventListener('click', async () => {
+                reduceBtn.disabled = true; reduceBtn.textContent = 'Closing…';
+                const rowEl = document.querySelector(`#page-process-reducer .pr-process-row[data-proc="${p.processName}"]`);
+                if (rowEl) await closeSingleProcess(p, rowEl);
+                ov.setAttribute('hidden', '');
+            });
+            foot.appendChild(reduceBtn);
+        }
+
+        ov.removeAttribute('hidden');
     }
 
     function updateClosedSection() {
@@ -6198,6 +6297,10 @@ function initializeProcessReducer() {
 
         const cardsHtml = modules.map(t => {
             const b = BADGE_MAP[t.badge] || BADGE_MAP['review'];
+            const isReview = t.badge === 'review';
+            const footBtn  = isReview
+                ? `<button class="prx-mc-review-btn" data-module-id="${t.id}" type="button">Review First</button>`
+                : `<button class="prx-mc-apply-btn"  data-module-id="${t.id}" type="button">Apply</button>`;
             return `<div class="prx-module-card" data-module-id="${t.id}">
                 <div class="prx-mc-shine" aria-hidden="true"></div>
                 <div class="prx-mc-top">
@@ -6205,9 +6308,7 @@ function initializeProcessReducer() {
                     <span class="prx-tweak-badge ${b.cls}">${b.text}</span>
                 </div>
                 <p class="prx-mc-desc">${t.desc}</p>
-                <div class="prx-mc-foot">
-                    <button class="prx-mc-apply-btn" data-module-id="${t.id}" type="button">Apply</button>
-                </div>
+                <div class="prx-mc-foot">${footBtn}</div>
             </div>`;
         }).join('');
 
@@ -6217,27 +6318,31 @@ function initializeProcessReducer() {
             </div>
             <div class="prx-mc-grid">${cardsHtml}</div>`;
 
+        async function applyModule(id, btn) {
+            const card = btn.closest('.prx-module-card');
+            btn.disabled = true; btn.textContent = 'Applying…';
+            try {
+                const res = await window.electronAPI?.applyTweak?.(id, 'apply');
+                if (res?.success) { card?.classList.add('prx-mc-applied'); btn.textContent = 'Applied'; }
+                else { card?.classList.add('prx-mc-failed'); btn.textContent = 'Failed'; btn.disabled = false; }
+            } catch { card?.classList.add('prx-mc-failed'); btn.textContent = 'Failed'; btn.disabled = false; }
+        }
+
         container.querySelectorAll('.prx-mc-apply-btn').forEach(btn => {
+            btn.addEventListener('click', () => applyModule(btn.dataset.moduleId, btn));
+        });
+
+        // Review-first cards: first click shows description + changes to "Apply Anyway", second click applies
+        container.querySelectorAll('.prx-mc-review-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const id   = btn.dataset.moduleId;
-                const card = btn.closest('.prx-module-card');
-                btn.disabled = true;
-                btn.textContent = 'Applying…';
-                try {
-                    const res = await window.electronAPI?.applyTweak?.(id, 'apply');
-                    if (res?.success) {
-                        card?.classList.add('prx-mc-applied');
-                        btn.textContent = 'Applied';
-                    } else {
-                        card?.classList.add('prx-mc-failed');
-                        btn.textContent = 'Failed';
-                        btn.disabled = false;
-                    }
-                } catch {
-                    card?.classList.add('prx-mc-failed');
-                    btn.textContent = 'Failed';
-                    btn.disabled = false;
+                if (btn.dataset.confirmed !== '1') {
+                    btn.dataset.confirmed = '1';
+                    btn.textContent = 'Apply Anyway';
+                    const mod = BG_TWEAKS.find(t => t.id === btn.dataset.moduleId);
+                    showNotification('info', mod?.title || 'Review First', mod?.desc || 'Review this action before applying.', { duration: 4200 });
+                    return;
                 }
+                await applyModule(btn.dataset.moduleId, btn);
             });
         });
     }

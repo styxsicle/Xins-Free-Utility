@@ -60,10 +60,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return () => ipcRenderer.removeListener('ai-engine-progress', handler);
     },
 
+    clearBgCache:         () => ipcRenderer.invoke('clear-bg-cache'),
+    getCpuStatic:         () => ipcRenderer.invoke('get-cpu-static'),
     getBackgroundContext: () => ipcRenderer.invoke('get-background-context'),
     getStartupContext:    () => ipcRenderer.invoke('get-startup-context'),
     closeProcess: (pid, processName) => ipcRenderer.invoke('close-process', pid, processName),
     disableStartupEntry: (name, location) => ipcRenderer.invoke('disable-startup-entry', name, location),
+    getLiveProcessStats: () => ipcRenderer.invoke('get-live-process-stats'),
 
     // DNS Optimizer & Network
     checkAdmin:          ()       => ipcRenderer.invoke('check-admin'),

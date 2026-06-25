@@ -823,7 +823,10 @@ let currentSystemStats = {
     gpuUsage: 0,
     cpuTemp: 45,
     gpuTemp: 50,
-    fps: 60
+    fps: 60,
+    processCount: 0,
+    threadCount: 0,
+    handleCount: 0,
 };
 
 function startStatsMonitor() {
@@ -861,6 +864,11 @@ function startStatsMonitor() {
                         _gpuUsageIsReal = false;
                     }
 
+                    // Process / thread / handle counters
+                    if (stats.procCount   > 0) currentSystemStats.processCount = stats.procCount;
+                    if (stats.threadCount > 0) currentSystemStats.threadCount  = stats.threadCount;
+                    if (stats.handleCount > 0) currentSystemStats.handleCount  = stats.handleCount;
+
                     // Temps (Simulated based on Load)
                     // Allows realistic fluctuations
                     currentSystemStats.cpuTemp = Math.round(35 + (currentSystemStats.cpuUsage * 0.5) + (Math.random() * 3));
@@ -886,6 +894,17 @@ startStatsMonitor();
 
 ipcMain.handle('get-live-stats', async () => {
     return currentSystemStats;
+});
+
+ipcMain.handle('get-cpu-static', () => {
+    const cpus = os.cpus();
+    return {
+        model:        cpus[0]?.model?.trim() || 'Unknown CPU',
+        logicalCores: cpus.length,
+        speedMHz:     cpus[0]?.speed || 0,
+        totalRamMB:   Math.round(os.totalmem() / (1024 * 1024)),
+        uptimeSeconds: Math.round(os.uptime()),
+    };
 });
 
 const tweakCommands = {
@@ -1287,6 +1306,18 @@ const tweakCommands = {
         apply: 'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v SubscribedContent-338389Enabled /t REG_DWORD /d 0 /f && reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v SoftLandingEnabled /t REG_DWORD /d 0 /f && reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v SystemPaneSuggestionsEnabled /t REG_DWORD /d 0 /f',
         revert: 'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v SubscribedContent-338389Enabled /t REG_DWORD /d 1 /f && reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v SoftLandingEnabled /t REG_DWORD /d 1 /f && reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v SystemPaneSuggestionsEnabled /t REG_DWORD /d 1 /f'
     },
+    'disable-sticky-keys-prompt': {
+        apply: 'reg add "HKCU\\Control Panel\\Accessibility\\StickyKeys" /v Flags /t REG_SZ /d "506" /f && reg add "HKCU\\Control Panel\\Accessibility\\ToggleKeys" /v Flags /t REG_SZ /d "58" /f && reg add "HKCU\\Control Panel\\Accessibility\\Keyboard Response" /v Flags /t REG_SZ /d "122" /f',
+        revert: 'reg add "HKCU\\Control Panel\\Accessibility\\StickyKeys" /v Flags /t REG_SZ /d "510" /f && reg add "HKCU\\Control Panel\\Accessibility\\ToggleKeys" /v Flags /t REG_SZ /d "62" /f && reg add "HKCU\\Control Panel\\Accessibility\\Keyboard Response" /v Flags /t REG_SZ /d "126" /f'
+    },
+    'disable-voice-activation': {
+        apply: 'reg add "HKCU\\Software\\Microsoft\\Speech_OneCore\\Settings\\VoiceActivation" /v UserPreferenceForAllApps /t REG_DWORD /d 0 /f',
+        revert: 'reg add "HKCU\\Software\\Microsoft\\Speech_OneCore\\Settings\\VoiceActivation" /v UserPreferenceForAllApps /t REG_DWORD /d 1 /f'
+    },
+    'quiet-windows-update': {
+        apply: 'reg add "HKCU\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings" /v IsActiveHoursEnabled /t REG_DWORD /d 1 /f && reg add "HKCU\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings" /v ActiveHoursStart /t REG_DWORD /d 8 /f && reg add "HKCU\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings" /v ActiveHoursEnd /t REG_DWORD /d 22 /f',
+        revert: 'reg add "HKCU\\SOFTWARE\\Microsoft\\WindowsUpdate\\UX\\Settings" /v IsActiveHoursEnabled /t REG_DWORD /d 0 /f'
+    },
     'slider-large-cache': {
         apply: 'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v DisableThumbnailCache /t REG_DWORD /d 1 /f && reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v IconsOnly /t REG_DWORD /d 0 /f',
         revert: 'reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v DisableThumbnailCache /t REG_DWORD /d 0 /f && reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v IconsOnly /t REG_DWORD /d 0 /f'
@@ -1302,6 +1333,18 @@ const tweakCommands = {
     'disable-c-states': {
         apply: 'reg add "HKCU\\Control Panel\\PowerCfg\\GlobalPowerPolicy" /v Policies /t REG_BINARY /d 01000000020000000100000000000000020000000000000000000000 /f && reg add "HKCU\\Control Panel\\Desktop" /v ScreenSaveActive /t REG_SZ /d "0" /f',
         revert: 'reg add "HKCU\\Control Panel\\PowerCfg\\GlobalPowerPolicy" /v Policies /t REG_BINARY /d 01000000020000000000000000000000020000000000000000000000 /f && reg add "HKCU\\Control Panel\\Desktop" /v ScreenSaveActive /t REG_SZ /d "1" /f'
+    },
+    'disable-edge-background': {
+        apply: 'reg add "HKCU\\SOFTWARE\\Policies\\Microsoft\\Edge" /v StartupBoostEnabled /t REG_DWORD /d 0 /f 2>nul & reg add "HKCU\\SOFTWARE\\Policies\\Microsoft\\Edge" /v BackgroundModeEnabled /t REG_DWORD /d 0 /f 2>nul & echo Edge background applied',
+        revert: 'reg delete "HKCU\\SOFTWARE\\Policies\\Microsoft\\Edge" /v StartupBoostEnabled /f 2>nul & reg delete "HKCU\\SOFTWARE\\Policies\\Microsoft\\Edge" /v BackgroundModeEnabled /f 2>nul & echo Edge background restored'
+    },
+    'disable-widgets': {
+        apply: 'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f && reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Dsh" /v IsPrelaunchEnabled /t REG_DWORD /d 0 /f 2>nul & echo Widgets background disabled',
+        revert: 'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v TaskbarDa /t REG_DWORD /d 1 /f && reg delete "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Dsh" /v IsPrelaunchEnabled /f 2>nul & echo Widgets restored'
+    },
+    'disable-teams-startup': {
+        apply: 'reg delete "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" /v "com.squirrel.Teams.Teams" /f 2>nul & reg delete "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" /v MicrosoftTeams /f 2>nul & reg delete "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" /v Teams /f 2>nul & echo Teams startup entries removed',
+        revert: 'echo Teams startup will restore when Teams is next launched'
     }
 };
 
@@ -1885,7 +1928,7 @@ async function collectBackgroundContext() {
                     safeToClose:         info.safeToClose,
                     safeToDisableStartup:info.safeToDisableStartup,
                 });
-            } else if (!isSystemName && ramMB >= 2) {
+            } else if (!isSystemName && ramMB >= 1) {
                 // Non-catalog, non-system background process — show as Review First
                 unknownBuf.push({
                     name:        rawName,
@@ -1900,9 +1943,9 @@ async function collectBackgroundContext() {
         }
     }
 
-    // Add top unknown processes sorted by RAM (cap at 30 to avoid flooding the list)
+    // Add top unknown processes sorted by RAM (cap at 50 to avoid flooding the list)
     unknownBuf.sort((a, b) => b.ramMB - a.ramMB);
-    for (const u of unknownBuf.slice(0, 30)) processes.push(u);
+    for (const u of unknownBuf.slice(0, 50)) processes.push(u);
 
     // Sort final list: catalog safe-to-close first, then review, then by RAM
     processes.sort((a, b) => {
@@ -1969,6 +2012,43 @@ async function collectBackgroundContext() {
 
     return { processes, startups, services, totalScanned, protectedCount, isAdmin, timestamp: Date.now() };
 }
+
+ipcMain.handle('clear-bg-cache', () => { _bgContextCache = null; _bgContextTime = 0; });
+
+// ── Lightweight live process stats — RAM-only refresh, bypasses 60s BG cache ──
+let _liveProcsCache = null;
+let _liveProcsCacheTime = 0;
+const LIVE_PROCS_TTL = 2500;
+
+ipcMain.handle('get-live-process-stats', () => {
+    const now = Date.now();
+    if (_liveProcsCache && (now - _liveProcsCacheTime) < LIVE_PROCS_TTL) {
+        return Promise.resolve(_liveProcsCache);
+    }
+    return new Promise(resolve => {
+        const proc = spawn('powershell.exe', [
+            '-NonInteractive', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
+            `Get-Process | Select-Object Name,Id,@{N='RAM_MB';E={[math]::Round($_.WorkingSet64/1MB,0)}} | ConvertTo-Json -Compress -Depth 1`
+        ], { windowsHide: true });
+        let out = '';
+        proc.stdout.on('data', d => { out += d.toString(); });
+        proc.stderr.on('data', () => {});
+        proc.on('error', () => resolve([]));
+        const t = setTimeout(() => { try { proc.kill(); } catch {} resolve([]); }, 5000);
+        proc.on('close', () => {
+            clearTimeout(t);
+            const trimmed = out.trim();
+            if (!trimmed) return resolve([]);
+            try {
+                let arr = JSON.parse(trimmed);
+                if (!Array.isArray(arr)) arr = [arr];
+                _liveProcsCache = arr;
+                _liveProcsCacheTime = Date.now();
+                resolve(arr);
+            } catch { resolve([]); }
+        });
+    });
+});
 
 ipcMain.handle('get-background-context', async () => {
     const now = Date.now();
