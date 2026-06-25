@@ -229,6 +229,7 @@ function initializeNavigation() {
                         void dashPage.offsetWidth;
                         dashPage.classList.add('dash-entered');
                     }
+                    scheduleDashboardCardsOnEntry({ source: 'page-enter' });
                 }
             }
         }
@@ -6578,6 +6579,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('page-gaming')?.classList.contains('active')) {
             scheduleGamingCardsOnEntry({ source: 'page-enter' });
         }
+        if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+            scheduleDashboardCardsOnEntry({ source: 'page-enter' });
+        }
     }, 0);
 });
 
@@ -9802,6 +9806,135 @@ function scheduleNetworkCardsOnEntry(options = {}) {
                 networkTabMotionLastRun = now;
             }
             animateNetworkCardsOnEntry();
+        });
+    });
+}
+
+// ── Dashboard: card reveal motion (mirrors Network/Gaming entrance) ──────────
+const DASHBOARD_ENTRY_MOTION = {
+    duration: 620,
+    stagger: 55,
+    slideX: 0,
+    slideY: 14,
+    blur: 5,
+    opacity: 0,
+    scale: 0.985,
+    easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
+};
+let dashboardPageEnterMotionLastRun = 0;
+let dashboardTabMotionLastRun = 0;
+let dashboardTabMotionRequest = 0;
+
+function getDashboardEntryCards(page) {
+    const items = [];
+    const hero = page.querySelector('#hero-card');
+    if (hero) items.push(hero);
+    page.querySelectorAll('.assets-grid > .asset-card').forEach(c => items.push(c));
+    const discord = page.querySelector('#discord-card');
+    if (discord) items.push(discord);
+    const active = page.querySelector('.active-card.glass');
+    if (active) items.push(active);
+    return items.filter(item => {
+        const rect = item.getBoundingClientRect();
+        return rect.width >= 8 && rect.height >= 8;
+    });
+}
+
+function clearDashboardEntryCardAnimations(items = []) {
+    items.forEach(item => {
+        if (item._dashboardEntryAnimation) {
+            item._dashboardEntryAnimation.cancel();
+            item._dashboardEntryAnimation = null;
+        }
+        item.style.removeProperty('will-change');
+        item.style.removeProperty('pointer-events');
+        item.style.removeProperty('opacity');
+        item.style.removeProperty('transform');
+        item.style.removeProperty('filter');
+        clearEntryCardShine(item);
+    });
+}
+
+function animateDashboardCardsOnEntry() {
+    const page = document.getElementById('page-dashboard');
+    if (!page?.classList.contains('active')) return 0;
+
+    const targetItems = getDashboardEntryCards(page);
+    clearDashboardEntryCardAnimations(targetItems);
+    if (targetItems[0]) targetItems[0].offsetHeight;
+
+    let started = 0;
+    targetItems.forEach((item, index) => {
+        const rect = item.getBoundingClientRect();
+        if (rect.width < 8 || rect.height < 8) return;
+        applyEntryCardShine(item, index, DASHBOARD_ENTRY_MOTION.stagger);
+        item.style.pointerEvents = 'none';
+
+        const animation = item.animate([
+            {
+                opacity: DASHBOARD_ENTRY_MOTION.opacity,
+                transform: `translate3d(${DASHBOARD_ENTRY_MOTION.slideX}px, ${DASHBOARD_ENTRY_MOTION.slideY}px, 0) scale(${DASHBOARD_ENTRY_MOTION.scale})`,
+                filter: `blur(${DASHBOARD_ENTRY_MOTION.blur}px)`
+            },
+            {
+                opacity: 1,
+                transform: 'translate3d(0, 0, 0) scale(1)',
+                filter: 'blur(0px)'
+            }
+        ], {
+            duration: DASHBOARD_ENTRY_MOTION.duration,
+            delay: index * DASHBOARD_ENTRY_MOTION.stagger,
+            easing: DASHBOARD_ENTRY_MOTION.easing,
+            fill: 'both'
+        });
+
+        item.style.willChange = 'transform, opacity, filter';
+        item._dashboardEntryAnimation = animation;
+        setTimeout(() => {
+            if (item._dashboardEntryAnimation === animation) item.style.removeProperty('pointer-events');
+        }, index * DASHBOARD_ENTRY_MOTION.stagger);
+        animation.finished
+            .catch(() => {})
+            .finally(() => {
+                if (item._dashboardEntryAnimation === animation) {
+                    animation.cancel();
+                    item._dashboardEntryAnimation = null;
+                    item.style.removeProperty('will-change');
+                    item.style.removeProperty('pointer-events');
+                    item.style.removeProperty('opacity');
+                    item.style.removeProperty('transform');
+                    item.style.removeProperty('filter');
+                }
+            });
+        started++;
+    });
+
+    return started;
+}
+
+function scheduleDashboardCardsOnEntry(options = {}) {
+    const page = document.getElementById('page-dashboard');
+    if (!page) return;
+    const requestId = ++dashboardTabMotionRequest;
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (!page.classList.contains('active')) return;
+            const now = performance.now();
+            if (options.source === 'page-enter' && now - dashboardPageEnterMotionLastRun < 900) return;
+            if (options.source === 'page-enter') dashboardPageEnterMotionLastRun = now;
+            if (options.source === 'tab-click') {
+                if (requestId !== dashboardTabMotionRequest) return;
+                if (now - dashboardTabMotionLastRun < 450) {
+                    setTimeout(() => {
+                        if (requestId !== dashboardTabMotionRequest || !page.classList.contains('active')) return;
+                        dashboardTabMotionLastRun = performance.now();
+                        animateDashboardCardsOnEntry();
+                    }, 450 - (now - dashboardTabMotionLastRun));
+                    return;
+                }
+                dashboardTabMotionLastRun = now;
+            }
+            animateDashboardCardsOnEntry();
         });
     });
 }

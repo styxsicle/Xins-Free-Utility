@@ -13667,31 +13667,13 @@ body.settings-nav-hidden .sidebar {
 }
 
 /* -- Dashboard staggered entrance ---------------------------------
-   Triggered by .dash-entered so the animation replays on every
-   navigation to Dashboard (not just the initial page load).
-   backwards fill keeps elements hidden during their delay yet
-   leaves hover transforms intact once the animation settles.      */
-#page-dashboard.dash-entered > .hero {
-  animation: cineRise var(--cine-entrance) var(--ease-cine) both;
-  animation-delay: 40ms;
-}
+   Hero, stat cards, Discord panel, and temp monitor are animated
+   by the WAAPI system in renderer.js (scheduleDashboardCardsOnEntry),
+   matching the Network/Gaming entrance pattern exactly.
+   Only the section header uses a CSS animation here.              */
 #page-dashboard.dash-entered .assets-header {
   animation: cineRise 680ms var(--ease-cine) backwards;
   animation-delay: 200ms;
-}
-#page-dashboard.dash-entered .assets-grid > .asset-card {
-  animation: cineRise 680ms var(--ease-cine) backwards;
-}
-#page-dashboard.dash-entered .assets-grid > .asset-card:nth-child(1) { animation-delay: 270ms; }
-#page-dashboard.dash-entered .assets-grid > .asset-card:nth-child(2) { animation-delay: 365ms; }
-#page-dashboard.dash-entered .assets-grid > .asset-card:nth-child(3) { animation-delay: 460ms; }
-#page-dashboard.dash-entered > .dash-row-1 > .side-panel {
-  animation: cineRiseRight 820ms var(--ease-cine) backwards;
-  animation-delay: 520ms;
-}
-#page-dashboard.dash-entered .active-card.glass {
-  animation: cineRise 680ms var(--ease-cine) backwards;
-  animation-delay: 580ms;
 }
 
 /* -- Hero ambient glass light sweep -------------------------------
@@ -13763,11 +13745,7 @@ body.settings-nav-hidden .sidebar {
    Elements settle instantly at their natural resting state.
    ============================================================= */
 @media (prefers-reduced-motion: reduce) {
-  #page-dashboard.dash-entered > .hero,
   #page-dashboard.dash-entered .assets-header,
-  #page-dashboard.dash-entered .assets-grid > .asset-card,
-  #page-dashboard.dash-entered > .dash-row-1 > .side-panel,
-  #page-dashboard.dash-entered .active-card.glass,
   .sidebar .nav-branding,
   .sidebar .nav-category,
   .sidebar .nav-item,
