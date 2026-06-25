@@ -4076,71 +4076,15 @@
             <canvas class="ai-welcome-canvas" id="ai-welcome-canvas" aria-hidden="true"></canvas>
             <div class="ai-welcome-ambient" aria-hidden="true"></div>
             <div class="ai-welcome-modal" id="ai-welcome-modal">
-
-                <!-- Orb visual -->
-                <div class="ai-welcome-orb-section" aria-hidden="true">
-                  <div class="ai-orb-wrap" id="ai-orb-wrap">
-                    <canvas class="ai-orb-canvas" id="ai-orb-canvas" width="220" height="220"></canvas>
-                    <svg class="ai-orb-svg" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" overflow="visible">
-                      <defs>
-                        <radialGradient id="aiOrb-coreGlow" cx="50%" cy="50%" r="50%">
-                          <stop class="aiOrb-cg0"   offset="0%"   stop-color="#ffffff" stop-opacity="0.12"/>
-                          <stop class="aiOrb-cg60"  offset="60%"  stop-color="#ffffff" stop-opacity="0.03"/>
-                          <stop class="aiOrb-cg100" offset="100%" stop-color="#0a0a0f" stop-opacity="0"/>
-                        </radialGradient>
-                        <filter id="aiOrb-lineGlow" x="-60%" y="-60%" width="220%" height="220%">
-                          <feGaussianBlur stdDeviation="1.8" result="blur"/>
-                          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                        </filter>
-                        <filter id="aiOrb-dotGlow" x="-200%" y="-200%" width="500%" height="500%">
-                          <feGaussianBlur stdDeviation="3" result="blur"/>
-                          <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                        </filter>
-                        <clipPath id="aiOrb-innerClip"><circle cx="80" cy="80" r="46"/></clipPath>
-                        <radialGradient id="aiOrb-sphereSheen" cx="38%" cy="28%" r="55%">
-                          <stop class="aiOrb-ss0" offset="0%"  stop-color="rgba(255,255,255,0.06)"/>
-                          <stop offset="100%" stop-color="transparent"/>
-                        </radialGradient>
-                      </defs>
-                      <circle class="ai-orb-glow-disc"    cx="80" cy="80" r="70"/>
-                      <circle class="ai-orb-sphere-base"  cx="80" cy="80" r="46" stroke-width="0.5"/>
-                      <circle class="ai-orb-sphere-sheen" cx="80" cy="80" r="46" fill="url(#aiOrb-sphereSheen)" clip-path="url(#aiOrb-innerClip)"/>
-                      <g class="ai-orb-crosshair" filter="url(#aiOrb-lineGlow)" opacity="0.7">
-                        <line class="ai-orb-line-main" x1="56" y1="80" x2="104" y2="80"  stroke-width="0.8"/>
-                        <line class="ai-orb-line-main" x1="80" y1="56" x2="80"  y2="104" stroke-width="0.8"/>
-                        <line class="ai-orb-line-diag" x1="62" y1="62" x2="98"  y2="98"  stroke-width="0.5"/>
-                        <line class="ai-orb-line-diag" x1="98" y1="62" x2="62"  y2="98"  stroke-width="0.5"/>
-                      </g>
-                      <circle class="ai-orb-center-dot" cx="80" cy="80" r="2.5" opacity="0.9" filter="url(#aiOrb-dotGlow)"/>
-                      <g id="aiOrb-orbit-group">
-                        <circle class="ai-orb-ring-outer" cx="80" cy="80" r="66" fill="none" stroke-width="0.6" stroke-dasharray="4 8"/>
-                        <circle id="aiOrb-travel-dot"  class="ai-orb-travel-dot" cx="146" cy="80" r="3"   filter="url(#aiOrb-dotGlow)"/>
-                        <path   id="aiOrb-trail-arc"   class="ai-orb-trail"      fill="none" stroke-width="1" stroke-linecap="round" filter="url(#aiOrb-lineGlow)"/>
-                      </g>
-                      <g id="aiOrb-inner-orbit">
-                        <circle class="ai-orb-ring-inner" cx="80" cy="80" r="54" fill="none" stroke-width="0.5"/>
-                        <circle id="aiOrb-inner-dot" class="ai-orb-inner-dot" cx="134" cy="80" r="1.8" filter="url(#aiOrb-dotGlow)"/>
-                      </g>
-                      <circle class="ai-orb-ring-subtle" cx="80" cy="80" r="72" fill="none" stroke-width="0.5"/>
-                    </svg>
-                  </div>
-                </div>
-                <!-- Text content -->
-                <div class="ai-welcome-content">
-                  <h1 class="ai-welcome-title">Welcome to AI Tweaker</h1>
-                  <p class="ai-welcome-sub">Your personal optimization assistant for gaming performance, latency reduction, cleanup, and deep system tuning.</p>
-                  <p class="ai-welcome-tag">Private. On-device. Built into XTweaks.</p>
-                </div>
-
-                <!-- Footer controls -->
-                <div class="ai-welcome-footer">
-                    <label class="ai-welcome-dismiss-label">
-                        <input type="checkbox" class="ai-welcome-dismiss-check" id="ai-welcome-dismiss-check">
-                        <span class="ai-welcome-dismiss-text">Don't show this again</span>
-                    </label>
-                    <button class="ai-welcome-continue-btn" id="ai-welcome-continue-btn">Continue</button>
-                </div>
-
+                <iframe class="ai-welcome-card-frame" id="ai-welcome-card-frame"
+                    src="./assets/Welcome Cards Ai tweaker Cards/Ai Popup Card - Xins Premium.html"
+                    scrolling="no" frameborder="0"
+                    aria-label="AI Tweaker Welcome Card"></iframe>
+                <!-- Hidden controls — JS uses these for dismiss/close logic; iframe posts messages to drive them -->
+                <input type="checkbox" class="ai-welcome-dismiss-check" id="ai-welcome-dismiss-check"
+                    style="position:absolute;opacity:0;pointer-events:none" aria-hidden="true" tabindex="-1">
+                <button class="ai-welcome-continue-btn" id="ai-welcome-continue-btn"
+                    style="position:absolute;opacity:0;pointer-events:none" aria-hidden="true" tabindex="-1"></button>
             </div>
         </div>
         </div>

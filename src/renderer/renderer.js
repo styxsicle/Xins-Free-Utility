@@ -215,9 +215,11 @@ function initializeNavigation() {
                 scheduleSysMemCardsOnEntry('page-system', { source: 'page-enter' });
                 loadSysCpuSection();
             } else if (targetPage === 'memory') {
-                _integratePageTopBar('page-memory', '.mem-filter-bar');
-                scheduleSysMemCardsOnEntry('page-memory', { source: 'page-enter' });
-            } else {
+  _integratePageTopBar('page-memory', '.mem-filter-bar');
+  scheduleSysMemCardsOnEntry('page-memory', { source: 'page-enter' });
+} else if (targetPage === 'process-reducer') {
+  _integratePageTopBar('page-process-reducer', '.prx-filter-bar');
+} else {
                 _restoreNetTopBar();
                 updateTopBarHeightVar();
                 if (targetPage === 'dashboard') {
@@ -9010,7 +9012,32 @@ function initializeAiTweaker() {
         const continueBtn = document.getElementById('ai-welcome-continue-btn');
         const dismissCheck = document.getElementById('ai-welcome-dismiss-check');
         const modal = document.getElementById('ai-welcome-modal');
+        const cardFrame = document.getElementById('ai-welcome-card-frame');
         if (!overlay || !continueBtn) return;
+        const THEME_CARD_MAP = {
+            'xins-premium': './assets/Welcome Cards Ai tweaker Cards/Ai Popup Card - Xins Premium.html',
+            'obsidian':     './assets/Welcome Cards Ai tweaker Cards/Ai Popup Card - Obsidian.html',
+            'silver-mist':  './assets/Welcome Cards Ai tweaker Cards/Ai Popup Card - Silver Mist.html',
+            'frost-glass':  './assets/Welcome Cards Ai tweaker Cards/Ai Popup Card - Frost Glass.html',
+        };
+        let currentCardTheme = null;
+        function updateCardFrame() {
+            if (!cardFrame) return;
+            const theme = document.documentElement.dataset.theme || 'xins-premium';
+            if (theme === currentCardTheme) return;
+            const newSrc = THEME_CARD_MAP[theme] || THEME_CARD_MAP['xins-premium'];
+            // Skip reload if iframe already shows the correct file (avoids reload-on-open flash)
+            try {
+                if (cardFrame.src === new URL(newSrc, document.baseURI).href) {
+                    currentCardTheme = theme;
+                    return;
+                }
+            } catch { /* ignore URL resolution errors */ }
+            currentCardTheme = theme;
+            cardFrame.src = newSrc;
+        }
+        // Pre-load the correct card for the current theme while the popup is still hidden
+        updateCardFrame();
         const motionStorageKey = 'xtweaks-ai-modal-motion-v1';
         const motionSettingsVersion = 3;
         const motionDefaults = {
@@ -9251,6 +9278,7 @@ function initializeAiTweaker() {
             if (options.source === 'page-enter' && now - aiWelcomePageEnterLastRun < 700) return;
             if (options.source === 'page-enter') aiWelcomePageEnterLastRun = now;
 
+            updateCardFrame();
             clearAiModalMotionTimers();
             resetAiModalAnimationState();
 
@@ -9309,6 +9337,19 @@ function initializeAiTweaker() {
         };
 
         continueBtn.addEventListener('click', closeWelcome);
+        window.addEventListener('message', (e) => {
+            if (!e.data || typeof e.data !== 'object') return;
+            if (e.data.type === 'ai-welcome-dismiss') {
+                if (dismissCheck) dismissCheck.checked = !!e.data.checked;
+            } else if (e.data.type === 'ai-welcome-continue') {
+                closeWelcome();
+            }
+        });
+        const themeObs = new MutationObserver(() => {
+            // Always update — pre-loads correct card while hidden, updates immediately when open
+            updateCardFrame();
+        });
+        themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) closeWelcome();
         });

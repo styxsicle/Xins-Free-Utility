@@ -15885,3 +15885,34 @@ body.settings-nav-hidden .sidebar {
 .top-bar-search {
   background: var(--topbar-control-bg) !important;
 }
+/* =========================================================
+   PAGE-SPECIFIC TOP BAR TUNING
+   Edit these to make each page top bar match better.
+   ========================================================= */
+
+/* Processes page */
+#page-process-reducer {
+  --topbar-bg: linear-gradient(180deg, rgba(14, 14, 16, 0.96), rgba(5, 5, 7, 0.94));
+  --topbar-border: rgba(255, 255, 255, 0.075);
+  --topbar-control-bg: rgba(255, 255, 255, 0.035);
+}
+/* =========================================================
+   AI WELCOME IFRAME CLEANUP
+   Removes old parent modal shine/hidden controls showing over iframe.
+   ========================================================= */
+
+.ai-welcome-modal::before,
+.ai-welcome-modal::after {
+  content: none !important;
+  display: none !important;
+}
+
+.ai-welcome-dismiss-check,
+.ai-welcome-continue-btn {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
