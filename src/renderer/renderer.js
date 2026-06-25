@@ -4894,6 +4894,7 @@ function initializeProcessReducer() {
     let startupDataLoaded = false;
     let _confirmResolve = null;
     let _scanTimers = [];
+    let _prxPollInterval = null;
 
     // ── Category icon SVGs (inline, no downloads) ──
     const CAT_ICONS = {
@@ -4981,6 +4982,8 @@ function initializeProcessReducer() {
         prxModal.setAttribute('aria-hidden', 'true');
         _scanTimers.forEach(clearTimeout);
         _scanTimers = [];
+        clearInterval(_prxPollInterval);
+        _prxPollInterval = null;
     }
 
     // ── PRX Modal: scan state ──
@@ -5019,13 +5022,36 @@ function initializeProcessReducer() {
     }
 
     const BG_TWEAKS = [
-        { id: 'disable-game-bar',        label: 'Xbox Game Bar background capture',   checked: true  },
-        { id: 'disable-xbox-services',   label: 'Xbox DVR background services',        checked: true  },
-        { id: 'disable-telemetry',       label: 'Windows telemetry & feedback',        checked: true  },
-        { id: 'disable-background-apps', label: 'Windows UWP background apps',         checked: true  },
-        { id: 'disable-delivery-opt',    label: 'Delivery Optimization sharing',       checked: true  },
-        { id: 'disable-windows-tips',    label: 'Windows tips & promotional content',  checked: true  },
-        { id: 'disable-cortana',         label: 'Cortana search assistance',           checked: false },
+        // ── Game & Background Services ─────────────────────────────────────────
+        { _group: 'Game & Background Services' },
+        { id: 'disable-game-bar',        title: 'Game Bar Background Cut',        desc: 'Disables Game Bar background capture and recording overhead.',                      badge: 'restart',   checked: true  },
+        { id: 'disable-xbox-services',   title: 'Xbox DVR Background Services',   desc: 'Disables Xbox DVR overlay, GameBar nexus, and background capture hooks.',          badge: 'restart',   checked: true  },
+        { id: 'disable-background-apps', title: 'Background App Suppression',     desc: 'Prevents UWP apps from running background tasks when not in use.',                  badge: 'restart',   checked: true  },
+        // ── Telemetry & Content ────────────────────────────────────────────────
+        { _group: 'Telemetry & Content' },
+        { id: 'disable-telemetry',    title: 'Telemetry Silence',              desc: 'Disables Windows feedback prompts, tailored experiences, and diagnostic UI noise.', badge: 'immediate', checked: true  },
+        { id: 'disable-windows-tips', title: 'Windows Tips Suppression',       desc: 'Turns off Windows tips, suggestions, and promotional app content.',                  badge: 'immediate', checked: true  },
+        { id: 'disable-delivery-opt', title: 'Delivery Optimization Restrict', desc: 'Stops Windows from uploading your updates to other PCs in the background.',          badge: 'immediate', checked: true  },
+        // ── Search & Cloud ─────────────────────────────────────────────────────
+        { _group: 'Search & Cloud' },
+        { id: 'disable-search-indexing', title: 'Search Cloud Isolation',    desc: 'Removes Bing web results from Windows Search — keeps search local only.',           badge: 'restart',   checked: true  },
+        { id: 'disable-cortana',         title: 'Cortana Search Assistance', desc: 'Disables Cortana background data collection and Bing cloud integration.',             badge: 'restart',   checked: false },
+        // ── Scheduler & Responsiveness ─────────────────────────────────────────
+        { _group: 'Scheduler & Responsiveness' },
+        { id: 'slider-proc-scheduling', title: 'Windows Priority Optimizer', desc: 'Tunes foreground app responsiveness and reduces background scheduling delay.',       badge: 'immediate', checked: true  },
+        // ── Input & Accessibility ──────────────────────────────────────────────
+        { _group: 'Input & Accessibility' },
+        { id: 'disable-sticky-keys-prompt', title: 'Sticky Keys Guard',        desc: 'Prevents accidental Sticky Keys, Toggle Keys, and Filter Keys popup dialogs.',  badge: 'immediate', checked: true  },
+        { id: 'disable-voice-activation',   title: 'Voice Activation Silence', desc: 'Disables background voice activation listeners for all apps.',                   badge: 'restart',   checked: false },
+        // ── Review First ───────────────────────────────────────────────────────
+        { _group: 'Review First' },
+        { id: 'quiet-windows-update', title: 'Windows Update Quiet Mode',  desc: 'Sets active hours (8am–10pm) so Windows defers auto-restart during the day. Does not disable security updates.', badge: 'review', checked: false },
+        { id: null, title: 'Cloud Sync Quiet Mode',   desc: 'Limits cloud sync startup behavior. Review first — may interrupt active sync.',                  badge: 'review', checked: false, disabled: true },
+        { id: null, title: 'Sensor Activity Guard',   desc: 'Reduces background location and sensor polling. Review first — affects all apps.',                badge: 'review', checked: false, disabled: true },
+        { id: null, title: 'WebDAV Background Guard', desc: 'WebClient service management requires administrator access — coming in a future update.',         badge: 'soon',   checked: false, disabled: true },
+        // ── Startup Load ───────────────────────────────────────────────────────
+        { _group: 'Startup Load' },
+        { id: '__startup__', title: 'Startup Load Review', desc: 'Review which apps launch at boot and disable unnecessary entries. Startup changes apply next restart.', badge: 'next-boot', checked: false, isStartupLink: true },
     ];
 
     // ── PRX Modal: results state ──
@@ -5057,21 +5083,36 @@ function initializeProcessReducer() {
         if (prxBaBeforeMem)  prxBaBeforeMem.textContent   =
             isAdmin ? `${totalProcs} candidates` : `${totalProcs} candidates · limited visibility`;
 
-        // Right card: optimization plan — NOT a projected process count
-        // Showing immediate closures available, not a fake "after" total.
-        // Background tweaks are registry writes; they do not instantly lower running process count.
+        // Right card: when safeCount > 0 show immediate closures; when 0 emphasize module count
         if (prxBaLabelAfter)  prxBaLabelAfter.textContent  = 'Optimization plan';
         const prxBaAfterUnit  = prxBaAfter?.nextElementSibling;
-        if (prxBaAfter)      prxBaAfter.textContent      = safeCount;
-        if (prxBaAfterUnit)  prxBaAfterUnit.textContent   = safeCount === 1 ? 'immediate closure' : 'immediate closures';
-        if (prxBaAfterMem)   prxBaAfterMem.textContent    = `${BG_TWEAKS.length} background tweaks ready`;
+        const activeTweakCount = BG_TWEAKS.filter(t => !t._group && !t.disabled && t.id && t.id !== '__startup__').length;
+        if (safeCount > 0) {
+            if (prxBaAfter)     prxBaAfter.textContent     = safeCount;
+            if (prxBaAfterUnit) prxBaAfterUnit.textContent  = safeCount === 1 ? 'immediate closure' : 'immediate closures';
+            if (prxBaAfterMem)  prxBaAfterMem.textContent   = `${activeTweakCount} background modules ready`;
+        } else {
+            if (prxBaAfter)     prxBaAfter.textContent     = activeTweakCount;
+            if (prxBaAfterUnit) prxBaAfterUnit.textContent  = activeTweakCount === 1 ? 'background module' : 'background modules';
+            if (prxBaAfterMem)  prxBaAfterMem.textContent   = '0 immediate closures found';
+        }
+
+        // Last-scanned timestamp + 60s auto-poll
+        const scanTimeEl = document.getElementById('prx-scan-time');
+        const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        if (scanTimeEl) scanTimeEl.textContent = `Last scanned: ${nowStr}`;
+        clearInterval(_prxPollInterval);
+        _prxPollInterval = setInterval(() => {
+            if (prxModal?.classList.contains('active')) triggerScan();
+            else { clearInterval(_prxPollInterval); _prxPollInterval = null; }
+        }, 60000);
 
         // Stats row — do not fabricate CPU savings
         if (prxFreedRam)     prxFreedRam.textContent     = estimatedRamMB > 0 ? `${estimatedRamMB} MB` : '—';
         if (prxFreedCpu)     prxFreedCpu.textContent     = '—'; // CPU impact not reliably measurable
         if (prxSafeCount)    prxSafeCount.textContent    = safeCount;
         if (prxStartupCount) prxStartupCount.textContent = startupCount > 0 ? startupCount : '—';
-        if (prxBgTweaksCount) prxBgTweaksCount.textContent = BG_TWEAKS.length;
+        if (prxBgTweaksCount) prxBgTweaksCount.textContent = activeTweakCount;
 
         // Admin notice
         if (prxAdminNotice) prxAdminNotice.classList.toggle('prx-hidden', isAdmin);
@@ -5100,32 +5141,90 @@ function initializeProcessReducer() {
                 }).join('') + (more ? `<div class="prx-close-more">…and ${more} more recommended</div>` : '');
             } else {
                 prxCloseList.innerHTML = `<div class="prx-zero-close-msg">
-                    Your running apps look clean — no immediate safe closures found.<br>
-                    Use <strong>Startup Reduction</strong> and <strong>Background Tweaks</strong> below to reduce what loads after reboot.
+                    No low-risk helper processes are safe to close right now. Your running apps look clean.<br>
+                    Use <strong>Background Modules</strong> and <strong>Startup Review</strong> below for deeper reduction after reboot.
                 </div>`;
             }
         }
 
-        // Background tweaks checklist
+        // Background Optimization Modules — grouped layout
         if (prxBgTweaksSection) {
+            const BADGE = {
+                'immediate': { cls: 'prx-badge-immediate', text: 'immediate'       },
+                'restart':   { cls: 'prx-badge-restart',   text: 'may need restart' },
+                'review':    { cls: 'prx-badge-review',     text: 'review first'    },
+                'soon':      { cls: 'prx-badge-soon',       text: 'coming soon'     },
+                'next-boot': { cls: 'prx-badge-restart',   text: 'next restart'    },
+            };
+
+            const renderItem = t => {
+                const b = BADGE[t.badge] || BADGE['review'];
+                if (t.isStartupLink) return `
+                    <div class="prx-tweak-item prx-tweak-startup-link" role="button" tabindex="0" data-action="startup-review">
+                        <div class="prx-tweak-info">
+                            <span class="prx-tweak-title">${t.title}</span>
+                            <span class="prx-tweak-desc">${t.desc}</span>
+                        </div>
+                        <span class="prx-tweak-badge ${b.cls}">${b.text}</span>
+                        <span class="prx-startup-link-arrow">→</span>
+                    </div>`;
+                if (t.disabled) return `
+                    <div class="prx-tweak-item prx-tweak-disabled">
+                        <div class="prx-tweak-info">
+                            <span class="prx-tweak-title">${t.title}</span>
+                            <span class="prx-tweak-desc">${t.desc}</span>
+                        </div>
+                        <span class="prx-tweak-badge ${b.cls}">${b.text}</span>
+                    </div>`;
+                return `
+                    <label class="prx-tweak-item">
+                        <input type="checkbox" class="prx-tweak-chk" data-tweak-id="${t.id}"${t.checked ? ' checked' : ''}>
+                        <div class="prx-tweak-info">
+                            <span class="prx-tweak-title">${t.title}</span>
+                            <span class="prx-tweak-desc">${t.desc}</span>
+                        </div>
+                        <span class="prx-tweak-badge ${b.cls}">${b.text}</span>
+                    </label>`;
+            };
+
+            // Build per-group sections
+            const groups = [];
+            let cur = null;
+            for (const t of BG_TWEAKS) {
+                if (t._group) { if (cur) groups.push(cur); cur = { label: t._group, items: [] }; }
+                else if (cur) cur.items.push(t);
+            }
+            if (cur) groups.push(cur);
+
+            const sectionsHtml = groups.map(g => `
+                <div class="prx-tweak-group-label">${g.label}</div>
+                <div class="prx-tweak-list">${g.items.map(renderItem).join('')}</div>
+            `).join('');
+
             prxBgTweaksSection.innerHTML = `
                 <div class="prx-tweaks-header">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-                    Background Tweaks
+                    Background Optimization Modules
                 </div>
-                <div class="prx-tweak-list">
-                    ${BG_TWEAKS.map(t => `
-                        <label class="prx-tweak-item">
-                            <input type="checkbox" class="prx-tweak-chk" data-tweak-id="${t.id}"${t.checked ? ' checked' : ''}>
-                            <span class="prx-tweak-label">${t.label}</span>
-                            <span class="prx-tweak-badge">may need restart</span>
-                        </label>
-                    `).join('')}
-                </div>
+                <p class="prx-tweaks-impact-note">Estimated impact is based on this PC's running apps, startup entries, and selected background modules.</p>
+                ${sectionsHtml}
                 <button class="prx-tweaks-apply-btn" id="prx-tweaks-apply-btn" type="button">Apply Selected Tweaks</button>
                 <div class="prx-tweaks-result" id="prx-tweaks-result" hidden></div>
             `;
             document.getElementById('prx-tweaks-apply-btn')?.addEventListener('click', applyBgTweaks);
+            document.querySelectorAll('#prx-bg-tweaks-section .prx-tweak-startup-link').forEach(el => {
+                el.addEventListener('click', () => {
+                    closePrxModal();
+                    switchPrxTab('apps');
+                    if (startupListEl) {
+                        startupListEl.closest?.('[hidden]')?.removeAttribute('hidden');
+                        startupListEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    } else if (installedPanel) {
+                        installedPanel.hidden = false;
+                        installedPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            });
         }
 
         setTimeout(() => {
@@ -5256,6 +5355,11 @@ function initializeProcessReducer() {
         triggerScan();
     });
 
+    document.getElementById('prx-refresh-btn')?.addEventListener('click', async () => {
+        await window.electronAPI?.clearBgCache?.();
+        triggerScan();
+    });
+
     // Escape key closes modal
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && prxModal?.classList.contains('active')) closePrxModal();
@@ -5292,8 +5396,12 @@ function initializeProcessReducer() {
     function renderProcessGroups(processes) {
         const safeList    = document.getElementById('pr-safe-list');
         const reviewList  = document.getElementById('pr-review-list');
-        const safeCountEl = document.getElementById('pr-safe-count');
-        const revCountEl  = document.getElementById('pr-review-count');
+        const safeCountEl      = document.getElementById('pr-safe-count');
+        const revCountEl       = document.getElementById('pr-review-count');
+        const safeGroupEl      = document.getElementById('pr-group-safe');
+        const reviewGroupEl    = document.getElementById('pr-group-review');
+        const protectedGroupEl = document.getElementById('pr-group-protected');
+        const scrollEl         = document.querySelector('.prx-results-scroll');
 
         const visible   = processes.filter(p => !ignoredProcs.has(p.processName));
         const sorted    = getSorted(visible);
@@ -5386,29 +5494,50 @@ function initializeProcessReducer() {
             return row;
         };
 
-        if (safeList) {
-            if (safeProcs.length) {
-                safeProcs.forEach((p, i) => {
-                    const row = makeRow(p, true);
-                    safeList.appendChild(row);
-                    setTimeout(() => row.classList.add('pr-revealed'), 36 * i);
-                });
-            } else {
-                safeList.innerHTML = '<div class="pr-proc-empty">No safe-to-close processes detected.</div>';
-            }
+        if (safeList && safeProcs.length) {
+            safeProcs.forEach((p, i) => {
+                const row = makeRow(p, true);
+                safeList.appendChild(row);
+                setTimeout(() => row.classList.add('pr-revealed'), 36 * i);
+            });
         }
-        if (reviewList) {
-            if (revProcs.length) {
-                revProcs.forEach((p, i) => {
-                    const row = makeRow(p, false);
-                    reviewList.appendChild(row);
-                    setTimeout(() => row.classList.add('pr-revealed'), 36 * (i + safeProcs.length));
-                });
-            } else {
-                reviewList.innerHTML = '<div class="pr-proc-empty">Nothing in review queue.</div>';
-            }
+        if (reviewList && revProcs.length) {
+            revProcs.forEach((p, i) => {
+                const row = makeRow(p, false);
+                reviewList.appendChild(row);
+                setTimeout(() => row.classList.add('pr-revealed'), 36 * (i + safeProcs.length));
+            });
         }
+
+        // Show/hide groups based on content — no empty-box waste
+        if (safeGroupEl)      safeGroupEl.style.display      = safeProcs.length ? '' : 'none';
+        if (reviewGroupEl)    reviewGroupEl.style.display     = revProcs.length  ? '' : 'none';
+        if (protectedGroupEl) protectedGroupEl.style.display  = 'none';
+
+        // Zero-rows message when scan returned nothing closeable
+        const zeroMsgId = 'prx-zero-rows-msg';
+        const existingZeroMsg = scrollEl?.querySelector('#prx-zero-rows-msg');
+        if (safeProcs.length === 0 && revProcs.length === 0) {
+            if (!existingZeroMsg && scrollEl) {
+                const z = document.createElement('div');
+                z.id = zeroMsgId;
+                z.className = 'prx-zero-rows-msg';
+                z.textContent = 'No detected apps need review right now. Your system looks clean.';
+                scrollEl.appendChild(z);
+            }
+        } else {
+            existingZeroMsg?.remove();
+        }
+
         applySearch();
+        const pillsEl = document.getElementById('prx-results-pills');
+        if (pillsEl) {
+            pillsEl.innerHTML = [
+                safeProcs.length ? `<span class="prx-res-pill prx-res-pill-safe">${safeProcs.length} safe</span>` : '',
+                revProcs.length  ? `<span class="prx-res-pill prx-res-pill-review">${revProcs.length} review</span>` : '',
+                `<span class="prx-res-pill prx-res-pill-protected">protected hidden</span>`,
+            ].join('');
+        }
     }
 
     async function closeSingleProcess(p, row) {
@@ -5606,10 +5735,10 @@ function initializeProcessReducer() {
             liveStatsBefore = ls;
 
             renderProcessGroups(prProcesses);
-            if (prProcesses.length && resultsEl) {
+            if (resultsEl) {
                 resultsEl.hidden = false;
                 const appsEmpty = document.getElementById('prx-apps-empty');
-                if (appsEmpty) appsEmpty.hidden = true;
+                if (appsEmpty) appsEmpty.style.display = 'none';
             }
 
             const safeCount    = prProcesses.filter(p => p.safeToClose && !ignoredProcs.has(p.processName)).length;
@@ -5863,6 +5992,163 @@ function initializeProcessReducer() {
         const msg = tray.slice(0, 4).map(p => p.name || p.processName).join(', ');
         showNotification('info', `${tray.length} Tray Apps Found`, `${msg}${tray.length > 4 ? '…' : ''}. View full scan for details.`);
     });
+
+    // ── Live Process Snapshot card (Apps tab) ──
+    (function initPrxSnapshot() {
+        const MAX_HIST  = 30;
+        let cpuHistory  = [];
+        let bootTime    = null;
+        let _snapIntvl  = null;
+
+        function fmtUptime(sec) {
+            const d = Math.floor(sec / 86400);
+            const h = Math.floor((sec % 86400) / 3600);
+            const m = Math.floor((sec % 3600) / 60);
+            if (d > 0) return `${d}d ${h}h`;
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m`;
+        }
+
+        function fmtNum(n) {
+            return n >= 1000 ? n.toLocaleString() : String(n);
+        }
+
+        function updateSparkline() {
+            if (cpuHistory.length < 2) return;
+            const W = 200, H = 26, pad = 2;
+            const step = W / (MAX_HIST - 1);
+            const pts = cpuHistory.map((v, i) => {
+                const x = (i * step).toFixed(1);
+                const y = (H - pad - ((v / 100) * (H - pad * 2))).toFixed(1);
+                return `${x},${y}`;
+            });
+            const lineEl = document.getElementById('snap-spark-line');
+            const fillEl = document.getElementById('snap-spark-fill');
+            if (lineEl) lineEl.setAttribute('points', pts.join(' '));
+            if (fillEl && pts.length >= 2) {
+                const lastX = (( cpuHistory.length - 1) * step).toFixed(1);
+                fillEl.setAttribute('points', `${pts.join(' ')} ${lastX},${H} 0,${H}`);
+            }
+        }
+
+        async function tick() {
+            try {
+                const stats = await window.electronAPI?.getLiveStats?.();
+                if (!stats) return;
+                const cpu  = Math.round(stats.cpuUsage    || 0);
+                const mem  = Math.round(stats.memoryUsage || 0);
+                const prcs = stats.processCount || 0;
+                const thrd = stats.threadCount  || 0;
+                const hndl = stats.handleCount  || 0;
+
+                const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+                set('snap-cpu',     `${cpu}%`);
+                set('snap-procs',   prcs > 0 ? fmtNum(prcs) : '—');
+                set('snap-mem',     `${mem}%`);
+                set('snap-threads', thrd > 0 ? `${fmtNum(thrd)} threads`  : '—');
+                set('snap-handles', hndl > 0 ? `${fmtNum(hndl)} handles`  : '—');
+                set('snap-time',    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+
+                if (bootTime) {
+                    const elapsed = Math.round((Date.now() - bootTime) / 1000);
+                    set('snap-uptime', fmtUptime(elapsed));
+                }
+
+                cpuHistory.push(cpu);
+                if (cpuHistory.length > MAX_HIST) cpuHistory.shift();
+                updateSparkline();
+            } catch {}
+        }
+
+        function startPoll() {
+            if (_snapIntvl) return;
+            tick();
+            _snapIntvl = setInterval(tick, 3000);
+        }
+        function stopPoll() {
+            clearInterval(_snapIntvl);
+            _snapIntvl = null;
+        }
+
+        // Load static CPU info once (synchronous Node.js os.cpus(), zero PS cost)
+        window.electronAPI?.getCpuStatic?.().then(info => {
+            if (!info) return;
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            set('snap-cpu-model', info.model);
+            set('snap-cores',    `${info.logicalCores} logical cores`);
+            set('snap-clock',    `${info.speedMHz} MHz`);
+            bootTime = Date.now() - info.uptimeSeconds * 1000;
+        }).catch(() => {});
+
+        // Start polling; stop when Processes page is hidden
+        startPoll();
+        const prxPage = document.getElementById('page-process-reducer');
+        if (prxPage) {
+            new MutationObserver(() => {
+                prxPage.hidden ? stopPoll() : startPoll();
+            }).observe(prxPage, { attributes: true, attributeFilter: ['hidden'] });
+        }
+    })();
+
+    // ── Fix 7: Module cards on overview page ──
+    function renderModuleCards() {
+        const container = document.getElementById('prx-module-cards');
+        if (!container) return;
+        const BADGE_MAP = {
+            'immediate': { cls: 'prx-badge-immediate', text: 'immediate'        },
+            'restart':   { cls: 'prx-badge-restart',   text: 'may need restart' },
+            'review':    { cls: 'prx-badge-review',     text: 'review first'    },
+            'soon':      { cls: 'prx-badge-soon',       text: 'coming soon'     },
+        };
+        const modules = BG_TWEAKS.filter(t => !t._group && !t.disabled && t.id && t.id !== '__startup__');
+        if (!modules.length) return;
+
+        const cardsHtml = modules.map(t => {
+            const b = BADGE_MAP[t.badge] || BADGE_MAP['review'];
+            return `<div class="prx-module-card" data-module-id="${t.id}">
+                <div class="prx-mc-shine" aria-hidden="true"></div>
+                <div class="prx-mc-top">
+                    <span class="prx-mc-title">${t.title}</span>
+                    <span class="prx-tweak-badge ${b.cls}">${b.text}</span>
+                </div>
+                <p class="prx-mc-desc">${t.desc}</p>
+                <div class="prx-mc-foot">
+                    <button class="prx-mc-apply-btn" data-module-id="${t.id}" type="button">Apply</button>
+                </div>
+            </div>`;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="prx-section-top prx-section-top-sm" style="margin-top:18px">
+                <span class="prx-section-label-sm">Background Optimization Modules</span>
+            </div>
+            <div class="prx-mc-grid">${cardsHtml}</div>`;
+
+        container.querySelectorAll('.prx-mc-apply-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id   = btn.dataset.moduleId;
+                const card = btn.closest('.prx-module-card');
+                btn.disabled = true;
+                btn.textContent = 'Applying…';
+                try {
+                    const res = await window.electronAPI?.applyTweak?.(id, 'apply');
+                    if (res?.success) {
+                        card?.classList.add('prx-mc-applied');
+                        btn.textContent = 'Applied';
+                    } else {
+                        card?.classList.add('prx-mc-failed');
+                        btn.textContent = 'Failed';
+                        btn.disabled = false;
+                    }
+                } catch {
+                    card?.classList.add('prx-mc-failed');
+                    btn.textContent = 'Failed';
+                    btn.disabled = false;
+                }
+            });
+        });
+    }
+    renderModuleCards();
 
     enhancePrxCards();
 }
