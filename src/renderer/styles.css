@@ -13656,8 +13656,8 @@ body.settings-nav-hidden .sidebar {
   to   { opacity: 1; transform: translateX(0); }
 }
 @keyframes cineDropIn {
-  from { opacity: 0; transform: translateY(-12px); filter: blur(8px); }
-  to   { opacity: 1; transform: translateY(0);     filter: blur(0); }
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes heroGlassSweep {
   0%   { transform: translateX(-140%) skewX(-20deg); opacity: 0; }
@@ -13726,9 +13726,9 @@ body.settings-nav-hidden .sidebar {
 }
 
 /* -- Top bar: search / settings / apply slide-down reveal --------- */
-.top-bar-search { animation: cineDropIn 640ms var(--ease-cine) backwards; animation-delay: 90ms; }
-.top-bar-actions .icon-btn { animation: cineDropIn 640ms var(--ease-cine) backwards; animation-delay: 170ms; }
-.top-bar-actions .top-bar-cta { animation: cineDropIn 640ms var(--ease-cine) backwards; animation-delay: 250ms; }
+.top-bar-search { animation: cineDropIn 480ms var(--ease-cine) backwards; animation-delay: 50ms; }
+.top-bar-actions .icon-btn { animation: cineDropIn 480ms var(--ease-cine) backwards; animation-delay: 90ms; }
+.top-bar-actions .top-bar-cta { animation: cineDropIn 480ms var(--ease-cine) backwards; animation-delay: 130ms; }
 
 /* Stat-card lift + glass highlight + border glow already exist on
    .asset-card:hover and are intentionally left intact. */

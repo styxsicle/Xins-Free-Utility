@@ -9812,13 +9812,13 @@ function scheduleNetworkCardsOnEntry(options = {}) {
 
 // ── Dashboard: card reveal motion (mirrors Network/Gaming entrance) ──────────
 const DASHBOARD_ENTRY_MOTION = {
-    duration: 620,
-    stagger: 55,
+    duration: 820,
+    stagger: 100,
     slideX: 0,
-    slideY: 14,
-    blur: 5,
+    slideY: 20,
+    blur: 8,
     opacity: 0,
-    scale: 0.985,
+    scale: 0.98,
     easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
 };
 let dashboardPageEnterMotionLastRun = 0;
