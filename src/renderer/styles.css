@@ -142,6 +142,8 @@ svg { max-width: 100%; max-height: 100%; }
   --accent-gradient: linear-gradient(135deg, #dfe2e8 0%, #ffffff 48%, #8e929b 100%);
   --hero-bg: radial-gradient(120% 150% at 50% -25%, #1a1c22 0%, #0a0b0e 58%, #060709 100%);
   --topbar-bg: rgba(18, 19, 23, 0.60);
+  --topbar-border: rgba(214, 218, 226, 0.09);
+  --topbar-control-bg: rgba(228, 232, 238, 0.04);
   /* Dashboard — stealth graphite/black with silver edge glow */
   --dashboard-hero-bg:
     radial-gradient(140% 100% at 100% 0%, rgba(228,232,238,0.16) 0%, transparent 55%),
@@ -194,6 +196,8 @@ svg { max-width: 100%; max-height: 100%; }
   --accent-gradient: linear-gradient(135deg, #f0f2f6 0%, #c6ccd6 50%, #9aa1ad 100%);
   --hero-bg: linear-gradient(157deg, #2b2f37 0%, #1b1e24 64%, #14161a 100%);
   --topbar-bg: rgba(40, 44, 52, 0.50);
+  --topbar-border: rgba(228, 232, 240, 0.13);
+  --topbar-control-bg: rgba(236, 240, 247, 0.05);
   /* Dashboard — gunmetal/steel with silver mist accents */
   --dashboard-hero-bg:
     radial-gradient(140% 100% at 100% 0%, rgba(255,255,255,0.20) 0%, transparent 55%),
@@ -246,6 +250,8 @@ svg { max-width: 100%; max-height: 100%; }
   --accent-gradient: linear-gradient(135deg, #e8f3fd 0%, #bcd4ec 50%, #8eb1d6 100%);
   --hero-bg: linear-gradient(157deg, #233448 0%, #16212e 66%, #101822 100%);
   --topbar-bg: rgba(36, 54, 74, 0.42);
+  --topbar-border: rgba(214, 230, 247, 0.16);
+  --topbar-control-bg: rgba(214, 232, 250, 0.06);
   /* Dashboard — cool frosted slate with pale blue-silver accents */
   --dashboard-hero-bg:
     radial-gradient(140% 100% at 100% 0%, rgba(222,238,253,0.20) 0%, transparent 55%),
@@ -285,9 +291,7 @@ svg { max-width: 100%; max-height: 100%; }
   --accent-border: rgba(160, 166, 176, 0.28);
   --accent-gradient: linear-gradient(135deg, #3b3f46 0%, #9ba0a8 52%, #1f2227 100%);
   --button-border: rgba(160, 166, 176, 0.18);
-  --topbar-bg: linear-gradient(180deg, rgba(16,18,22,0.80), rgba(9,10,12,0.84));
-  --topbar-border: rgba(255,255,255,0.07);
-  --topbar-control-bg: rgba(255,255,255,0.035);
+  /* Top bar intentionally excluded — topbar follows theme, not accent finish */
 }
 
 :root[data-accent-finish="chrome"] {
@@ -297,9 +301,7 @@ svg { max-width: 100%; max-height: 100%; }
   --accent-border: rgba(255, 255, 255, 0.42);
   --accent-gradient: linear-gradient(115deg, #f6f7f8 0%, #8f949c 24%, #ffffff 48%, #747982 68%, #f1f2f4 100%);
   --button-border: rgba(255, 255, 255, 0.34);
-  --topbar-bg: linear-gradient(180deg, rgba(34,36,42,0.74), rgba(18,20,24,0.80));
-  --topbar-border: rgba(255,255,255,0.12);
-  --topbar-control-bg: rgba(255,255,255,0.055);
+  /* Top bar intentionally excluded — topbar follows theme, not accent finish */
 }
 
 /* Phase 3 TODO: Per-tab theme tuning: audit each page and replace remaining hardcoded colors with theme variables. */
@@ -7071,11 +7073,10 @@ ol.ai-msg-list li {
 .ai-welcome-modal {
   width: 340px; max-width: 100%;
   opacity: 0;
-  background: linear-gradient(160deg, #141418 0%, #0e0e14 60%, #0a0a0f 100%);
+  background: #0a0a0f;
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: 28px;
-  padding: 36px 28px 28px;
-  text-align: center;
+  padding: 0;
   display: flex; flex-direction: column; align-items: stretch;
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.04) inset,
@@ -7083,6 +7084,14 @@ ol.ai-msg-list li {
     0 0 120px rgba(255,255,255,0.03);
   position: relative; overflow: hidden;
   z-index: 3;
+}
+.ai-welcome-card-frame {
+  display: block;
+  width: 340px;
+  height: 475px;
+  border: none;
+  background: transparent;
+  max-width: 100%;
 }
 .ai-welcome-modal::before {
   content: '';
@@ -15838,3 +15847,41 @@ body.settings-nav-hidden .sidebar {
 .sys-cpu-proc-ram { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
 .sys-cpu-proc-cat { font-size: 10px; font-weight: 700; color: var(--text-secondary); opacity: 0.55; }
 .sys-cpu-empty { font-size: 12px; color: var(--text-secondary); opacity: 0.48; font-style: italic; padding: 4px 0; }
+/* =========================================================
+   MANUAL TOP BAR ACCENT CONTROLS
+   Edit this block only when tuning the top bar.
+   ========================================================= */
+
+/* Pearl accent */
+[data-accent-finish="pearl"] {
+  --topbar-bg: linear-gradient(180deg, rgba(18, 18, 22, 0.92), rgba(9, 9, 12, 0.88));
+  --topbar-border: rgba(255, 255, 255, 0.075);
+  --topbar-control-bg: rgba(255, 255, 255, 0.045);
+}
+
+/* Graphite accent */
+[data-accent-finish="graphite"] {
+  --topbar-bg: linear-gradient(180deg, rgba(28, 29, 33, 0.92), rgba(14, 15, 18, 0.88));
+  --topbar-border: rgba(255, 255, 255, 0.085);
+  --topbar-control-bg: rgba(255, 255, 255, 0.05);
+}
+
+/* Chrome accent */
+[data-accent-finish="chrome"] {
+  --topbar-bg: linear-gradient(180deg, rgba(22, 22, 24, 0.94), rgba(8, 8, 10, 0.92));
+  --topbar-border: rgba(255, 255, 255, 0.105);
+  --topbar-control-bg: rgba(255, 255, 255, 0.045);
+}
+
+/* Force top bar to use the manual variables above */
+.top-bar,
+.top-bar.net-integrated,
+.top-bar.gaming-integrated {
+  background: var(--topbar-bg) !important;
+  border-color: var(--topbar-border) !important;
+  transition: none !important;
+}
+
+.top-bar-search {
+  background: var(--topbar-control-bg) !important;
+}
