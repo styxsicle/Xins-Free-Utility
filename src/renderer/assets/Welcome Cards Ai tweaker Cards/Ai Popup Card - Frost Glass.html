@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Tweaker — Frost Glass</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: linear-gradient(135deg, #b8cee0 0%, #c8d8e8 50%, #bdd0e2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+  }
+
+  .card {
+    background: linear-gradient(160deg, rgba(210,225,240,0.72) 0%, rgba(190,210,230,0.60) 60%, rgba(175,200,225,0.55) 100%);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,0.55);
+    border-radius: 28px;
+    width: 340px;
+    padding: 36px 28px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.35) inset,
+      0 40px 80px rgba(100,140,180,0.25),
+      0 0 0 0.5px rgba(150,185,220,0.3);
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 65% 35% at 50% 0%, rgba(255,255,255,0.45) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .orb-wrap {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    margin: 0 auto 24px;
+  }
+
+  #orb-svg { width: 100%; height: 100%; overflow: visible; }
+
+  #particle-canvas {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .title {
+    font-size: 22px; font-weight: 700; letter-spacing: -0.5px;
+    color: #1a2a3a; margin-bottom: 10px;
+  }
+
+  .subtitle {
+    font-size: 13.5px; font-weight: 400; line-height: 1.6;
+    color: rgba(30,50,75,0.60); margin-bottom: 6px;
+  }
+
+  .tagline {
+    font-size: 11px; font-weight: 400;
+    color: rgba(30,50,75,0.38); letter-spacing: 0.3px; margin-bottom: 24px;
+  }
+
+  .checkbox-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; margin-bottom: 18px; cursor: pointer; user-select: none;
+  }
+
+  .checkbox-row input[type="checkbox"] {
+    appearance: none; width: 15px; height: 15px;
+    border: 1.5px solid rgba(30,60,100,0.30); border-radius: 4px;
+    background: rgba(255,255,255,0.35); cursor: pointer; position: relative;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .checkbox-row input[type="checkbox"]:checked {
+    background: rgba(30,60,100,0.70);
+    border-color: rgba(30,60,100,0.70);
+  }
+
+  .checkbox-row input[type="checkbox"]:checked::after {
+    content: ''; position: absolute; left: 3px; top: 1px;
+    width: 5px; height: 8px;
+    border: 1.5px solid #fff;
+    border-top: none; border-left: none; transform: rotate(40deg);
+  }
+
+  .checkbox-row label { font-size: 12.5px; color: rgba(30,50,75,0.45); cursor: pointer; }
+
+  .btn {
+    display: block; width: 100%; padding: 15px 0; border-radius: 14px;
+    border: none;
+    background: rgba(20,40,70,0.82);
+    color: #ffffff;
+    font-size: 15px; font-weight: 600; letter-spacing: -0.1px; cursor: pointer;
+    transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
+    box-shadow: 0 2px 16px rgba(20,50,90,0.25);
+  }
+
+  .btn:hover {
+    background: rgba(20,40,70,0.92);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 24px rgba(20,50,90,0.35);
+  }
+  .btn:active { transform: translateY(0); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="orb-wrap">
+    <canvas id="particle-canvas" width="220" height="220"></canvas>
+    <svg id="orb-svg" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"   stop-color="#1a3a5c" stop-opacity="0.14"/>
+          <stop offset="60%"  stop-color="#2a5080" stop-opacity="0.04"/>
+          <stop offset="100%" stop-color="#b8cee0"  stop-opacity="0"/>
+        </radialGradient>
+        <filter id="lineGlow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="1.8" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="dotGlow" x="-200%" y="-200%" width="500%" height="500%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <clipPath id="innerClip"><circle cx="80" cy="80" r="46"/></clipPath>
+      </defs>
+
+      <circle cx="80" cy="80" r="70" fill="url(#coreGlow)"/>
+      <circle cx="80" cy="80" r="46"
+        fill="rgba(200,220,240,0.45)"
+        stroke="rgba(255,255,255,0.55)"
+        stroke-width="0.8"/>
+      <circle cx="80" cy="80" r="46" fill="url(#sphereSheen)" clip-path="url(#innerClip)"/>
+      <defs>
+        <radialGradient id="sphereSheen" cx="38%" cy="28%" r="55%">
+          <stop offset="0%"  stop-color="rgba(255,255,255,0.55)"/>
+          <stop offset="100%" stop-color="transparent"/>
+        </radialGradient>
+      </defs>
+
+      <g filter="url(#lineGlow)" opacity="0.75">
+        <line x1="56" y1="80" x2="104" y2="80" stroke="rgba(20,50,90,0.55)" stroke-width="0.8"/>
+        <line x1="80" y1="56" x2="80"  y2="104" stroke="rgba(20,50,90,0.55)" stroke-width="0.8"/>
+        <line x1="62" y1="62" x2="98" y2="98" stroke="rgba(20,50,90,0.12)" stroke-width="0.5"/>
+        <line x1="98" y1="62" x2="62" y2="98" stroke="rgba(20,50,90,0.12)" stroke-width="0.5"/>
+      </g>
+
+      <circle cx="80" cy="80" r="2.5" fill="rgba(15,40,80,0.9)" opacity="0.85" filter="url(#dotGlow)"/>
+
+      <g id="orbit-group">
+        <circle cx="80" cy="80" r="66" fill="none" stroke="rgba(20,50,90,0.14)" stroke-width="0.6" stroke-dasharray="4 8"/>
+        <circle id="travel-dot" cx="146" cy="80" r="3" fill="rgba(15,40,80,0.85)" filter="url(#dotGlow)"/>
+        <path id="trail-arc" fill="none" stroke="rgba(20,50,90,0.45)" stroke-width="1" stroke-linecap="round" filter="url(#lineGlow)"/>
+      </g>
+
+      <g id="inner-orbit">
+        <circle cx="80" cy="80" r="54" fill="none" stroke="rgba(20,50,90,0.10)" stroke-width="0.5"/>
+        <circle id="inner-dot" cx="134" cy="80" r="1.8" fill="rgba(15,40,80,0.7)" filter="url(#dotGlow)"/>
+      </g>
+
+      <circle cx="80" cy="80" r="72" fill="none" stroke="rgba(20,50,90,0.05)" stroke-width="0.5"/>
+    </svg>
+  </div>
+
+  <h1 class="title">Welcome to AI Tweaker</h1>
+  <p class="subtitle">Your personal optimization assistant for gaming performance, latency reduction, cleanup, and deep system tuning.</p>
+  <p class="tagline">Private. On-device. Built into XTweaks.</p>
+
+  <label class="checkbox-row">
+    <input type="checkbox" id="dontShow"/>
+    <span>Don't show this again</span>
+  </label>
+
+  <button class="btn">Continue</button>
+</div>
+
+<script>
+const SPEED = {
+  orbitOuter:    0.0015,
+  orbitInner:    0.0022,
+  trailLength:   1.2,
+  float:         0.3,
+  floatDist:     4,
+  particleDrift: 0.28,
+  particlePulse: 0.18,
+};
+
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const CX = W / 2, CY = H / 2;
+const particles = [];
+const COUNT = 38;
+function randBetween(a, b) { return a + Math.random() * (b - a); }
+for (let i = 0; i < COUNT; i++) {
+  const angle = Math.random() * Math.PI * 2;
+  const dist  = randBetween(30, 95);
+  particles.push({
+    x: CX + Math.cos(angle) * dist, y: CY + Math.sin(angle) * dist,
+    baseX: CX + Math.cos(angle) * dist, baseY: CY + Math.sin(angle) * dist,
+    r: randBetween(0.4, 1.4), alpha: randBetween(0.08, 0.35),
+    speed: randBetween(0.0004, 0.0012), phase: Math.random() * Math.PI * 2,
+    drift: randBetween(2, 6), color: 'rgba(15,40,80,0.9)',
+  });
+}
+let t = 0;
+function drawParticles() {
+  ctx.clearRect(0, 0, W, H);
+  t += 0.016;
+  for (const p of particles) {
+    const wobble  = Math.sin(t * p.speed * SPEED.particleDrift * 3000 + p.phase);
+    const wobble2 = Math.cos(t * p.speed * SPEED.particleDrift * 2400 + p.phase);
+    p.x = p.baseX + wobble * p.drift;
+    p.y = p.baseY + wobble2 * p.drift;
+    const pulse = 0.5 + 0.5 * Math.sin(t * p.speed * SPEED.particlePulse * 3000 + p.phase);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * (0.8 + 0.4 * pulse), 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.alpha * (0.5 + 0.5 * pulse);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+const travelDot = document.getElementById('travel-dot');
+const innerDot  = document.getElementById('inner-dot');
+const trailArc  = document.getElementById('trail-arc');
+let orbitAngle = 0, innerAngle = Math.PI;
+const R = 66, Ri = 54;
+function arcPath(cx, cy, r, s, e) {
+  const x1 = cx + r * Math.cos(s), y1 = cy + r * Math.sin(s);
+  const x2 = cx + r * Math.cos(e), y2 = cy + r * Math.sin(e);
+  const diff = ((e - s) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+  return `M ${x1} ${y1} A ${r} ${r} 0 ${diff > Math.PI ? 1 : 0} 1 ${x2} ${y2}`;
+}
+function animateSVG() {
+  orbitAngle += SPEED.orbitOuter;
+  innerAngle -= SPEED.orbitInner;
+  travelDot.setAttribute('cx', 80 + R * Math.cos(orbitAngle));
+  travelDot.setAttribute('cy', 80 + R * Math.sin(orbitAngle));
+  trailArc.setAttribute('d', arcPath(80, 80, R, orbitAngle - SPEED.trailLength, orbitAngle));
+  innerDot.setAttribute('cx', 80 + Ri * Math.cos(innerAngle));
+  innerDot.setAttribute('cy', 80 + Ri * Math.sin(innerAngle));
+}
+const orbWrap = document.querySelector('.orb-wrap');
+let floatT = 0;
+function floatOrb() {
+  floatT += 0.016;
+  orbWrap.style.transform = `translateY(${Math.sin(floatT * SPEED.float) * SPEED.floatDist}px)`;
+}
+function loop() { drawParticles(); animateSVG(); floatOrb(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>

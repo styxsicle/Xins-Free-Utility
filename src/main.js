@@ -1628,56 +1628,56 @@ ipcMain.handle('ai-engine-setup', (event) => {
 // ── AI Background Context ─────────────────────────────────────────────────
 
 const PROCESS_CATALOG = new Map([
-    // Browsers
-    ['chrome',               { display: 'Google Chrome',        category: 'Browser',           safeToClose: true,  safeToDisableStartup: false }],
-    ['msedge',               { display: 'Microsoft Edge',       category: 'Browser',           safeToClose: true,  safeToDisableStartup: false }],
-    ['firefox',              { display: 'Firefox',              category: 'Browser',           safeToClose: true,  safeToDisableStartup: false }],
-    ['brave',                { display: 'Brave',                category: 'Browser',           safeToClose: true,  safeToDisableStartup: false }],
-    ['opera',                { display: 'Opera',                category: 'Browser',           safeToClose: true,  safeToDisableStartup: false }],
-    // Game launchers
-    ['steam',                { display: 'Steam',                category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
-    ['epicgameslauncher',    { display: 'Epic Games Launcher',  category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
-    ['battlenetlauncher',    { display: 'Battle.net',           category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
-    ['riotclientservices',   { display: 'Riot Client',          category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
-    ['galaxyclient',         { display: 'GOG Galaxy',           category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
-    ['upc',                  { display: 'Ubisoft Connect',      category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
-    ['eadesktop',            { display: 'EA App',               category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
-    ['playnite.desktopapp',  { display: 'Playnite',             category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: false }],
-    // Chat / Voice
-    ['discord',              { display: 'Discord',              category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
-    ['teams',                { display: 'Microsoft Teams',      category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
-    ['slack',                { display: 'Slack',                category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
-    ['skype',                { display: 'Skype',                category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
-    ['zoom',                 { display: 'Zoom',                 category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
-    ['teamspeak3',           { display: 'TeamSpeak 3',          category: 'Chat/Voice',        safeToClose: true,  safeToDisableStartup: true  }],
-    // Overlays
+    // Browsers — Review First (may have unsaved tabs/forms)
+    ['chrome',               { display: 'Google Chrome',        category: 'Browser',           safeToClose: false, safeToDisableStartup: false }],
+    ['msedge',               { display: 'Microsoft Edge',       category: 'Browser',           safeToClose: false, safeToDisableStartup: false }],
+    ['firefox',              { display: 'Firefox',              category: 'Browser',           safeToClose: false, safeToDisableStartup: false }],
+    ['brave',                { display: 'Brave',                category: 'Browser',           safeToClose: false, safeToDisableStartup: false }],
+    ['opera',                { display: 'Opera',                category: 'Browser',           safeToClose: false, safeToDisableStartup: false }],
+    // Game launchers — Review First (game may be active or mid-download)
+    ['steam',                { display: 'Steam',                category: 'Game Launcher',     safeToClose: false, safeToDisableStartup: true  }],
+    ['epicgameslauncher',    { display: 'Epic Games Launcher',  category: 'Game Launcher',     safeToClose: false, safeToDisableStartup: true  }],
+    ['battlenetlauncher',    { display: 'Battle.net',           category: 'Game Launcher',     safeToClose: false, safeToDisableStartup: true  }],
+    ['riotclientservices',   { display: 'Riot Client',          category: 'Game Launcher',     safeToClose: false, safeToDisableStartup: true  }],
+    ['galaxyclient',         { display: 'GOG Galaxy',           category: 'Game Launcher',     safeToClose: false, safeToDisableStartup: true  }],
+    ['upc',                  { display: 'Ubisoft Connect',      category: 'Game Launcher',     safeToClose: false, safeToDisableStartup: true  }],
+    ['eadesktop',            { display: 'EA App',               category: 'Game Launcher',     safeToClose: false, safeToDisableStartup: true  }],
+    ['playnite.desktopapp',  { display: 'Playnite',             category: 'Game Launcher',     safeToClose: false, safeToDisableStartup: false }],
+    // Chat / Voice — Review First (user may be in a call)
+    ['discord',              { display: 'Discord',              category: 'Chat/Voice',        safeToClose: false, safeToDisableStartup: true  }],
+    ['teams',                { display: 'Microsoft Teams',      category: 'Chat/Voice',        safeToClose: false, safeToDisableStartup: true  }],
+    ['slack',                { display: 'Slack',                category: 'Chat/Voice',        safeToClose: false, safeToDisableStartup: true  }],
+    ['skype',                { display: 'Skype',                category: 'Chat/Voice',        safeToClose: false, safeToDisableStartup: true  }],
+    ['zoom',                 { display: 'Zoom',                 category: 'Chat/Voice',        safeToClose: false, safeToDisableStartup: true  }],
+    ['teamspeak3',           { display: 'TeamSpeak 3',          category: 'Chat/Voice',        safeToClose: false, safeToDisableStartup: true  }],
+    // Overlays — Review First (driver-adjacent; GeForce Experience has UI)
     ['nvcontainer',          { display: 'NVIDIA Overlay',       category: 'Overlay',           safeToClose: false, safeToDisableStartup: true  }],
-    ['geforceexperience',    { display: 'GeForce Experience',   category: 'Overlay',           safeToClose: true,  safeToDisableStartup: true  }],
+    ['geforceexperience',    { display: 'GeForce Experience',   category: 'Overlay',           safeToClose: false, safeToDisableStartup: true  }],
     ['gamebar',              { display: 'Xbox Game Bar',        category: 'Overlay',           safeToClose: false, safeToDisableStartup: false }],
     ['xboxgamemonitor',      { display: 'Xbox Game Monitor',    category: 'Overlay',           safeToClose: false, safeToDisableStartup: false }],
-    // RGB / Peripheral
+    // RGB / Peripheral — main UI apps are Review First; background-only service is Safe
     ['lightingservice',      { display: 'ASUS Aura Sync',       category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
-    ['icue',                 { display: 'Corsair iCUE',         category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
-    ['razercentral',         { display: 'Razer Synapse',        category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
-    ['synapse3',             { display: 'Razer Synapse 3',      category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
-    ['lghub',                { display: 'Logitech G Hub',       category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
-    ['logioptionsplus',      { display: 'Logi Options+',        category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
-    ['steelseriesggtool',    { display: 'SteelSeries GG',       category: 'RGB/Peripheral',    safeToClose: true,  safeToDisableStartup: true  }],
-    // Cloud Sync
-    ['onedrive',             { display: 'Microsoft OneDrive',   category: 'Cloud Sync',        safeToClose: true,  safeToDisableStartup: true  }],
-    ['dropbox',              { display: 'Dropbox',              category: 'Cloud Sync',        safeToClose: true,  safeToDisableStartup: true  }],
-    ['googledrivefs',        { display: 'Google Drive',         category: 'Cloud Sync',        safeToClose: true,  safeToDisableStartup: true  }],
-    ['icloudservices',       { display: 'iCloud',               category: 'Cloud Sync',        safeToClose: true,  safeToDisableStartup: true  }],
+    ['icue',                 { display: 'Corsair iCUE',         category: 'RGB/Peripheral',    safeToClose: false, safeToDisableStartup: true  }],
+    ['razercentral',         { display: 'Razer Synapse',        category: 'RGB/Peripheral',    safeToClose: false, safeToDisableStartup: true  }],
+    ['synapse3',             { display: 'Razer Synapse 3',      category: 'RGB/Peripheral',    safeToClose: false, safeToDisableStartup: true  }],
+    ['lghub',                { display: 'Logitech G Hub',       category: 'RGB/Peripheral',    safeToClose: false, safeToDisableStartup: true  }],
+    ['logioptionsplus',      { display: 'Logi Options+',        category: 'RGB/Peripheral',    safeToClose: false, safeToDisableStartup: true  }],
+    ['steelseriesggtool',    { display: 'SteelSeries GG',       category: 'RGB/Peripheral',    safeToClose: false, safeToDisableStartup: true  }],
+    // Cloud Sync — Review First (sync may be in progress)
+    ['onedrive',             { display: 'Microsoft OneDrive',   category: 'Cloud Sync',        safeToClose: false, safeToDisableStartup: true  }],
+    ['dropbox',              { display: 'Dropbox',              category: 'Cloud Sync',        safeToClose: false, safeToDisableStartup: true  }],
+    ['googledrivefs',        { display: 'Google Drive',         category: 'Cloud Sync',        safeToClose: false, safeToDisableStartup: true  }],
+    ['icloudservices',       { display: 'iCloud',               category: 'Cloud Sync',        safeToClose: false, safeToDisableStartup: true  }],
     // Updaters
     ['adobeupdateservice',   { display: 'Adobe Updater',        category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
     ['googleupdate',         { display: 'Google Updater',       category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
-    // Recording / Capture
-    ['obs64',                { display: 'OBS Studio',           category: 'Recording/Capture', safeToClose: true,  safeToDisableStartup: false }],
-    ['obs32',                { display: 'OBS Studio (32-bit)',  category: 'Recording/Capture', safeToClose: true,  safeToDisableStartup: false }],
-    // Desktop / Other
-    ['wallpaperengine64',    { display: 'Wallpaper Engine',     category: 'Desktop App',       safeToClose: true,  safeToDisableStartup: false }],
-    ['parsec',               { display: 'Parsec',               category: 'Remote Access',     safeToClose: true,  safeToDisableStartup: true  }],
-    ['spotify',              { display: 'Spotify',              category: 'Desktop App',       safeToClose: true,  safeToDisableStartup: true  }],
+    // Recording / Capture — Review First (may be streaming live)
+    ['obs64',                { display: 'OBS Studio',           category: 'Recording/Capture', safeToClose: false, safeToDisableStartup: false }],
+    ['obs32',                { display: 'OBS Studio (32-bit)',  category: 'Recording/Capture', safeToClose: false, safeToDisableStartup: false }],
+    // Desktop / Other — Review First (active remote session / active playback)
+    ['wallpaperengine64',    { display: 'Wallpaper Engine',     category: 'Desktop App',       safeToClose: false, safeToDisableStartup: false }],
+    ['parsec',               { display: 'Parsec',               category: 'Remote Access',     safeToClose: false, safeToDisableStartup: true  }],
+    ['spotify',              { display: 'Spotify',              category: 'Desktop App',       safeToClose: false, safeToDisableStartup: true  }],
     // Anti-cheat — never safe to close/disable
     ['vgc',                  { display: 'Riot Vanguard',        category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
     ['vgtray',               { display: 'Riot Vanguard',        category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
@@ -1687,7 +1687,7 @@ const PROCESS_CATALOG = new Map([
     ['belvservice',          { display: 'BattlEye',             category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
     ['faceitclient',         { display: 'FACEIT Client',        category: 'Anti-Cheat',        safeToClose: false, safeToDisableStartup: false }],
     // Lunar Client
-    ['lunarclient',          { display: 'Lunar Client',         category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['lunarclient',          { display: 'Lunar Client',         category: 'Game Launcher',     safeToClose: false, safeToDisableStartup: true  }],
     // NVIDIA ShadowPlay / GeForce
     ['nvsphelper64',         { display: 'NVIDIA ShadowPlay',    category: 'Overlay',           safeToClose: false, safeToDisableStartup: true  }],
     ['nvsphelper',           { display: 'NVIDIA ShadowPlay',    category: 'Overlay',           safeToClose: false, safeToDisableStartup: true  }],
@@ -1697,8 +1697,8 @@ const PROCESS_CATALOG = new Map([
     ['adobegcclient',        { display: 'Adobe Creative Cloud', category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
     ['creativecloudapp',     { display: 'Adobe Creative Cloud', category: 'Updater',           safeToClose: true,  safeToDisableStartup: true  }],
     // Extra game launchers
-    ['heroiclauncher',       { display: 'Heroic Games Launcher',category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
-    ['xboxapp',              { display: 'Xbox App',             category: 'Game Launcher',     safeToClose: true,  safeToDisableStartup: true  }],
+    ['heroiclauncher',       { display: 'Heroic Games Launcher',category: 'Game Launcher',     safeToClose: false, safeToDisableStartup: true  }],
+    ['xboxapp',              { display: 'Xbox App',             category: 'Game Launcher',     safeToClose: false, safeToDisableStartup: true  }],
 ]);
 
 const CRITICAL_SERVICES = new Set([
@@ -1720,6 +1720,43 @@ const INTERNAL_PROTECTED_PROCESSES = new Set([
     'xin-premium-optimizer',
     'xintweaks',
 ]);
+
+// Windows core/OS processes — never surface to the user
+const WINDOWS_CORE_PROCS = new Set([
+    'system','registry','smss','csrss','wininit','winlogon','services','lsass','lsaiso',
+    'fontdrvhost','dwm','sihost','taskhostw','runtimebroker','spoolsv','audiodg',
+    'msdtc','wudfhost','dllhost','conhost','werfault','werfaultsecure','wermgr',
+    'ctfmon','useroobebroker','netservicesmanager','svchost',
+    'explorer','shellexperiencehost','startmenuexperiencehost','searchhost','searchapp',
+    'lockapp','applicationframehost','systemsettings','textinputhost','phasedeploymentserver',
+    'msmpeng','nissrv','msseces','securityhealthservice','securityhealthsystray',
+    'mpcmdrun','mpsigstub','mpdef','antimalwareservice',
+    'tiworker','trustedinstaller','wuauclt','musnotification','musnotificationux',
+    'msiexec','mmc','consent','dism','rundll32','regsvr32',
+    'taskmgr','regedit','cmd','powershell','pwsh',
+    'searchindexer','searchprotocolhost','searchfilterhost',
+    'backgroundtaskhost','wmiprvse','wmiapsrv','vds',
+    'ntoskrnl','ntkrnlmp','idle',
+    'winmgmt','wbemhostexe','wbemhost',
+    'uhssvc','upfc','usoclient',
+    'node','electron','xinpremiumoptimizer','xintweaks',
+]);
+
+// Guess category for processes not in PROCESS_CATALOG
+function guessProcessCategory(name, path) {
+    const n = (name || '').toLowerCase();
+    const p = (path || '').toLowerCase();
+    if (n.includes('update') || n.includes('updater') || n.includes('autoupdate')) return 'Updater';
+    if (n.includes('tray') || n.includes('notification') || n.includes('notify'))   return 'Tray App';
+    if (n.includes('helper') || n.includes('agent') || n.includes('daemon'))         return 'Background';
+    if (n.includes('launcher') || n.includes('boot') || n.includes('startup'))       return 'Launcher';
+    if (p.includes('steam') || p.includes('epic games') || p.includes('battle.net') || p.includes('riot')) return 'Game Launcher';
+    if (p.includes('discord') || p.includes('slack') || p.includes('teams') || p.includes('zoom'))        return 'Chat/Voice';
+    if (p.includes('spotify') || p.includes('music') || p.includes('media'))                               return 'Media';
+    if (p.includes('adobe') || p.includes('creative cloud'))                                                return 'Creative Suite';
+    if (p.includes('\\appdata\\') || p.includes('\\program files\\'))                                      return 'User App';
+    return 'Background';
+}
 
 const SERVICE_CATEGORIES = {
     'diagtrack':             { display: 'Connected User Experiences / Telemetry',  category: 'Review'            },
@@ -1747,7 +1784,7 @@ let _bgContextTime  = 0;
 const BG_CACHE_TTL  = 60000;
 
 async function collectBackgroundContext() {
-    function runPS(script) {
+    function runPS(script, timeoutMs = 11000) {
         return new Promise((resolve) => {
             const proc = spawn('powershell.exe', [
                 '-NonInteractive', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script
@@ -1758,7 +1795,7 @@ async function collectBackgroundContext() {
             proc.stderr.on('data', () => {});
             proc.on('error', () => resolve(null));
 
-            const timer = setTimeout(() => { try { proc.kill(); } catch {} resolve(null); }, 12000);
+            const timer = setTimeout(() => { try { proc.kill(); } catch {} resolve(null); }, timeoutMs);
             proc.on('close', () => {
                 clearTimeout(timer);
                 const trimmed = out.trim();
@@ -1768,44 +1805,118 @@ async function collectBackgroundContext() {
         });
     }
 
-    // ── Processes ──────────────────────────────────────────────────────────
-    let rawProcs = await runPS(
-        `Get-Process | Select-Object Name, Id, ` +
-        `@{N='RAM_MB';E={[math]::Round($_.WorkingSet64/1MB,0)}} | ConvertTo-Json -Compress -Depth 1`
-    );
-    if (rawProcs && !Array.isArray(rawProcs)) rawProcs = [rawProcs];
+    // Run all queries in parallel — admin check is fast (~300 ms), never blocks the others
+    const [rawProcs, rawStartups, rawSvcs, rawIsAdmin] = await Promise.all([
+        runPS(
+            `Get-Process | Select-Object Name, Id, ` +
+            `@{N='RAM_MB';E={[math]::Round($_.WorkingSet64/1MB,0)}}, ` +
+            `@{N='Path';E={try{$_.Path}catch{''}}} | ` +
+            `ConvertTo-Json -Compress -Depth 1`,
+            11000
+        ),
+        runPS(
+            `Get-CimInstance Win32_StartupCommand | Select-Object Name, Location | ConvertTo-Json -Compress`,
+            11000
+        ),
+        runPS(
+            `Get-Service | Where-Object { $_.Status -eq 'Running' } | ` +
+            `Select-Object Name, DisplayName, Status, StartType | ConvertTo-Json -Compress`,
+            11000
+        ),
+        runPS(
+            `([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent())` +
+            `.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) | ConvertTo-Json`,
+            3000
+        ),
+    ]);
 
-    const processes = [];
-    const seenProc  = new Set();
-    if (Array.isArray(rawProcs)) {
-        for (const p of rawProcs) {
-            const key  = (p.Name || '').toLowerCase().replace(/\s+/g, '');
-            if (seenProc.has(key)) continue;
-            if (INTERNAL_PROTECTED_PROCESSES.has(key)) continue;  // never surface internal engine
-            const info = PROCESS_CATALOG.get(key);
-            if (!info) continue;
+    const isAdmin = rawIsAdmin === true;
+
+    // ── Processes ──────────────────────────────────────────────────────────
+    let procsArr = rawProcs;
+    if (procsArr && !Array.isArray(procsArr)) procsArr = [procsArr];
+
+    // Raw total from Get-Process (mirrors Task Manager "Processes" count)
+    const totalScanned = Array.isArray(procsArr) ? procsArr.length : 0;
+
+    const processes    = [];
+    const seenProc     = new Set();
+    const unknownBuf   = []; // non-catalog user processes, capped + sorted by RAM
+    let protectedCount = 0;
+
+    if (Array.isArray(procsArr)) {
+        for (const p of procsArr) {
+            const rawName = (p.Name || '');
+            const key     = rawName.toLowerCase().replace(/\s+/g, '');
+            const path    = (p.Path || '').toLowerCase();
+            const ramMB   = typeof p.RAM_MB === 'number' ? p.RAM_MB : 0;
+            const pid     = typeof p.Id === 'number' ? p.Id : null;
+
+            if (!key || seenProc.has(key)) continue;
+            if (INTERNAL_PROTECTED_PROCESSES.has(key)) { protectedCount++; seenProc.add(key); continue; }
+
+            // Determine if this is a Windows system process
+            const isSystemPath = !!path && (
+                path.includes('\\windows\\system32\\') ||
+                path.includes('\\windows\\syswow64\\') ||
+                path.includes('\\windows\\winsxs\\') ||
+                (path.startsWith('c:\\windows\\') && !path.includes('\\program files\\'))
+            );
+            const isSystemName = WINDOWS_CORE_PROCS.has(key) ||
+                /^(svchost|dllhost|runtimebroker|backgroundtaskhost|wmiprvse|conhost|wbemhost)/.test(key);
+
+            if (isSystemPath || (isSystemName && !path)) {
+                protectedCount++;
+                seenProc.add(key);
+                continue;
+            }
+
             seenProc.add(key);
-            processes.push({
-                name:                info.display,
-                processName:         key,
-                pid:                 typeof p.Id === 'number' ? p.Id : null,
-                category:            info.category,
-                ramMB:               typeof p.RAM_MB === 'number' ? p.RAM_MB : null,
-                safeToClose:         info.safeToClose,
-                safeToDisableStartup:info.safeToDisableStartup,
-            });
+
+            const info = PROCESS_CATALOG.get(key);
+            if (info) {
+                // Known catalog entry — use catalog classification
+                processes.push({
+                    name:                info.display,
+                    processName:         key,
+                    pid,
+                    category:            info.category,
+                    ramMB,
+                    safeToClose:         info.safeToClose,
+                    safeToDisableStartup:info.safeToDisableStartup,
+                });
+            } else if (!isSystemName && ramMB >= 2) {
+                // Non-catalog, non-system background process — show as Review First
+                unknownBuf.push({
+                    name:        rawName,
+                    processName: key,
+                    pid,
+                    category:    guessProcessCategory(rawName, p.Path || ''),
+                    ramMB,
+                    safeToClose: false,
+                    safeToDisableStartup: false,
+                });
+            }
         }
     }
 
+    // Add top unknown processes sorted by RAM (cap at 30 to avoid flooding the list)
+    unknownBuf.sort((a, b) => b.ramMB - a.ramMB);
+    for (const u of unknownBuf.slice(0, 30)) processes.push(u);
+
+    // Sort final list: catalog safe-to-close first, then review, then by RAM
+    processes.sort((a, b) => {
+        if (a.safeToClose !== b.safeToClose) return a.safeToClose ? -1 : 1;
+        return b.ramMB - a.ramMB;
+    });
+
     // ── Startup entries ────────────────────────────────────────────────────
-    let rawStartups = await runPS(
-        `Get-CimInstance Win32_StartupCommand | Select-Object Name, Location | ConvertTo-Json -Compress`
-    );
-    if (rawStartups && !Array.isArray(rawStartups)) rawStartups = [rawStartups];
+    let startupsArr = rawStartups;
+    if (startupsArr && !Array.isArray(startupsArr)) startupsArr = [startupsArr];
 
     const startups = [];
-    if (Array.isArray(rawStartups)) {
-        for (const s of rawStartups) {
+    if (Array.isArray(startupsArr)) {
+        for (const s of startupsArr) {
             const sName = (s.Name || '').trim();
             if (!sName) continue;
             if (INTERNAL_PROTECTED_PROCESSES.has(sName.toLowerCase().replace(/\s+/g, ''))) continue;
@@ -1837,15 +1948,12 @@ async function collectBackgroundContext() {
     }
 
     // ── Services ───────────────────────────────────────────────────────────
-    let rawSvcs = await runPS(
-        `Get-Service | Where-Object { $_.Status -eq 'Running' } | ` +
-        `Select-Object Name, DisplayName, Status, StartType | ConvertTo-Json -Compress`
-    );
-    if (rawSvcs && !Array.isArray(rawSvcs)) rawSvcs = [rawSvcs];
+    let svcsArr = rawSvcs;
+    if (svcsArr && !Array.isArray(svcsArr)) svcsArr = [svcsArr];
 
     const services = [];
-    if (Array.isArray(rawSvcs)) {
-        for (const svc of rawSvcs) {
+    if (Array.isArray(svcsArr)) {
+        for (const svc of svcsArr) {
             const svcKey = (svc.Name || '').toLowerCase().replace(/[\s._-]/g, '');
             const known  = SERVICE_CATEGORIES[svcKey];
             if (!known) continue;
@@ -1859,7 +1967,7 @@ async function collectBackgroundContext() {
         }
     }
 
-    return { processes, startups, services, timestamp: Date.now() };
+    return { processes, startups, services, totalScanned, protectedCount, isAdmin, timestamp: Date.now() };
 }
 
 ipcMain.handle('get-background-context', async () => {
@@ -1867,10 +1975,15 @@ ipcMain.handle('get-background-context', async () => {
     if (_bgContextCache && (now - _bgContextTime) < BG_CACHE_TTL) {
         return { ..._bgContextCache, fromCache: true };
     }
-    const data = await collectBackgroundContext();
-    _bgContextCache = data;
-    _bgContextTime  = now;
-    return data;
+    try {
+        const data = await collectBackgroundContext();
+        _bgContextCache = data;
+        _bgContextTime  = now;
+        return data;
+    } catch (err) {
+        console.error('[Process Reducer] collectBackgroundContext failed:', err?.message || err);
+        return { processes: [], startups: [], services: [], timestamp: now, scanFailed: true };
+    }
 });
 
 // ── Startup Context (real registry / folder / task / service scan) ───────────
@@ -2048,8 +2161,26 @@ ipcMain.handle('get-startup-context', async () => {
 ipcMain.handle('close-process', async (event, pid, processName) => {
     if (typeof pid !== 'number' || pid <= 0) return { success: false, error: 'invalid_pid' };
     const key  = (processName || '').toLowerCase().replace(/\s+/g, '');
+
+    // Safety gate: only CATALOG entries with safeToClose can be terminated
     const info = PROCESS_CATALOG.get(key);
     if (!info || !info.safeToClose) return { success: false, error: 'not_whitelisted' };
+
+    // Verify PID still matches the expected process name before killing
+    const verified = await new Promise(resolve => {
+        execFile('tasklist', ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'],
+            { windowsHide: true, timeout: 3000 },
+            (err, stdout) => {
+                if (err) return resolve(true); // tasklist unavailable — allow and let taskkill decide
+                const line = (stdout || '').trim().split('\n').find(l => l.includes(`"${pid}"`)) || '';
+                if (!line) return resolve(false); // PID not found — already exited
+                const actualName = (line.split(',')[0] || '').replace(/"/g, '').trim()
+                    .toLowerCase().replace(/\.exe$/i, '').replace(/\s+/g, '');
+                resolve(actualName === key || actualName.startsWith(key.slice(0, Math.min(key.length, 6))));
+            }
+        );
+    });
+    if (!verified) return { success: false, error: 'pid_mismatch' };
 
     return new Promise((resolve) => {
         execFile('taskkill', ['/PID', String(pid), '/F'], { windowsHide: true, timeout: 5000 },

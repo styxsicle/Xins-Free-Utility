@@ -163,6 +163,13 @@
                     <span class="nav-text">Memory</span>
                 </button>
 
+                <button class="nav-item" data-page="process-reducer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                    </svg>
+                    <span class="nav-text">Processes</span>
+                </button>
+
                 <button class="nav-item" data-page="ai-tweaker">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
@@ -1937,6 +1944,67 @@
                         </div>
                     </div>
 
+                    <!-- ══ CPU MONITOR ══ -->
+                    <div class="sys-cpu-section" id="sys-cpu-section">
+                        <div class="sys-cpu-section-header">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2M15 20v2M9 2v2M9 20v2M2 9h2M20 9h2M2 15h2M20 15h2"/>
+                            </svg>
+                            <span class="sys-cpu-section-title">CPU Monitor</span>
+                            <span class="sys-cpu-badge" id="sys-cpu-live-badge">Live</span>
+                        </div>
+                        <div class="sys-cpu-grid">
+
+                            <!-- Left: usage + specs -->
+                            <div class="sys-cpu-card">
+                                <div class="sys-cpu-name" id="sys-cpu-name">Detecting…</div>
+                                <div class="sys-cpu-usage-wrap">
+                                    <div class="sys-cpu-usage-bar">
+                                        <div class="sys-cpu-usage-fill" id="sys-cpu-usage-fill"></div>
+                                    </div>
+                                    <span class="sys-cpu-usage-pct" id="sys-cpu-usage-pct">—%</span>
+                                </div>
+                                <div class="sys-cpu-stats-row">
+                                    <div class="sys-cpu-stat">
+                                        <span class="sys-cpu-stat-label">Cores</span>
+                                        <span class="sys-cpu-stat-value" id="sys-cpu-cores">—</span>
+                                    </div>
+                                    <div class="sys-cpu-stat">
+                                        <span class="sys-cpu-stat-label">Threads</span>
+                                        <span class="sys-cpu-stat-value" id="sys-cpu-threads">—</span>
+                                    </div>
+                                    <div class="sys-cpu-stat">
+                                        <span class="sys-cpu-stat-label">Base Clock</span>
+                                        <span class="sys-cpu-stat-value" id="sys-cpu-clock">—</span>
+                                    </div>
+                                    <div class="sys-cpu-stat">
+                                        <span class="sys-cpu-stat-label">Temperature</span>
+                                        <span class="sys-cpu-stat-value sys-cpu-stat-dim">Sensor unavailable</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: system info + top processes -->
+                            <div class="sys-cpu-card">
+                                <div class="sys-cpu-sys-row">
+                                    <div class="sys-cpu-stat">
+                                        <span class="sys-cpu-stat-label">Uptime</span>
+                                        <span class="sys-cpu-stat-value" id="sys-cpu-uptime">—</span>
+                                    </div>
+                                    <div class="sys-cpu-stat">
+                                        <span class="sys-cpu-stat-label">Power Plan</span>
+                                        <span class="sys-cpu-stat-value sys-cpu-stat-dim">Not detected</span>
+                                    </div>
+                                </div>
+                                <div class="sys-cpu-proc-header">Active Background Processes</div>
+                                <div class="sys-cpu-proc-list" id="sys-cpu-proc-list">
+                                    <div class="sys-cpu-empty">Scan in Process Reducer to populate.</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
                 </div>
 
                 <div id="page-memory" class="page">
@@ -2675,6 +2743,559 @@
 
                 </div>
 
+                <!-- ══════════════════════════════════════════════════════
+                     PROCESS REDUCER PAGE
+                     ═════════════════════════════════════════════════════ -->
+                <div id="page-process-reducer" class="page">
+
+                    <!-- ── Hero ── -->
+                    <div class="prx-hero">
+                        <div class="prx-hero-bg" aria-hidden="true">
+                            <div class="prx-hero-wave1"></div>
+                            <div class="prx-hero-wave2"></div>
+                        </div>
+                        <div class="prx-hero-body">
+                            <div class="prx-hero-left">
+                                <span class="prx-hero-eyebrow">BACKGROUND CONTROL</span>
+                                <h1 class="prx-hero-title">AI Process Reducer</h1>
+                                <p class="prx-hero-sub">Detect background apps, rank CPU/RAM impact, and reduce non-critical processes without touching protected system tasks.</p>
+                            </div>
+                            <div class="prx-hero-right">
+                                <div class="prx-hero-pill">
+                                    <span class="prx-pill-dot"></span>
+                                    Safe-close verified
+                                </div>
+                                <div class="prx-hero-pill prx-pill-muted">
+                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                    System protected
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Page Tabs ── -->
+                    <div class="prx-filter-bar">
+                        <div class="prx-filter-tabs" id="prx-filter-tabs">
+                            <button class="prx-filter-tab prx-filter-active" data-prx-tab="overview" type="button">Overview</button>
+                            <button class="prx-filter-tab" data-prx-tab="apps" type="button">Apps</button>
+                            <button class="prx-filter-tab" data-prx-tab="history" type="button">History</button>
+                        </div>
+                    </div>
+
+                    <!-- ── Overview Tab Panel ── -->
+                    <div class="prx-tab-panel" id="prx-panel-overview">
+
+                        <!-- Featured Section -->
+                        <div class="prx-section">
+                            <div class="prx-section-top">
+                                <div class="prx-section-head-left">
+                                    <span class="prx-eyebrow-sm">FEATURED TOOL</span>
+                                    <h2 class="prx-section-h2">Recommended Optimizations</h2>
+                                    <p class="prx-section-desc">AI-guided background process reduction — scan, review, and safely reduce CPU/RAM load.</p>
+                                </div>
+                                <div class="prx-section-head-right">
+                                    <span class="prx-meta-pill">5 tools</span>
+                                    <span class="prx-meta-pill">Local only</span>
+                                </div>
+                            </div>
+                            <div class="prx-pcard-grid">
+
+                                <!-- AI Process Reducer Main Card -->
+                                <div class="toggle-card prx-pcard" data-prx-card="1" data-hover-cat="Process Tool" data-hover-hint="Click Open to start" data-hover-body="Scans running background apps, ranks CPU/RAM impact, and prepares a safe-close plan while protecting Windows core services.">
+                                    <span class="tc-aurora" aria-hidden="true"></span>
+                                    <span class="tc-shine" aria-hidden="true"></span>
+                                    <span class="tc-accent" aria-hidden="true"></span>
+                                    <div class="pcard-top">
+                                        <div class="pcard-icon-wrap">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>
+                                                <line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/>
+                                                <line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/>
+                                                <line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/>
+                                                <line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>
+                                            </svg>
+                                        </div>
+                                        <span class="pcard-cat-pill">Process Tool</span>
+                                    </div>
+                                    <div class="pcard-body">
+                                        <h4 class="pcard-title">AI Process Reducer</h4>
+                                        <p class="pcard-desc">Scan running apps, separate safe-to-close tasks from protected system processes, and prepare a guided CPU/RAM reduction plan.</p>
+                                    </div>
+                                    <div class="pcard-tags">
+                                        <span class="pcard-tag">Recommended</span>
+                                        <span class="pcard-tag">Safe</span>
+                                        <span class="pcard-tag">Local</span>
+                                    </div>
+                                    <div class="pcard-foot">
+                                        <div class="pcard-status">
+                                            <span class="tc-status-dot active" id="prx-main-dot"></span>
+                                            <span class="pcard-status-text" id="prx-main-status">Ready</span>
+                                        </div>
+                                        <button class="pcard-btn-primary" id="prx-open-btn" type="button">Open</button>
+                                    </div>
+                                </div>
+
+                                <!-- Session History Card -->
+                                <div class="toggle-card prx-pcard" data-prx-card="1" data-hover-cat="Session" data-hover-hint="Click to view session history" data-hover-body="Shows recent scan and safe-close activity for this session only.">
+                                    <span class="tc-aurora" aria-hidden="true"></span>
+                                    <span class="tc-shine" aria-hidden="true"></span>
+                                    <span class="tc-accent" aria-hidden="true"></span>
+                                    <div class="pcard-top">
+                                        <div class="pcard-icon-wrap">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="1 4 1 10 7 10"/>
+                                                <path d="M3.51 15a9 9 0 1 0 .49-3.34"/>
+                                            </svg>
+                                        </div>
+                                        <span class="pcard-cat-pill">Session</span>
+                                    </div>
+                                    <div class="pcard-body">
+                                        <h4 class="pcard-title">Session History</h4>
+                                        <p class="pcard-desc">View apps closed this session and restore them from your taskbar or Start menu if needed.</p>
+                                    </div>
+                                    <div class="pcard-tags">
+                                        <span class="pcard-tag">Safe</span>
+                                        <span class="pcard-tag">Reversible</span>
+                                    </div>
+                                    <div class="pcard-foot">
+                                        <div class="pcard-status">
+                                            <span class="tc-status-dot" id="prx-restore-dot"></span>
+                                            <span class="pcard-status-text" id="prx-restore-status">No session data</span>
+                                        </div>
+                                        <button class="pcard-btn-secondary" id="prx-restore-btn" type="button" disabled>View History</button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Tool Cards Section -->
+                        <div class="prx-section prx-section-adv">
+                            <div class="prx-section-top prx-section-top-sm">
+                                <span class="prx-section-label-sm">Background Tools</span>
+                            </div>
+                            <div class="prx-adv-grid">
+
+                                <!-- Startup App Review -->
+                                <div class="toggle-card prx-adv-card" data-prx-card="1" data-hover-cat="Startup" data-hover-hint="Scan first, then click Review" data-hover-body="Finds apps that launch with Windows and surfaces safe candidates that may slow boot or idle performance.">
+                                    <span class="tc-aurora" aria-hidden="true"></span>
+                                    <span class="tc-accent" aria-hidden="true"></span>
+                                    <div class="adv-card-head">
+                                        <div class="adv-card-icon">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="23 7 13 17 8 12 1 19"/>
+                                                <polyline points="17 7 23 7 23 13"/>
+                                            </svg>
+                                        </div>
+                                        <div class="adv-card-titles">
+                                            <h4>Startup App Review</h4>
+                                            <p>Find apps launching with Windows and reduce startup load.</p>
+                                        </div>
+                                    </div>
+                                    <div class="adv-card-foot">
+                                        <div class="pcard-status">
+                                            <span class="tc-status-dot active"></span>
+                                            <span class="pcard-status-text">Scan first</span>
+                                        </div>
+                                        <button class="pcard-btn-secondary" id="prx-startup-btn" type="button">Review</button>
+                                    </div>
+                                </div>
+
+                                <!-- Memory Hog Finder -->
+                                <div class="toggle-card prx-adv-card" data-prx-card="1" data-hover-cat="Memory" data-hover-hint="Scan first, then click Find" data-hover-body="Highlights background apps using the most RAM so users can review what is worth closing.">
+                                    <span class="tc-aurora" aria-hidden="true"></span>
+                                    <span class="tc-accent" aria-hidden="true"></span>
+                                    <div class="adv-card-head">
+                                        <div class="adv-card-icon">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                                                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                                            </svg>
+                                        </div>
+                                        <div class="adv-card-titles">
+                                            <h4>Memory Hog Finder</h4>
+                                            <p>Sort background apps by RAM usage and identify safe targets.</p>
+                                        </div>
+                                    </div>
+                                    <div class="adv-card-foot">
+                                        <div class="pcard-status">
+                                            <span class="tc-status-dot active"></span>
+                                            <span class="pcard-status-text">Scan first</span>
+                                        </div>
+                                        <button class="pcard-btn-secondary" id="prx-mem-hog-btn" type="button">Find</button>
+                                    </div>
+                                </div>
+
+                                <!-- Tray App Cleanup -->
+                                <div class="toggle-card prx-adv-card" data-prx-card="1" data-hover-cat="Tray" data-hover-hint="Scan first, then click Detect" data-hover-body="Detects unused tray helpers, launchers, and updaters that often sit open in the background.">
+                                    <span class="tc-aurora" aria-hidden="true"></span>
+                                    <span class="tc-accent" aria-hidden="true"></span>
+                                    <div class="adv-card-head">
+                                        <div class="adv-card-icon">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+                                                <path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+                                            </svg>
+                                        </div>
+                                        <div class="adv-card-titles">
+                                            <h4>Tray App Cleanup</h4>
+                                            <p>Detect unused tray apps and optional launchers.</p>
+                                        </div>
+                                    </div>
+                                    <div class="adv-card-foot">
+                                        <div class="pcard-status">
+                                            <span class="tc-status-dot active"></span>
+                                            <span class="pcard-status-text">Scan first</span>
+                                        </div>
+                                        <button class="pcard-btn-secondary" id="prx-tray-btn" type="button">Detect</button>
+                                    </div>
+                                </div>
+
+                                <!-- Protected Process Guard -->
+                                <div class="toggle-card prx-adv-card" data-prx-card="1" data-hover-cat="Protection" data-hover-hint="Always active — no action needed" data-hover-body="Keeps Windows core services, drivers, antivirus, and system-critical tasks out of the safe-close list.">
+                                    <span class="tc-aurora" aria-hidden="true"></span>
+                                    <span class="tc-accent" aria-hidden="true"></span>
+                                    <div class="adv-card-head">
+                                        <div class="adv-card-icon">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                            </svg>
+                                        </div>
+                                        <div class="adv-card-titles">
+                                            <h4>Protected Process Guard</h4>
+                                            <p>Windows, drivers, antivirus, and system-critical services stay protected.</p>
+                                        </div>
+                                    </div>
+                                    <div class="adv-card-foot">
+                                        <div class="pcard-status">
+                                            <span class="tc-status-dot active"></span>
+                                            <span class="pcard-status-text">Always active</span>
+                                        </div>
+                                        <button class="pcard-btn-secondary" type="button" disabled>Protected</button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Post-scan status bar (hidden until first scan) -->
+                        <div class="prx-last-scan-bar" id="prx-last-scan-bar" hidden>
+                            <span class="pr-status-dot" id="pr-status-dot"></span>
+                            <span id="pr-status-text">Scan complete.</span>
+                            <button class="pr-sec-btn" id="pr-advanced-review-btn" type="button" style="margin-left:auto" disabled>Advanced Review</button>
+                        </div>
+
+                    </div><!-- /prx-panel-overview -->
+
+                    <!-- ── Apps Tab Panel ── -->
+                    <div class="prx-tab-panel prx-tab-hidden" id="prx-panel-apps">
+
+                        <!-- Empty state (shown before first scan) -->
+                        <div class="prx-apps-empty" id="prx-apps-empty">
+                            <div class="prx-apps-empty-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>
+                                    <line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/>
+                                    <line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/>
+                                    <line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/>
+                                    <line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>
+                                </svg>
+                            </div>
+                            <p class="prx-apps-empty-title">No scan results yet</p>
+                            <p class="prx-apps-empty-sub">Run a scan to see detected apps and safe-close recommendations.</p>
+                            <button class="prx-apps-open-btn" id="prx-apps-open-btn" type="button">Open AI Process Reducer</button>
+                        </div>
+
+                        <!-- Process groups (shown after scan) -->
+                        <div class="pr-results" id="pr-results" hidden>
+
+                            <div class="pr-group" id="pr-group-safe">
+                                <div class="pr-group-header">
+                                    <span class="pr-group-dot safe" aria-hidden="true"></span>
+                                    <span class="pr-group-title">Safe to Close</span>
+                                    <span class="pr-group-count" id="pr-safe-count">0</span>
+                                </div>
+                                <div class="pr-table-header" aria-hidden="true">
+                                    <span></span><span>Process</span><span>CPU</span><span>Memory</span><span>Category</span><span>Actions</span>
+                                </div>
+                                <div class="pr-process-list" id="pr-safe-list"></div>
+                            </div>
+
+                            <div class="pr-group" id="pr-group-review">
+                                <div class="pr-group-header">
+                                    <span class="pr-group-dot review" aria-hidden="true"></span>
+                                    <span class="pr-group-title">Review First</span>
+                                    <span class="pr-group-count" id="pr-review-count">0</span>
+                                </div>
+                                <div class="pr-table-header" aria-hidden="true">
+                                    <span></span><span>Process</span><span>CPU</span><span>Memory</span><span>Category</span><span>Actions</span>
+                                </div>
+                                <div class="pr-process-list" id="pr-review-list"></div>
+                            </div>
+
+                            <div class="pr-group" id="pr-group-protected">
+                                <div class="pr-group-header">
+                                    <span class="pr-group-dot protected" aria-hidden="true"></span>
+                                    <span class="pr-group-title">Protected — Windows Core &amp; Drivers</span>
+                                    <span class="pr-group-count">Hidden</span>
+                                </div>
+                                <div class="pr-process-info-row">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                    System services, security processes, and drivers are never surfaced or modified by Process Reducer.
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Startup / Installed Apps Panel -->
+                        <div class="pr-installed-panel" id="pr-installed-panel" hidden>
+                            <div class="pr-installed-notice">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                                <div>
+                                    <div class="pr-installed-notice-title">Startup Items</div>
+                                    <div class="pr-installed-notice-sub">Programs registered to launch with Windows. Safe items can be disabled. Scan first to load data.</div>
+                                </div>
+                            </div>
+                            <div class="pr-startup-list" id="pr-startup-list">
+                                <div class="pr-proc-empty">Scan first to load startup item data.</div>
+                            </div>
+                        </div>
+
+                    </div><!-- /prx-panel-apps -->
+
+                    <!-- ── History Tab Panel ── -->
+                    <div class="prx-tab-panel prx-tab-hidden" id="prx-panel-history">
+
+                        <!-- Empty state (shown before any apps are closed) -->
+                        <div class="prx-history-empty" id="prx-history-empty">
+                            <div class="prx-apps-empty-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="1 4 1 10 7 10"/>
+                                    <path d="M3.51 15a9 9 0 1 0 .49-3.34"/>
+                                </svg>
+                            </div>
+                            <p class="prx-apps-empty-title">No session history</p>
+                            <p class="prx-apps-empty-sub">Apps closed during this session will appear here. Use AI Process Reducer to get started.</p>
+                        </div>
+
+                        <!-- Closed Apps (shown after close actions) -->
+                        <div class="pr-closed-section" id="pr-closed-section" hidden>
+                            <div class="pr-closed-header">
+                                <span class="pr-group-dot safe" aria-hidden="true"></span>
+                                <span class="pr-closed-title">Closed This Session</span>
+                            </div>
+                            <div class="pr-closed-list" id="pr-closed-list"></div>
+                        </div>
+
+                    </div><!-- /prx-panel-history -->
+
+                    <!-- ── AI Process Reducer Modal (prx- prefix, 4 states) ── -->
+                    <div class="prx-modal-overlay" id="prx-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="prx-modal-title">
+                        <div class="prx-modal-backdrop" id="prx-modal-backdrop"></div>
+                        <div class="prx-modal-card">
+                            <div class="prx-modal-bg" aria-hidden="true">
+                                <div class="prx-modal-glow"></div>
+                                <div class="prx-modal-node prx-node-a"></div>
+                                <div class="prx-modal-node prx-node-b"></div>
+                                <div class="prx-modal-node prx-node-c"></div>
+                                <div class="prx-modal-node prx-node-d"></div>
+                            </div>
+                            <div class="prx-modal-content">
+                                <button class="prx-modal-close" id="prx-modal-close" aria-label="Close AI Process Reducer">
+                                    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1L13 13M13 1L1 13"/></svg>
+                                </button>
+
+                                <!-- State 0: Ready (initial) -->
+                                <div class="prx-modal-state" id="prx-state-ready">
+                                    <div class="prx-ready-visual" aria-hidden="true">
+                                        <div class="prx-ready-ring prx-ring-outer"></div>
+                                        <div class="prx-ready-ring prx-ring-mid"></div>
+                                        <div class="prx-ready-inner">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                                                <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>
+                                                <line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/>
+                                                <line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/>
+                                                <line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/>
+                                                <line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <h2 class="prx-modal-title" id="prx-modal-title">AI Process Reducer</h2>
+                                    <p class="prx-modal-sub">Ready to scan background activity</p>
+                                    <button class="prx-btn-scan" id="prx-start-scan-btn" type="button">Start Scan</button>
+                                </div>
+
+                                <!-- State 1: Scanning (with chips) -->
+                                <div class="prx-modal-state prx-hidden" id="prx-state-scan">
+                                    <div class="prx-scan-visual" aria-hidden="true">
+                                        <div class="prx-scan-wrap">
+                                            <div class="prx-scan-ring">
+                                                <div class="prx-scan-inner">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                                                        <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>
+                                                        <line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/>
+                                                        <line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/>
+                                                        <line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/>
+                                                        <line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            <span class="prx-chip prx-chip-1">Updater</span>
+                                            <span class="prx-chip prx-chip-2">Launcher</span>
+                                            <span class="prx-chip prx-chip-3">Telemetry</span>
+                                            <span class="prx-chip prx-chip-4">Tray App</span>
+                                            <span class="prx-chip prx-chip-5">Helper</span>
+                                        </div>
+                                    </div>
+                                    <h2 class="prx-modal-title">AI Process Reducer</h2>
+                                    <p class="prx-modal-sub" id="prx-scan-status">Scanning running processes…</p>
+                                    <div class="prx-progress-track">
+                                        <div class="prx-progress-fill" id="prx-scan-bar" style="width:0%"></div>
+                                    </div>
+                                    <div class="prx-scan-steps" id="prx-scan-steps">
+                                        <div class="prx-scan-step" data-step="0"><span class="prx-step-dot"></span>Scanning running processes…</div>
+                                        <div class="prx-scan-step" data-step="1"><span class="prx-step-dot"></span>Measuring CPU and memory impact…</div>
+                                        <div class="prx-scan-step" data-step="2"><span class="prx-step-dot"></span>Filtering protected Windows tasks…</div>
+                                        <div class="prx-scan-step" data-step="3"><span class="prx-step-dot"></span>Building safe close plan…</div>
+                                    </div>
+                                </div>
+
+                                <!-- State 2: Results -->
+                                <div class="prx-modal-state prx-hidden" id="prx-state-results">
+                                    <h2 class="prx-modal-title">AI Process Reducer</h2>
+                                    <p class="prx-modal-sub" id="prx-results-sub">Scan complete — review your optimization plan</p>
+                                    <div class="prx-ba-wrap">
+                                        <div class="prx-ba-col">
+                                            <span class="prx-ba-label" id="prx-ba-label-before">Current</span>
+                                            <span class="prx-ba-big" id="prx-ba-before">—</span>
+                                            <span class="prx-ba-unit">background processes</span>
+                                            <span class="prx-ba-mem" id="prx-ba-before-mem">— GB used</span>
+                                        </div>
+                                        <div class="prx-ba-arrow" aria-hidden="true">→</div>
+                                        <div class="prx-ba-col prx-ba-after-col">
+                                            <span class="prx-ba-label" id="prx-ba-label-after">Projected</span>
+                                            <span class="prx-ba-big prx-ba-big-new" id="prx-ba-after">—</span>
+                                            <span class="prx-ba-unit">background processes</span>
+                                            <span class="prx-ba-mem" id="prx-ba-after-mem">est. after close</span>
+                                        </div>
+                                    </div>
+                                    <p class="prx-tm-note">Task Manager count may differ slightly — Windows processes start/stop continuously, and scanning can briefly spawn helper processes.</p>
+                                    <div class="prx-stats-row">
+                                        <div class="prx-stat-item">
+                                            <span class="prx-stat-val" id="prx-freed-ram">—</span>
+                                            <span class="prx-stat-label">Est. RAM freed</span>
+                                        </div>
+                                        <div class="prx-stat-item">
+                                            <span class="prx-stat-val" id="prx-freed-cpu">—</span>
+                                            <span class="prx-stat-label">CPU reduction</span>
+                                        </div>
+                                        <div class="prx-stat-item">
+                                            <span class="prx-stat-val" id="prx-safe-count">—</span>
+                                            <span class="prx-stat-label">Safe closures</span>
+                                        </div>
+                                        <div class="prx-stat-item">
+                                            <span class="prx-stat-val" id="prx-startup-count">—</span>
+                                            <span class="prx-stat-label">Startup items</span>
+                                        </div>
+                                        <div class="prx-stat-item">
+                                            <span class="prx-stat-val" id="prx-bg-tweaks-count">7</span>
+                                            <span class="prx-stat-label">BG tweaks</span>
+                                        </div>
+                                    </div>
+                                    <div class="prx-close-section">
+                                        <div class="prx-close-label">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                                            Recommended safe closures
+                                        </div>
+                                        <div class="prx-close-list" id="prx-close-list"></div>
+                                    </div>
+                                    <div id="prx-bg-tweaks-section"></div>
+                                    <div class="prx-admin-notice prx-hidden" id="prx-admin-notice">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                        Limited visibility — run as administrator for deeper process details and more accurate startup/service review.
+                                    </div>
+                                    <div class="prx-protected-notice">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                        Windows core services, drivers, antivirus, and system-critical processes are never closed.
+                                    </div>
+                                    <div class="prx-result-btns">
+                                        <button class="prx-btn-ghost" id="prx-close-btn" type="button">Close</button>
+                                        <button class="prx-btn-secondary" id="prx-review-plan-btn" type="button">Review Startup</button>
+                                        <button class="prx-btn-primary" id="prx-apply-btn" type="button">Apply Safe Close</button>
+                                    </div>
+                                </div>
+
+                                <!-- State 3: Error -->
+                                <div class="prx-modal-state prx-hidden" id="prx-state-error">
+                                    <div class="prx-error-visual" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <line x1="12" y1="8" x2="12" y2="12"/>
+                                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                        </svg>
+                                    </div>
+                                    <h2 class="prx-modal-title">Scan Failed</h2>
+                                    <p class="prx-modal-sub" id="prx-error-msg">An error occurred while scanning.</p>
+                                    <button class="prx-retry-btn" id="prx-retry-btn" type="button">Try Again</button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Review &amp; Close Confirm Modal ── -->
+                    <div class="pr-confirm-overlay" id="pr-confirm-overlay" aria-hidden="true">
+                        <div class="pr-confirm-card" role="dialog" aria-modal="true" aria-labelledby="pr-confirm-ttl">
+                            <div class="pr-confirm-ttl" id="pr-confirm-ttl">Review &amp; Close</div>
+                            <div class="pr-confirm-sub" id="pr-confirm-sub">This will safe-close non-critical background apps.</div>
+                            <div class="pr-confirm-list" id="pr-confirm-list"></div>
+                            <div class="pr-confirm-btns">
+                                <button class="pr-confirm-cancel" id="pr-confirm-cancel" type="button">Cancel</button>
+                                <button class="pr-confirm-continue" id="pr-confirm-continue" type="button">Continue</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Reduce Progress Modal (pointer-events: none when hidden) ── -->
+                    <div class="pr-modal-overlay" id="pr-modal-overlay" aria-hidden="true">
+                        <div class="pr-modal" id="pr-modal" role="dialog" aria-modal="true" aria-labelledby="pr-modal-ttl">
+                            <div class="pr-modal-orbit-wrap" aria-hidden="true">
+                                <div class="pr-modal-ring pr-ring-1"></div>
+                                <div class="pr-modal-ring pr-ring-2"></div>
+                                <div class="pr-modal-ring pr-ring-3"></div>
+                                <div class="pr-modal-pulse"></div>
+                                <svg class="pr-modal-center-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                            </div>
+                            <div class="pr-modal-ttl" id="pr-modal-ttl">Reducing background load</div>
+                            <div class="pr-modal-live-badge" aria-hidden="true">LIVE</div>
+                            <div class="pr-modal-proc" id="pr-modal-proc">Preparing…</div>
+                            <div class="pr-modal-progress-track">
+                                <div class="pr-modal-progress-fill" id="pr-modal-progress-fill" style="width:0%"></div>
+                            </div>
+                            <div class="pr-modal-pct" id="pr-modal-pct">0%</div>
+                            <div class="pr-modal-counts" id="pr-modal-counts">—</div>
+                            <button class="pr-modal-cancel" id="pr-modal-cancel" type="button">Cancel</button>
+                        </div>
+                    </div>
+
+                    <!-- ── Success Card Modal (pointer-events: none when hidden) ── -->
+                    <div class="pr-success-overlay" id="pr-success-overlay" aria-hidden="true">
+                        <div class="pr-success-card" role="dialog" aria-modal="true" aria-labelledby="pr-success-ttl">
+                            <div class="pr-success-icon-wrap" aria-hidden="true">
+                                <div class="pr-success-ring"></div>
+                                <svg class="pr-success-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            </div>
+                            <div class="pr-success-ttl" id="pr-success-ttl">Process Reduction Complete</div>
+                            <div class="pr-success-stats" id="pr-success-stats"></div>
+                            <div class="pr-success-btns">
+                                <button class="pr-cta-white" id="pr-success-review-btn" type="button">Review Changes</button>
+                                <button class="pr-sec-btn" id="pr-success-restore-btn" type="button">Restore</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
                 <div id="page-cleanup" class="page">
 
                     <!-- ── Hero Header ──────────────────────────────────── -->
@@ -2886,7 +3507,8 @@
                     <div class="about-section">
                         <h3 class="section-title">Development Team</h3>
                         <div class="devs-grid">
-                            <div class="dev-card lead">
+                            <div class="t-tilt about-team-tilt">
+                            <div class="dev-card lead t-tilt-card">
                                 <div class="dev-avatar">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -2909,8 +3531,11 @@
                                     </div>
                                 </div>
                                 <div class="dev-badge founder">Lead Dev</div>
+                                <div class="t-tilt-glare"></div>
                             </div>
-                            <div class="dev-card lead">
+                            </div>
+                            <div class="t-tilt about-team-tilt">
+                            <div class="dev-card lead t-tilt-card">
                                 <div class="dev-avatar">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -2934,6 +3559,8 @@
                                     </div>
                                 </div>
                                 <div class="dev-badge founder">Co-Dev</div>
+                                <div class="t-tilt-glare"></div>
+                            </div>
                             </div>
                         </div>
                     </div>

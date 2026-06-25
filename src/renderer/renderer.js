@@ -30,10 +30,12 @@ function initializeApp() {
     initializeGamingPage();
     initializeSystemPage();
     initializeMemoryPage();
+    initializeProcessReducer();
     initializeGameTunePage();
     initializeNetworkCards();
     initializeDnsOptimizer();
     initializeSettingsPage();
+    initializeAboutTilt();
 }
 
 function initializeExternalLinks() {
@@ -211,6 +213,7 @@ function initializeNavigation() {
             if (targetPage === 'system') {
                 _integratePageTopBar('page-system', '.sys-filter-bar');
                 scheduleSysMemCardsOnEntry('page-system', { source: 'page-enter' });
+                loadSysCpuSection();
             } else if (targetPage === 'memory') {
                 _integratePageTopBar('page-memory', '.mem-filter-bar');
                 scheduleSysMemCardsOnEntry('page-memory', { source: 'page-enter' });
@@ -4725,6 +4728,1145 @@ function initializeMemoryPage() {
     applyFilter('all');
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   CPU MONITOR — loads real CPU data into System page CPU section
+   ───────────────────────────────────────────────────────────────────────── */
+
+let _sysCpuSectionLoaded = false;
+
+function formatUptimeDisplay(seconds) {
+    const s = Math.max(0, Math.floor(seconds || 0));
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h ${m}m`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+}
+
+async function loadSysCpuSection() {
+    if (_sysCpuSectionLoaded) return;
+    _sysCpuSectionLoaded = true;
+
+    const nameEl   = document.getElementById('sys-cpu-name');
+    const fillEl   = document.getElementById('sys-cpu-usage-fill');
+    const pctEl    = document.getElementById('sys-cpu-usage-pct');
+    const coresEl  = document.getElementById('sys-cpu-cores');
+    const threadsEl= document.getElementById('sys-cpu-threads');
+    const clockEl  = document.getElementById('sys-cpu-clock');
+    const uptimeEl = document.getElementById('sys-cpu-uptime');
+    const procList = document.getElementById('sys-cpu-proc-list');
+
+    try {
+        const [sysInfo, liveStats] = await Promise.all([
+            window.electronAPI?.getSystemInfo?.(),
+            window.electronAPI?.getLiveStats?.(),
+        ]);
+
+        if (nameEl && sysInfo?.cpu?.model) nameEl.textContent = sysInfo.cpu.model;
+
+        const usage = typeof liveStats?.cpuUsage === 'number' ? liveStats.cpuUsage : 0;
+        if (fillEl) fillEl.style.width = `${usage}%`;
+        if (pctEl) pctEl.textContent = `${usage}%`;
+
+        // os.cpus().length = logical processors (threads)
+        if (threadsEl && sysInfo?.cpu?.cores) threadsEl.textContent = sysInfo.cpu.cores;
+        if (clockEl && sysInfo?.cpu?.speed) {
+            clockEl.textContent = `${(sysInfo.cpu.speed / 1000).toFixed(1)} GHz`;
+        }
+        if (uptimeEl && sysInfo?.uptime) uptimeEl.textContent = formatUptimeDisplay(sysInfo.uptime);
+
+        // Enhance with WMI data (physical core count, precise clock, exact model name)
+        try {
+            const fullInfo = await window.electronAPI?.getFullSystemInfo?.();
+            const cpuFull = fullInfo?.cpu?.data;
+            if (cpuFull) {
+                if (nameEl && cpuFull.Name) nameEl.textContent = cpuFull.Name;
+                if (coresEl && cpuFull.NumberOfCores != null) coresEl.textContent = cpuFull.NumberOfCores;
+                if (threadsEl && cpuFull.NumberOfLogicalProcessors != null) threadsEl.textContent = cpuFull.NumberOfLogicalProcessors;
+                if (clockEl && cpuFull.MaxClockSpeed) {
+                    clockEl.textContent = `${(cpuFull.MaxClockSpeed / 1000).toFixed(2)} GHz`;
+                }
+            }
+        } catch { /* WMI optional — basic data already shown */ }
+
+    } catch { /* entire section fails gracefully */ }
+
+    // Top background processes from existing scan (sorted by RAM)
+    if (procList) {
+        try {
+            const bgCtx = await window.electronAPI?.getBackgroundContext?.();
+            const procs = (bgCtx?.processes || [])
+                .filter(p => p.ramMB != null)
+                .sort((a, b) => (b.ramMB || 0) - (a.ramMB || 0))
+                .slice(0, 5);
+
+            if (procs.length) {
+                procList.innerHTML = procs.map(p => `
+                    <div class="sys-cpu-proc-row">
+                        <span class="sys-cpu-proc-name">${p.name}</span>
+                        <span class="sys-cpu-proc-ram">${p.ramMB} MB</span>
+                        <span class="sys-cpu-proc-cat">${p.category}</span>
+                    </div>
+                `).join('');
+            } else {
+                procList.innerHTML = '<div class="sys-cpu-empty">No known background processes detected.</div>';
+            }
+        } catch {
+            procList.innerHTML = '<div class="sys-cpu-empty">Process data unavailable.</div>';
+        }
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PROCESS REDUCER — scan, safe-close, advanced review, restore
+   ───────────────────────────────────────────────────────────────────────── */
+
+function initializeProcessReducer() {
+    const page = document.getElementById('page-process-reducer');
+    if (!page || page.dataset.prInitialized === '1') return;
+    page.dataset.prInitialized = '1';
+
+    // ── PRX Modal elements (new 4-state modal) ──
+    const prxModal        = document.getElementById('prx-modal');
+    const prxModalClose   = document.getElementById('prx-modal-close');
+    const prxModalBackdrop= document.getElementById('prx-modal-backdrop');
+    const prxStateReady   = document.getElementById('prx-state-ready');
+    const prxStateScan    = document.getElementById('prx-state-scan');
+    const prxStateResults = document.getElementById('prx-state-results');
+    const prxStateError   = document.getElementById('prx-state-error');
+    const prxStartScanBtn = document.getElementById('prx-start-scan-btn');
+    const prxScanStatus   = document.getElementById('prx-scan-status');
+    const prxScanBar      = document.getElementById('prx-scan-bar');
+    const prxScanSteps    = document.getElementById('prx-scan-steps');
+    const prxErrorMsg     = document.getElementById('prx-error-msg');
+    const prxBaBefore     = document.getElementById('prx-ba-before');
+    const prxBaAfter      = document.getElementById('prx-ba-after');
+    const prxBaBeforeMem  = document.getElementById('prx-ba-before-mem');
+    const prxBaAfterMem   = document.getElementById('prx-ba-after-mem');
+    const prxFreedRam     = document.getElementById('prx-freed-ram');
+    const prxFreedCpu     = document.getElementById('prx-freed-cpu');
+    const prxSafeCount    = document.getElementById('prx-safe-count');
+    const prxCloseList    = document.getElementById('prx-close-list');
+    const prxCloseBtn     = document.getElementById('prx-close-btn');
+    const prxReviewPlanBtn= document.getElementById('prx-review-plan-btn');
+    const prxApplyBtn        = document.getElementById('prx-apply-btn');
+    const prxRetryBtn        = document.getElementById('prx-retry-btn');
+    const prxBgTweaksSection = document.getElementById('prx-bg-tweaks-section');
+    const prxAdminNotice     = document.getElementById('prx-admin-notice');
+    const prxStartupCount    = document.getElementById('prx-startup-count');
+    const prxBgTweaksCount   = document.getElementById('prx-bg-tweaks-count');
+    const prxBaLabelBefore   = document.getElementById('prx-ba-label-before');
+    const prxBaLabelAfter    = document.getElementById('prx-ba-label-after');
+
+    // ── Page UI elements ──
+    const prxOpenBtn     = document.getElementById('prx-open-btn');
+    const prxRestoreBtn  = document.getElementById('prx-restore-btn');
+    const prxLastScanBar = document.getElementById('prx-last-scan-bar');
+    const advancedBtn    = document.getElementById('pr-advanced-review-btn');
+    const statusDot      = document.getElementById('pr-status-dot');
+    const statusText     = document.getElementById('pr-status-text');
+
+    // ── Hidden legacy elements (JS-wired, not visible) ──
+    const resultsEl      = document.getElementById('pr-results');
+    const installedPanel = document.getElementById('pr-installed-panel');
+    const startupListEl  = document.getElementById('pr-startup-list');
+    const modalOverlay   = document.getElementById('pr-modal-overlay');
+    const modalProc      = document.getElementById('pr-modal-proc');
+    const modalFill      = document.getElementById('pr-modal-progress-fill');
+    const modalPct       = document.getElementById('pr-modal-pct');
+    const modalCounts    = document.getElementById('pr-modal-counts');
+    const modalCancel    = document.getElementById('pr-modal-cancel');
+    const successOverlay = document.getElementById('pr-success-overlay');
+    const successStats   = document.getElementById('pr-success-stats');
+    const confirmOverlay = document.getElementById('pr-confirm-overlay');
+    const confirmSub     = document.getElementById('pr-confirm-sub');
+    const confirmList    = document.getElementById('pr-confirm-list');
+    const confirmCancel  = document.getElementById('pr-confirm-cancel');
+    const confirmContinue = document.getElementById('pr-confirm-continue');
+
+    let prProcesses = [];
+    const closedApps = [];
+    const ignoredProcs = new Set();
+    let cancelRequested = false;
+    let currentSort = 'ram';
+    let liveStatsBefore = null;
+    let startupDataLoaded = false;
+    let _confirmResolve = null;
+    let _scanTimers = [];
+
+    // ── Category icon SVGs (inline, no downloads) ──
+    const CAT_ICONS = {
+        'Browser':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+        'Launcher':   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
+        'Chat':       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+        'Overlay':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>',
+        'Cloud':      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>',
+        'Cloud Sync': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>',
+        'Startup':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 7 13 17 8 12 1 19"/><polyline points="17 7 23 7 23 13"/></svg>',
+        'RGB':        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
+        'RGB / Peripheral': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>',
+        'Anti-Cheat': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+        'Updater':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.34"/></svg>',
+        'Background': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>',
+        'default':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+    };
+
+    function getCategoryKey(cat) {
+        if (!cat) return 'default';
+        const c = cat.toLowerCase();
+        if (c.includes('browser'))       return 'Browser';
+        if (c.includes('launcher'))      return 'Launcher';
+        if (c.includes('chat') || c.includes('voice') || c.includes('discord')) return 'Chat';
+        if (c.includes('overlay'))       return 'Overlay';
+        if (c.includes('cloud') || c.includes('sync') || c.includes('onedrive')) return 'Cloud Sync';
+        if (c.includes('startup'))       return 'Startup';
+        if (c.includes('rgb') || c.includes('peripheral') || c.includes('lighting')) return 'RGB';
+        if (c.includes('anti') || c.includes('cheat')) return 'Anti-Cheat';
+        if (c.includes('update') || c.includes('updater')) return 'Updater';
+        if (c.includes('background'))    return 'Background';
+        return 'default';
+    }
+
+    function buildIconCell(name, category) {
+        const key = getCategoryKey(category);
+        const svg = CAT_ICONS[key] || CAT_ICONS['default'];
+        const el = document.createElement('div');
+        el.className = 'pr-proc-icon';
+        el.innerHTML = svg;
+        return el;
+    }
+
+    function buildInitialTile(name) {
+        const el = document.createElement('div');
+        el.className = 'pr-proc-icon-initial';
+        el.textContent = (name || '?').charAt(0);
+        return el;
+    }
+
+    function normalizeCatForPill(cat) {
+        if (!cat) return { label: 'Unknown', key: '' };
+        const c = cat.toLowerCase();
+        if (c.includes('browser'))  return { label: 'Browser',  key: 'Browser' };
+        if (c.includes('launcher')) return { label: 'Launcher', key: 'Launcher' };
+        if (c.includes('chat') || c.includes('voice')) return { label: 'Chat', key: 'Chat' };
+        if (c.includes('overlay'))  return { label: 'Overlay',  key: 'Overlay' };
+        if (c.includes('cloud') || c.includes('sync')) return { label: 'Cloud', key: 'Cloud' };
+        if (c.includes('startup'))  return { label: 'Startup',  key: 'Startup' };
+        if (c.includes('rgb') || c.includes('peripheral') || c.includes('lighting')) return { label: 'RGB', key: 'RGB' };
+        return { label: cat, key: '' };
+    }
+
+    function setStatus(text, scanning = false) {
+        if (statusText) statusText.textContent = text;
+        if (statusDot) statusDot.classList.toggle('scanning', scanning);
+    }
+
+    // ── PRX Modal: open / close ──
+    function openPrxModal() {
+        if (!prxModal) return;
+        // Always reset to ready state on open
+        prxStateReady?.classList.remove('prx-hidden');
+        prxStateScan?.classList.add('prx-hidden');
+        prxStateResults?.classList.add('prx-hidden');
+        prxStateError?.classList.add('prx-hidden');
+        if (prxStartScanBtn) { prxStartScanBtn.dataset.scanning = ''; prxStartScanBtn.disabled = false; }
+        prxModal.classList.add('active');
+        prxModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closePrxModal() {
+        if (!prxModal) return;
+        prxModal.classList.remove('active');
+        prxModal.setAttribute('aria-hidden', 'true');
+        _scanTimers.forEach(clearTimeout);
+        _scanTimers = [];
+    }
+
+    // ── PRX Modal: scan state ──
+    function showPrxScanState() {
+        if (prxScanBar) prxScanBar.style.width = '0%';
+        if (prxScanStatus) prxScanStatus.textContent = 'Scanning running processes…';
+        const steps = prxScanSteps?.querySelectorAll('.prx-scan-step') || [];
+        steps.forEach(s => s.classList.remove('active', 'done'));
+        prxStateReady?.classList.add('prx-hidden');
+        prxStateScan?.classList.remove('prx-hidden');
+        prxStateResults?.classList.add('prx-hidden');
+        prxStateError?.classList.add('prx-hidden');
+
+        _scanTimers.forEach(clearTimeout);
+        _scanTimers = [];
+        const stepMessages = [
+            'Scanning running processes…',
+            'Measuring CPU and memory impact…',
+            'Filtering protected Windows tasks…',
+            'Building safe close plan…',
+        ];
+        const durations    = [0, 600, 1300, 2100];
+        const progressPcts = [15, 40, 68, 88];
+        steps.forEach((step, idx) => {
+            const t = setTimeout(() => {
+                steps.forEach((s, si) => {
+                    if (si < idx)       { s.classList.remove('active'); s.classList.add('done'); }
+                    else if (si === idx) { s.classList.add('active');   s.classList.remove('done'); }
+                    else                 { s.classList.remove('active', 'done'); }
+                });
+                if (prxScanStatus) prxScanStatus.textContent = stepMessages[idx] || '';
+                if (prxScanBar)    prxScanBar.style.width    = `${progressPcts[idx] || 0}%`;
+            }, durations[idx]);
+            _scanTimers.push(t);
+        });
+    }
+
+    const BG_TWEAKS = [
+        { id: 'disable-game-bar',        label: 'Xbox Game Bar background capture',   checked: true  },
+        { id: 'disable-xbox-services',   label: 'Xbox DVR background services',        checked: true  },
+        { id: 'disable-telemetry',       label: 'Windows telemetry & feedback',        checked: true  },
+        { id: 'disable-background-apps', label: 'Windows UWP background apps',         checked: true  },
+        { id: 'disable-delivery-opt',    label: 'Delivery Optimization sharing',       checked: true  },
+        { id: 'disable-windows-tips',    label: 'Windows tips & promotional content',  checked: true  },
+        { id: 'disable-cortana',         label: 'Cortana search assistance',           checked: false },
+    ];
+
+    // ── PRX Modal: results state ──
+    function showPrxResultsState(procs, ls, data) {
+        _scanTimers.forEach(clearTimeout);
+        _scanTimers = [];
+        if (prxScanBar) prxScanBar.style.width = '100%';
+        const steps = prxScanSteps?.querySelectorAll('.prx-scan-step') || [];
+        steps.forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+
+        const safeProcs      = procs.filter(p => p.safeToClose && !ignoredProcs.has(p.processName));
+        const totalProcs     = procs.length;
+        const safeCount      = safeProcs.length;
+        const totalScanned   = data?.totalScanned || totalProcs;
+        const isAdmin        = data?.isAdmin !== false;
+        const startupCount   = Array.isArray(data?.startups) ? data.startups.length : 0;
+        const estimatedRamMB = safeProcs.reduce((sum, p) => sum + (p.ramMB || 0), 0);
+        const totalRamMB     = ls?.totalRamMB || 8192;
+        const usedRamMB      = ls?.memoryUsage != null ? Math.round(totalRamMB * (ls.memoryUsage / 100)) : null;
+        const afterMemStr    = estimatedRamMB > 0 && usedRamMB != null
+            ? `~${((usedRamMB - estimatedRamMB) / 1024).toFixed(1)} GB after close`
+            : estimatedRamMB > 0 ? `~${estimatedRamMB} MB to free` : '—';
+
+        // Left card: real scan count (matches Task Manager reality)
+        if (prxBaLabelBefore) prxBaLabelBefore.textContent = 'Current';
+        const prxBaBeforeUnit = prxBaBefore?.nextElementSibling;
+        if (prxBaBefore)     prxBaBefore.textContent     = totalScanned;
+        if (prxBaBeforeUnit) prxBaBeforeUnit.textContent  = 'processes scanned';
+        if (prxBaBeforeMem)  prxBaBeforeMem.textContent   =
+            isAdmin ? `${totalProcs} candidates` : `${totalProcs} candidates · limited visibility`;
+
+        // Right card: optimization plan — NOT a projected process count
+        // Showing immediate closures available, not a fake "after" total.
+        // Background tweaks are registry writes; they do not instantly lower running process count.
+        if (prxBaLabelAfter)  prxBaLabelAfter.textContent  = 'Optimization plan';
+        const prxBaAfterUnit  = prxBaAfter?.nextElementSibling;
+        if (prxBaAfter)      prxBaAfter.textContent      = safeCount;
+        if (prxBaAfterUnit)  prxBaAfterUnit.textContent   = safeCount === 1 ? 'immediate closure' : 'immediate closures';
+        if (prxBaAfterMem)   prxBaAfterMem.textContent    = `${BG_TWEAKS.length} background tweaks ready`;
+
+        // Stats row — do not fabricate CPU savings
+        if (prxFreedRam)     prxFreedRam.textContent     = estimatedRamMB > 0 ? `${estimatedRamMB} MB` : '—';
+        if (prxFreedCpu)     prxFreedCpu.textContent     = '—'; // CPU impact not reliably measurable
+        if (prxSafeCount)    prxSafeCount.textContent    = safeCount;
+        if (prxStartupCount) prxStartupCount.textContent = startupCount > 0 ? startupCount : '—';
+        if (prxBgTweaksCount) prxBgTweaksCount.textContent = BG_TWEAKS.length;
+
+        // Admin notice
+        if (prxAdminNotice) prxAdminNotice.classList.toggle('prx-hidden', isAdmin);
+
+        // Apply Safe Close: disable when nothing can be closed
+        if (prxApplyBtn) {
+            prxApplyBtn.disabled = safeCount === 0;
+            prxApplyBtn.title    = safeCount === 0 ? 'No immediate safe closures found on this PC' : '';
+        }
+
+        // Immediate safe closures list
+        if (prxCloseList) {
+            if (safeProcs.length) {
+                const shown = safeProcs.slice(0, 8);
+                const more  = safeProcs.length > 8 ? safeProcs.length - 8 : 0;
+                prxCloseList.innerHTML = shown.map(p => {
+                    const nm  = p.name || p.processName || 'Unknown';
+                    const cat = p.category || '';
+                    const ram = p.ramMB ? `${p.ramMB} MB` : '';
+                    return `<div class="prx-close-item">
+                        <span class="prx-close-dot"></span>
+                        <span class="prx-close-name">${nm}</span>
+                        ${cat ? `<span class="prx-close-cat">${cat}</span>` : ''}
+                        ${ram ? `<span class="prx-close-ram">${ram}</span>` : ''}
+                    </div>`;
+                }).join('') + (more ? `<div class="prx-close-more">…and ${more} more recommended</div>` : '');
+            } else {
+                prxCloseList.innerHTML = `<div class="prx-zero-close-msg">
+                    Your running apps look clean — no immediate safe closures found.<br>
+                    Use <strong>Startup Reduction</strong> and <strong>Background Tweaks</strong> below to reduce what loads after reboot.
+                </div>`;
+            }
+        }
+
+        // Background tweaks checklist
+        if (prxBgTweaksSection) {
+            prxBgTweaksSection.innerHTML = `
+                <div class="prx-tweaks-header">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                    Background Tweaks
+                </div>
+                <div class="prx-tweak-list">
+                    ${BG_TWEAKS.map(t => `
+                        <label class="prx-tweak-item">
+                            <input type="checkbox" class="prx-tweak-chk" data-tweak-id="${t.id}"${t.checked ? ' checked' : ''}>
+                            <span class="prx-tweak-label">${t.label}</span>
+                            <span class="prx-tweak-badge">may need restart</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <button class="prx-tweaks-apply-btn" id="prx-tweaks-apply-btn" type="button">Apply Selected Tweaks</button>
+                <div class="prx-tweaks-result" id="prx-tweaks-result" hidden></div>
+            `;
+            document.getElementById('prx-tweaks-apply-btn')?.addEventListener('click', applyBgTweaks);
+        }
+
+        setTimeout(() => {
+            prxStateScan?.classList.add('prx-hidden');
+            prxStateResults?.classList.remove('prx-hidden');
+        }, 380);
+    }
+
+    async function applyBgTweaks() {
+        const applyBtn = document.getElementById('prx-tweaks-apply-btn');
+        const resultEl = document.getElementById('prx-tweaks-result');
+        const checked  = [...document.querySelectorAll('#prx-bg-tweaks-section .prx-tweak-chk:checked')];
+        if (!checked.length) return;
+        if (applyBtn)  { applyBtn.disabled = true; applyBtn.textContent = 'Applying…'; }
+        if (resultEl)  { resultEl.hidden = true; }
+
+        let applied = 0, failed = 0;
+        for (const chk of checked) {
+            const item = chk.closest('.prx-tweak-item');
+            try {
+                const res = await window.electronAPI?.applyTweak?.(chk.dataset.tweakId, 'apply');
+                if (res?.success) {
+                    applied++;
+                    item?.classList.remove('prx-tweak-failed');
+                    item?.classList.add('prx-tweak-applied');
+                    chk.disabled = true;
+                    console.log('[BG Tweak] Applied:', chk.dataset.tweakId);
+                } else {
+                    failed++;
+                    item?.classList.add('prx-tweak-failed');
+                    console.warn('[BG Tweak] Failed:', chk.dataset.tweakId, res);
+                }
+            } catch (err) {
+                failed++;
+                item?.classList.add('prx-tweak-failed');
+                console.warn('[BG Tweak] Error:', chk.dataset.tweakId, err?.message || err);
+            }
+        }
+        if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = 'Apply Selected Tweaks'; }
+
+        // Show honest result — registry writes do NOT instantly lower process count.
+        // Effects may appear after restart, sign-out, or the affected app relaunches.
+        if (resultEl) {
+            resultEl.hidden = false;
+            if (applied > 0 && failed === 0) {
+                resultEl.className = 'prx-tweaks-result prx-tweaks-result-ok';
+                resultEl.innerHTML = `<strong>${applied} setting${applied !== 1 ? 's' : ''} applied.</strong><br>
+                    Some changes take effect after restart, sign-out, or app relaunch.<br>
+                    Running process count won't change immediately — this is expected.`;
+            } else if (applied > 0) {
+                resultEl.className = 'prx-tweaks-result prx-tweaks-result-ok';
+                resultEl.innerHTML = `<strong>${applied} applied, ${failed} failed.</strong><br>
+                    Some changes take effect after restart or sign-out. Run as administrator for full access.`;
+            } else {
+                resultEl.className = 'prx-tweaks-result prx-tweaks-result-err';
+                resultEl.innerHTML = `<strong>No settings could be applied.</strong> Try relaunching as administrator.`;
+            }
+        }
+        // Card labels stay as "Current" / "Optimization plan" — do not imply the count changed.
+    }
+
+    // ── PRX Modal: error state ──
+    function showPrxErrorState(msg) {
+        _scanTimers.forEach(clearTimeout);
+        _scanTimers = [];
+        if (prxErrorMsg) prxErrorMsg.textContent = msg || 'An error occurred while scanning.';
+        prxStateReady?.classList.add('prx-hidden');
+        prxStateScan?.classList.add('prx-hidden');
+        prxStateResults?.classList.add('prx-hidden');
+        prxStateError?.classList.remove('prx-hidden');
+    }
+
+    function getSorted(procs) {
+        const arr = [...procs];
+        if (currentSort === 'name') return arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        if (currentSort === 'category') return arr.sort((a, b) => (a.category || '').localeCompare(b.category || ''));
+        return arr.sort((a, b) => (b.ramMB || 0) - (a.ramMB || 0));
+    }
+
+    function applySearch() {
+        const input = document.querySelector('#page-process-reducer .pr-search');
+        if (!input) return;
+        const query = (input.value || '').toLowerCase().trim();
+        document.querySelectorAll('#page-process-reducer .pr-process-row').forEach(row => {
+            row.style.display = !query || row.textContent.toLowerCase().includes(query) ? '' : 'none';
+        });
+    }
+
+    function updateRestoreCard() {
+        const dot  = document.getElementById('prx-restore-dot');
+        const text = document.getElementById('prx-restore-status');
+        if (closedApps.length) {
+            dot?.classList.add('active');
+            if (text) text.textContent = `${closedApps.length} app${closedApps.length !== 1 ? 's' : ''} closed`;
+            if (prxRestoreBtn) prxRestoreBtn.disabled = false;
+        }
+    }
+
+    // ── PRX Modal event wiring ──
+    prxOpenBtn?.addEventListener('click', openPrxModal);
+    prxModalClose?.addEventListener('click', closePrxModal);
+    prxModalBackdrop?.addEventListener('click', closePrxModal);
+    prxCloseBtn?.addEventListener('click', closePrxModal);
+    prxRetryBtn?.addEventListener('click', () => {
+        showPrxScanState();
+        triggerScan();
+    });
+    prxReviewPlanBtn?.addEventListener('click', () => {
+        closePrxModal();
+        switchPrxTab('apps');
+        if (startupListEl) {
+            startupListEl.closest?.('[hidden]')?.removeAttribute('hidden');
+            startupListEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else if (installedPanel) {
+            installedPanel.hidden = false;
+            installedPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else if (resultsEl) {
+            resultsEl.hidden = false;
+            resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+    prxApplyBtn?.addEventListener('click', () => {
+        closePrxModal();
+        triggerSafeReduce();
+    });
+    prxStartScanBtn?.addEventListener('click', () => {
+        if (prxStartScanBtn.dataset.scanning === '1') return;
+        triggerScan();
+    });
+
+    // Escape key closes modal
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && prxModal?.classList.contains('active')) closePrxModal();
+    });
+
+    // ── Confirm Modal (replaces window.confirm) ──
+    function showConfirmModal(eligible) {
+        return new Promise(resolve => {
+            _confirmResolve = resolve;
+            if (confirmSub) confirmSub.textContent = `This will safe-close ${eligible.length} non-critical background app${eligible.length !== 1 ? 's' : ''}.`;
+            if (confirmList) {
+                const shown = eligible.slice(0, 8);
+                const more  = eligible.length > 8 ? eligible.length - 8 : 0;
+                confirmList.innerHTML = shown.map(p =>
+                    `<div class="pr-confirm-list-item">${p.name || p.processName}<span class="pr-confirm-list-cat">${p.category || ''}</span></div>`
+                ).join('') + (more ? `<div class="pr-confirm-more">…and ${more} more</div>` : '');
+            }
+            if (confirmOverlay) {
+                confirmOverlay.classList.add('active');
+                confirmOverlay.setAttribute('aria-hidden', 'false');
+            }
+        });
+    }
+    function hideConfirmModal(result) {
+        if (confirmOverlay) {
+            confirmOverlay.classList.remove('active');
+            confirmOverlay.setAttribute('aria-hidden', 'true');
+        }
+        if (_confirmResolve) { _confirmResolve(result); _confirmResolve = null; }
+    }
+    confirmCancel?.addEventListener('click',   () => hideConfirmModal(false));
+    confirmContinue?.addEventListener('click', () => hideConfirmModal(true));
+
+    function renderProcessGroups(processes) {
+        const safeList    = document.getElementById('pr-safe-list');
+        const reviewList  = document.getElementById('pr-review-list');
+        const safeCountEl = document.getElementById('pr-safe-count');
+        const revCountEl  = document.getElementById('pr-review-count');
+
+        const visible   = processes.filter(p => !ignoredProcs.has(p.processName));
+        const sorted    = getSorted(visible);
+        const safeProcs = sorted.filter(p =>  p.safeToClose);
+        const revProcs  = sorted.filter(p => !p.safeToClose);
+
+        if (safeCountEl) safeCountEl.textContent = safeProcs.length;
+        if (revCountEl)  revCountEl.textContent  = revProcs.length;
+        if (safeList)   safeList.innerHTML   = '';
+        if (reviewList) reviewList.innerHTML  = '';
+
+        const makeRow = (p, allowClose) => {
+            const row = document.createElement('div');
+            row.className = 'pr-process-row';
+            row.dataset.pid  = p.pid  != null ? String(p.pid) : '';
+            row.dataset.proc = p.processName || '';
+
+            const isClosed   = closedApps.some(c => c.processName === p.processName);
+            if (isClosed) row.classList.add('closed');
+
+            const ramMB      = p.ramMB != null ? p.ramMB : null;
+            const ramText    = ramMB != null ? `${ramMB} MB` : '—';
+            // max ~1500 MB for bar scale
+            const ramPct     = ramMB != null ? Math.min(100, Math.round((ramMB / 1500) * 100)) : 0;
+            const pill       = normalizeCatForPill(p.category);
+            const displayName = p.name || p.processName || 'Unknown';
+            const isVerified = !!(p.name && p.name !== p.processName);
+
+            // icon cell (colored by category)
+            const iconEl = buildIconCell(displayName, p.category);
+            iconEl.dataset.cat = pill.key;
+            row.appendChild(iconEl);
+
+            const editSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+            const ignoreSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
+            const closeSvg  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+
+            const actionsHtml = isClosed
+                ? `<div class="pr-proc-actions"><span class="pr-row-btn closed-tag">Closed</span></div>`
+                : allowClose
+                ? `<div class="pr-proc-actions">
+                       <button class="pr-row-btn edit-btn" type="button">${editSvg} Edit</button>
+                       <button class="pr-row-btn ignore-btn" type="button">${ignoreSvg} Ignore</button>
+                       <button class="pr-row-btn close-btn" type="button">${closeSvg} Safe Reduce</button>
+                   </div>`
+                : `<div class="pr-proc-actions">
+                       <button class="pr-row-btn edit-btn" type="button">${editSvg} Edit</button>
+                       <button class="pr-row-btn ignore-btn" type="button">${ignoreSvg} Ignore</button>
+                   </div>`;
+
+            const rest = document.createElement('div');
+            rest.style.display = 'contents';
+            rest.innerHTML = `
+                <div class="pr-proc-info">
+                    <div class="pr-proc-name-row">
+                        <span class="pr-proc-name">${displayName}</span>
+                        ${isVerified ? '<span class="pr-proc-verified">Verified</span>' : ''}
+                    </div>
+                    <div class="pr-proc-detail">${p.processName || ''}</div>
+                </div>
+                <div class="pr-proc-cpu-wrap">
+                    <span class="pr-proc-cpu-val">—</span>
+                    <div class="pr-proc-cpu-bar"><div class="pr-proc-cpu-fill" style="width:0%"></div></div>
+                </div>
+                <div class="pr-proc-ram-wrap">
+                    <span class="pr-proc-ram-val">${ramText}</span>
+                    <div class="pr-proc-ram-bar"><div class="pr-proc-ram-fill" style="width:${ramPct}%"></div></div>
+                </div>
+                <div class="pr-proc-cat" data-cat="${pill.key}">
+                    <span class="pr-proc-cat-dot"></span>${pill.label}
+                </div>
+                ${actionsHtml}
+            `;
+            row.appendChild(rest);
+
+            row.querySelector('.edit-btn')?.addEventListener('click', () => {
+                showNotification('info', displayName, `${p.processName || ''} · ${p.category || 'Unknown'} · ${ramText}`);
+            });
+            row.querySelector('.ignore-btn')?.addEventListener('click', () => {
+                ignoredProcs.add(p.processName);
+                row.style.transition = 'opacity 0.2s';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 220);
+                const countEl = p.safeToClose ? safeCountEl : revCountEl;
+                if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) - 1);
+            });
+            if (allowClose && !isClosed) {
+                row.querySelector('.close-btn')?.addEventListener('click', () => closeSingleProcess(p, row));
+            }
+            return row;
+        };
+
+        if (safeList) {
+            if (safeProcs.length) {
+                safeProcs.forEach((p, i) => {
+                    const row = makeRow(p, true);
+                    safeList.appendChild(row);
+                    setTimeout(() => row.classList.add('pr-revealed'), 36 * i);
+                });
+            } else {
+                safeList.innerHTML = '<div class="pr-proc-empty">No safe-to-close processes detected.</div>';
+            }
+        }
+        if (reviewList) {
+            if (revProcs.length) {
+                revProcs.forEach((p, i) => {
+                    const row = makeRow(p, false);
+                    reviewList.appendChild(row);
+                    setTimeout(() => row.classList.add('pr-revealed'), 36 * (i + safeProcs.length));
+                });
+            } else {
+                reviewList.innerHTML = '<div class="pr-proc-empty">Nothing in review queue.</div>';
+            }
+        }
+        applySearch();
+    }
+
+    async function closeSingleProcess(p, row) {
+        if (p.pid == null || !p.safeToClose) return;
+        const closeBtn = row.querySelector('.close-btn');
+        if (closeBtn) { closeBtn.disabled = true; closeBtn.textContent = '…'; }
+        try {
+            const result = await window.electronAPI?.closeProcess?.(p.pid, p.processName);
+            if (result?.success) {
+                row.classList.add('closing');
+                setTimeout(() => {
+                    row.classList.remove('closing');
+                    row.classList.add('closed');
+                    const actEl = row.querySelector('.pr-proc-actions');
+                    if (actEl) actEl.innerHTML = '<span class="pr-row-btn closed-tag">Closed</span>';
+                }, 340);
+                closedApps.push({ name: p.name || p.processName, processName: p.processName, category: p.category });
+                updateClosedSection();
+                if (prxRestoreBtn) prxRestoreBtn.disabled = false;
+                showNotification('success', 'Process closed', `${p.name || p.processName} was stopped.`);
+            } else {
+                if (closeBtn) { closeBtn.disabled = false; closeBtn.textContent = 'Safe Close'; }
+                const reason = result?.error === 'not_whitelisted'
+                    ? 'Not in the verified safe-close list.'
+                    : 'The process could not be stopped.';
+                showNotification('error', 'Could not close', reason);
+            }
+        } catch {
+            if (closeBtn) { closeBtn.disabled = false; closeBtn.textContent = 'Safe Close'; }
+            showNotification('error', 'Error', 'Could not reach the process manager.');
+        }
+    }
+
+    function updateClosedSection() {
+        const section      = document.getElementById('pr-closed-section');
+        const list         = document.getElementById('pr-closed-list');
+        const historyEmpty = document.getElementById('prx-history-empty');
+        if (!section || !list) return;
+        if (!closedApps.length) { section.hidden = true; return; }
+        section.hidden = false;
+        if (historyEmpty) historyEmpty.hidden = true;
+        list.innerHTML = closedApps.map(c => `
+            <div class="pr-closed-row">
+                <span class="pr-closed-name">${c.name}</span>
+                <span class="pr-closed-hint">${c.category} &middot; Relaunch from taskbar or Start menu</span>
+            </div>
+        `).join('');
+    }
+
+    function renderStartupItems(entries) {
+        if (!startupListEl) return;
+        if (!entries || !entries.length) {
+            startupListEl.innerHTML = '<div class="pr-proc-empty">No startup items found.</div>';
+            return;
+        }
+        const all = entries.slice(0, 50);
+        startupListEl.innerHTML = '';
+        all.forEach(s => {
+            const name     = s.name || s.display || 'Unknown';
+            const category = s.category || 'Unknown';
+            const loc      = s.location || '';
+            const bucket   = s.bucket || (s.safe ? 'safe' : 'unknown');
+            const type     = loc.toLowerCase().includes('hkcu') ? 'User' : loc ? 'System' : 'Unknown';
+
+            const card = document.createElement('div');
+            card.className = 'pr-su-card';
+
+            // icon / initial
+            const key = getCategoryKey(category);
+            const svg = CAT_ICONS[key] || CAT_ICONS['default'];
+            const iconEl = document.createElement('div');
+            iconEl.className = 'pr-su-icon';
+            if (key !== 'default') {
+                iconEl.innerHTML = svg;
+            } else {
+                iconEl.textContent = name.charAt(0).toUpperCase();
+            }
+
+            const badgeClass = bucket === 'safe' ? 'safe' : bucket === 'protected' ? 'system' : 'review';
+            const badgeLabel = bucket === 'safe' ? 'Safe' : bucket === 'protected' ? 'System' : 'Review';
+
+            const body = document.createElement('div');
+            body.className = 'pr-su-body';
+            body.innerHTML = `<div class="pr-su-name">${name}</div><div class="pr-su-meta">${category} &bull; ${type}</div>`;
+
+            const badge = document.createElement('span');
+            badge.className = `pr-su-badge ${badgeClass}`;
+            badge.textContent = badgeLabel;
+
+            card.appendChild(iconEl);
+            card.appendChild(body);
+            card.appendChild(badge);
+
+            if (bucket === 'safe' && (loc.toLowerCase().includes('hkcu') || loc.toLowerCase().includes('hklm'))) {
+                const disableBtn = document.createElement('button');
+                disableBtn.className = 'pr-su-disable-btn';
+                disableBtn.type = 'button';
+                disableBtn.textContent = 'Disable';
+                disableBtn.addEventListener('click', async () => {
+                    disableBtn.disabled = true;
+                    disableBtn.textContent = '…';
+                    try {
+                        const res = await window.electronAPI?.disableStartupEntry?.(name, loc);
+                        if (res?.success) {
+                            disableBtn.textContent = 'Disabled';
+                            badge.className = 'pr-su-badge system';
+                            badge.textContent = 'Disabled';
+                            showNotification('success', 'Startup disabled', `${name} will no longer launch at startup.`);
+                        } else {
+                            disableBtn.disabled = false;
+                            disableBtn.textContent = 'Disable';
+                            showNotification('error', 'Could not disable', res?.error === 'manual_required' ? 'Manual removal required for this entry.' : 'Operation failed.');
+                        }
+                    } catch {
+                        disableBtn.disabled = false;
+                        disableBtn.textContent = 'Disable';
+                        showNotification('error', 'Error', 'Could not reach the startup manager.');
+                    }
+                });
+                card.appendChild(disableBtn);
+            } else {
+                const tag = document.createElement('span');
+                tag.className = 'pr-su-coming-tag';
+                tag.textContent = 'Review only';
+                card.appendChild(tag);
+            }
+
+            startupListEl.appendChild(card);
+        });
+    }
+
+    function showModal(beforeCount, totalEligible) {
+        if (!modalOverlay) return;
+        if (modalFill)   modalFill.style.width   = '0%';
+        if (modalPct)    modalPct.textContent     = '0%';
+        if (modalProc)   modalProc.textContent    = 'Preparing…';
+        if (modalCounts) modalCounts.textContent  = `Before: ${beforeCount} processes — closing ${totalEligible}`;
+        modalOverlay.classList.add('active');
+        modalOverlay.setAttribute('aria-hidden', 'false');
+    }
+    function hideModal() {
+        if (!modalOverlay) return;
+        modalOverlay.classList.remove('active');
+        modalOverlay.setAttribute('aria-hidden', 'true');
+    }
+    function showSuccessCard(before, after, ramFreedMB, startupChanged) {
+        if (!successOverlay || !successStats) return;
+        const stopped = before - after;
+        let html = `<strong>${before}</strong> → <strong>${after}</strong> active processes<br>`;
+        html += `<strong>${stopped}</strong> app${stopped !== 1 ? 's' : ''} stopped`;
+        if (ramFreedMB > 0) html += `<br>~<strong>${ramFreedMB} MB</strong> RAM freed`;
+        const restartNote = startupChanged
+            ? 'Startup changes apply on next restart.'
+            : 'No restart required. Changes take effect immediately.';
+        html += `<br><span class="pr-success-restart-note">${restartNote}</span>`;
+        successStats.innerHTML = html;
+        successOverlay.classList.add('active');
+        successOverlay.setAttribute('aria-hidden', 'false');
+    }
+    function hideSuccessCard() {
+        if (!successOverlay) return;
+        successOverlay.classList.remove('active');
+        successOverlay.setAttribute('aria-hidden', 'true');
+    }
+
+    // ── Main scan trigger (called from Start Scan button inside modal) ──
+    async function triggerScan() {
+        if (prxStartScanBtn?.dataset.scanning === '1') return;
+        if (prxStartScanBtn) { prxStartScanBtn.dataset.scanning = '1'; prxStartScanBtn.disabled = true; }
+
+        showPrxScanState();
+        setStatus('Scanning background processes…', true);
+        if (resultsEl) resultsEl.hidden = true;
+
+        try {
+            const [data, ls] = await Promise.all([
+                window.electronAPI?.getBackgroundContext?.(),
+                window.electronAPI?.getLiveStats?.().catch(() => null),
+            ]);
+
+            if (!startupDataLoaded) {
+                window.electronAPI?.getStartupContext?.().then(su => {
+                    startupDataLoaded = true;
+                    const all = [
+                        ...(su?.registryEntries || []),
+                        ...(su?.folderEntries   || []),
+                    ];
+                    if (startupListEl) {
+                        startupListEl.dataset.pending = JSON.stringify(all.slice(0, 50));
+                    }
+                }).catch(() => {});
+            }
+
+            prProcesses     = data?.processes || [];
+            liveStatsBefore = ls;
+
+            renderProcessGroups(prProcesses);
+            if (prProcesses.length && resultsEl) {
+                resultsEl.hidden = false;
+                const appsEmpty = document.getElementById('prx-apps-empty');
+                if (appsEmpty) appsEmpty.hidden = true;
+            }
+
+            const safeCount    = prProcesses.filter(p => p.safeToClose && !ignoredProcs.has(p.processName)).length;
+            const totalScanned = data?.totalScanned || prProcesses.length;
+            setStatus(`Scanned ${totalScanned} processes — ${prProcesses.length} candidates, ${safeCount} safe to close.`, false);
+
+            await new Promise(r => setTimeout(r, 500));
+            showPrxResultsState(prProcesses, ls, data);
+
+            if (prxLastScanBar) prxLastScanBar.hidden = false;
+            if (advancedBtn) advancedBtn.disabled = prProcesses.length === 0;
+
+            const mainStatusEl = document.getElementById('prx-main-status');
+            if (mainStatusEl) mainStatusEl.textContent = safeCount > 0 ? `${safeCount} safe to close` : 'System looks clean';
+
+        } catch (err) {
+            console.error('[Process Reducer] Scan error:', err);
+            const reason = (err && err.message) ? err.message : 'Process backend unavailable';
+            showPrxErrorState(`Scan failed — ${reason}. Try again or relaunch the app.`);
+            setStatus('Scan failed — process backend unavailable.', false);
+        } finally {
+            if (prxStartScanBtn) { prxStartScanBtn.dataset.scanning = ''; prxStartScanBtn.disabled = false; }
+        }
+    }
+
+    // ── Safe Reduce (triggered from modal results or tool buttons) ──
+    async function triggerSafeReduce() {
+        const eligible = prProcesses.filter(p =>
+            p.safeToClose &&
+            !closedApps.some(c => c.processName === p.processName) &&
+            !ignoredProcs.has(p.processName)
+        );
+        if (!eligible.length) {
+            showNotification('info', 'Nothing to reduce', 'No safe-to-close processes found. Run a scan first.');
+            return;
+        }
+
+        const ok = await showConfirmModal(eligible);
+        if (!ok) return;
+
+        cancelRequested = false;
+        const beforeCount = prProcesses.filter(p => !closedApps.some(c => c.processName === p.processName)).length;
+        showModal(beforeCount, eligible.length);
+        setStatus(`Reducing ${eligible.length} process${eligible.length !== 1 ? 'es' : ''}…`, true);
+
+        let closed = 0, ramFreed = 0;
+        for (let i = 0; i < eligible.length; i++) {
+            if (cancelRequested) break;
+            const p   = eligible[i];
+            const pct = Math.round(((i + 1) / eligible.length) * 100);
+            if (modalProc)   modalProc.textContent   = p.name || p.processName;
+            if (modalFill)   modalFill.style.width   = `${pct}%`;
+            if (modalPct)    modalPct.textContent    = `${pct}%`;
+            if (modalCounts) modalCounts.textContent = `Closing ${i + 1} of ${eligible.length}…`;
+            try {
+                const result = await window.electronAPI?.closeProcess?.(p.pid, p.processName);
+                if (result?.success) {
+                    closed++;
+                    ramFreed += p.ramMB || 0;
+                    closedApps.push({ name: p.name || p.processName, processName: p.processName, category: p.category });
+                    const row = resultsEl?.querySelector(`.pr-process-row[data-proc="${p.processName}"]`);
+                    if (row) {
+                        row.classList.add('closed');
+                        const actEl = row.querySelector('.pr-proc-actions');
+                        if (actEl) actEl.innerHTML = '<span class="pr-row-btn closed-tag">Closed</span>';
+                    }
+                }
+            } catch { /* continue */ }
+        }
+
+        hideModal();
+        updateClosedSection();
+        updateRestoreCard();
+        setStatus(cancelRequested ? 'Reduction cancelled.' : `Closed ${closed} of ${eligible.length} process${eligible.length !== 1 ? 'es' : ''}.`, false);
+
+        if (!cancelRequested && closed > 0) {
+            showSuccessCard(beforeCount, beforeCount - closed, ramFreed, false);
+        } else if (!cancelRequested) {
+            showNotification('error', 'Nothing stopped', 'Processes could not be closed. They may have already exited.');
+        }
+    }
+
+    // ── Modal Cancel ──
+    modalCancel?.addEventListener('click', () => {
+        cancelRequested = true;
+        hideModal();
+        setStatus('Reduction cancelled.', false);
+    });
+
+    // ── Success Card Buttons ──
+    document.getElementById('pr-success-review-btn')?.addEventListener('click', () => {
+        hideSuccessCard();
+        switchPrxTab('apps');
+        resultsEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    document.getElementById('pr-success-restore-btn')?.addEventListener('click', () => {
+        hideSuccessCard();
+        updateClosedSection();
+        switchPrxTab('history');
+        const section = document.getElementById('pr-closed-section');
+        if (section) { section.hidden = false; section.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+        showNotification('info', 'Restore Guide', `${closedApps.length} app${closedApps.length !== 1 ? 's were' : ' was'} closed. Relaunch from taskbar or Start menu.`);
+    });
+
+    // ── Advanced Review ──
+    advancedBtn?.addEventListener('click', () => {
+        const isAdvanced = advancedBtn.dataset.advanced === '1';
+        if (isAdvanced) {
+            advancedBtn.dataset.advanced = '';
+            advancedBtn.textContent = 'Advanced Review';
+            const reviewList = document.getElementById('pr-review-list');
+            if (reviewList) reviewList.innerHTML = '';
+            const revProcs = getSorted(prProcesses.filter(p => !p.safeToClose && !ignoredProcs.has(p.processName)));
+            revProcs.forEach(p => {
+                const row = document.createElement('div');
+                row.className = 'pr-process-row pr-revealed';
+                row.dataset.pid  = p.pid != null ? String(p.pid) : '';
+                row.dataset.proc = p.processName || '';
+                const isClosed    = closedApps.some(c => c.processName === p.processName);
+                if (isClosed) row.classList.add('closed');
+                const pill        = normalizeCatForPill(p.category);
+                const displayName = p.name || p.processName || 'Unknown';
+                const isVerified  = !!(p.name && p.name !== p.processName);
+                const ramMB       = p.ramMB != null ? p.ramMB : null;
+                const ramPct      = ramMB != null ? Math.min(100, Math.round((ramMB / 1500) * 100)) : 0;
+                const iconEl      = buildIconCell(displayName, p.category);
+                iconEl.dataset.cat = pill.key;
+                row.appendChild(iconEl);
+                const rest = document.createElement('div');
+                rest.style.display = 'contents';
+                rest.innerHTML = `
+                    <div class="pr-proc-info">
+                        <div class="pr-proc-name-row"><span class="pr-proc-name">${displayName}</span>${isVerified ? '<span class="pr-proc-verified">Verified</span>' : ''}</div>
+                        <div class="pr-proc-detail">${p.processName || ''}</div>
+                    </div>
+                    <div class="pr-proc-cpu-wrap"><span class="pr-proc-cpu-val">—</span><div class="pr-proc-cpu-bar"><div class="pr-proc-cpu-fill" style="width:0%"></div></div></div>
+                    <div class="pr-proc-ram-wrap"><span class="pr-proc-ram-val">${ramMB != null ? ramMB + ' MB' : '—'}</span><div class="pr-proc-ram-bar"><div class="pr-proc-ram-fill" style="width:${ramPct}%"></div></div></div>
+                    <div class="pr-proc-cat" data-cat="${pill.key}"><span class="pr-proc-cat-dot"></span>${pill.label}</div>
+                    <div class="pr-proc-actions">${isClosed ? '<span class="pr-row-btn closed-tag">Closed</span>' : ''}</div>
+                `;
+                row.appendChild(rest);
+                if (reviewList) reviewList.appendChild(row);
+            });
+        } else {
+            advancedBtn.dataset.advanced = '1';
+            advancedBtn.textContent = 'Exit Advanced Review';
+            const closeSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+            const revProcs = prProcesses.filter(p => !p.safeToClose && !ignoredProcs.has(p.processName));
+            revProcs.forEach(p => {
+                const row = document.querySelector(`#pr-review-list .pr-process-row[data-proc="${p.processName}"]`);
+                if (!row) return;
+                const actEl = row.querySelector('.pr-proc-actions');
+                if (!actEl || actEl.querySelector('.close-btn')) return;
+                const isClosed = closedApps.some(c => c.processName === p.processName);
+                if (isClosed) return;
+                const btn = document.createElement('button');
+                btn.className = 'pr-row-btn close-btn';
+                btn.type = 'button';
+                btn.innerHTML = `${closeSvg} Safe Reduce`;
+                btn.addEventListener('click', () => closeSingleProcess(p, row));
+                actEl.appendChild(btn);
+            });
+            showNotification('info', 'Advanced Review', 'Review-bucket processes now have close buttons. Use caution — they may affect system features.');
+        }
+    });
+
+    // ── Restore / Session History card ──
+    prxRestoreBtn?.addEventListener('click', () => {
+        if (!closedApps.length) {
+            showNotification('info', 'No session data', 'No apps have been closed this session yet.');
+            return;
+        }
+        updateClosedSection();
+        switchPrxTab('history');
+        const section = document.getElementById('pr-closed-section');
+        if (section) { section.hidden = false; section.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+        showNotification('info', 'Restore Guide', `${closedApps.length} app${closedApps.length !== 1 ? 's were' : ' was'} closed this session. Relaunch from taskbar or Start menu.`);
+    });
+
+    // ── Tab panel switcher ──
+    function switchPrxTab(name) {
+        const panels = ['overview', 'apps', 'history'];
+        panels.forEach(n => {
+            const panel = document.getElementById(`prx-panel-${n}`);
+            panel?.classList.toggle('prx-tab-hidden', n !== name);
+        });
+        page.querySelectorAll('.prx-filter-tab').forEach(t => {
+            t.classList.toggle('prx-filter-active', t.dataset.prxTab === name);
+        });
+    }
+
+    document.getElementById('prx-filter-tabs')?.addEventListener('click', e => {
+        const tab = e.target.closest('[data-prx-tab]');
+        if (!tab) return;
+
+        // Tab press animation
+        tab.classList.remove('prx-is-activating');
+        void tab.offsetWidth;
+        tab.classList.add('prx-is-activating');
+        tab.addEventListener('animationend', () => tab.classList.remove('prx-is-activating'), { once: true });
+
+        switchPrxTab(tab.dataset.prxTab);
+    });
+
+    // Open modal from Apps empty state button
+    document.getElementById('prx-apps-open-btn')?.addEventListener('click', openPrxModal);
+
+    // ── Tool card buttons ──
+    document.getElementById('prx-startup-btn')?.addEventListener('click', () => {
+        if (!startupDataLoaded) {
+            showNotification('info', 'Scan first', 'Run a scan to load startup item data.');
+            return;
+        }
+        switchPrxTab('apps');
+        if (installedPanel) {
+            installedPanel.hidden = false;
+            installedPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        if (startupListEl?.dataset.pending) {
+            try {
+                const pending = JSON.parse(startupListEl.dataset.pending);
+                delete startupListEl.dataset.pending;
+                renderStartupItems(pending);
+            } catch {}
+        }
+    });
+
+    document.getElementById('prx-mem-hog-btn')?.addEventListener('click', () => {
+        if (!prProcesses.length) {
+            showNotification('info', 'Scan first', 'Run a scan to identify memory hogs.');
+            return;
+        }
+        const top = [...prProcesses].sort((a, b) => (b.ramMB || 0) - (a.ramMB || 0)).slice(0, 5);
+        const msg = top.map(p => `${p.name || p.processName}: ${p.ramMB || 0} MB`).join(' · ');
+        showNotification('info', 'Top Memory Users', msg);
+    });
+
+    document.getElementById('prx-tray-btn')?.addEventListener('click', () => {
+        if (!prProcesses.length) {
+            showNotification('info', 'Scan first', 'Run a scan to detect tray apps.');
+            return;
+        }
+        const tray = prProcesses.filter(p => {
+            const c = (p.category || '').toLowerCase();
+            return c.includes('tray') || c.includes('updater') || c.includes('launcher') || c.includes('overlay');
+        });
+        if (!tray.length) {
+            showNotification('info', 'No tray apps', 'No known tray apps detected in this scan.');
+            return;
+        }
+        const msg = tray.slice(0, 4).map(p => p.name || p.processName).join(', ');
+        showNotification('info', `${tray.length} Tray Apps Found`, `${msg}${tray.length > 4 ? '…' : ''}. View full scan for details.`);
+    });
+
+    enhancePrxCards();
+}
+
 const GAMING_CARD_DESCRIPTIONS = {
     'gaming-game-bar': 'Control the Xbox Game Bar overlay and background capture behavior.',
     'gaming-game-mode': 'Tune Windows Game Mode behavior for smoother gaming sessions.',
@@ -4873,6 +6015,63 @@ function enhanceNetworkCards() {
             showTimer = setTimeout(() => {
                 ensureTooltip().dataset.targetId = card.dataset.networkCard || '';
                 showTooltipFor(card);
+            }, 220);
+        });
+        card.addEventListener('mouseleave', () => {
+            clearTimeout(showTimer);
+            hideTooltip();
+        });
+    });
+}
+
+function enhancePrxCards() {
+    const cards = document.querySelectorAll(
+        '#page-process-reducer .prx-pcard, #page-process-reducer .prx-adv-card'
+    );
+    cards.forEach(card => {
+        if (card.dataset.prxEnhanced === '1') return;
+        card.dataset.prxEnhanced = '1';
+
+        card.addEventListener('pointermove', e => {
+            const r = card.getBoundingClientRect();
+            card.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
+            card.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
+        });
+
+        const body  = card.dataset.hoverBody || '';
+        const cat   = card.dataset.hoverCat  || 'Process Tool';
+        const hint  = card.dataset.hoverHint || 'Click to use';
+        const title = card.querySelector('.pcard-title, .adv-card-titles h4')?.textContent || '';
+        if (!body) return;
+
+        let showTimer;
+        card.addEventListener('mouseenter', () => {
+            clearTimeout(showTimer);
+            showTimer = setTimeout(() => {
+                const tt = ensureTooltip();
+                tt.dataset.cat = 'process';
+                tt.dataset.impact = 'low';
+                tt.querySelector('.tt-title').textContent = title;
+                tt.querySelector('.tt-cat').textContent = cat;
+                tt.querySelector('.tt-impact-text').textContent = 'Safe';
+                tt.querySelector('.tt-body').textContent = body;
+                tt.querySelector('.tt-state-text').textContent = 'Ready';
+                tt.querySelector('.tt-hint').textContent = hint;
+                tt.classList.remove('is-on');
+                tt.classList.add('is-ready');
+
+                const rect = card.getBoundingClientRect();
+                const ttWidth = 320, margin = 12;
+                let left = rect.left + rect.width / 2 - ttWidth / 2;
+                left = Math.max(margin, Math.min(left, window.innerWidth - ttWidth - margin));
+                let top = rect.bottom + 10;
+                let placeAbove = false;
+                if (top + 220 > window.innerHeight) { top = rect.top - 10; placeAbove = true; }
+                tt.style.left = `${left}px`;
+                tt.style.top  = `${top}px`;
+                tt.classList.toggle('place-above', placeAbove);
+                tt.style.setProperty('--arrow-left', `${(rect.left + rect.width / 2) - left}px`);
+                tt.classList.add('visible');
             }, 220);
         });
         card.addEventListener('mouseleave', () => {
@@ -9196,4 +10395,63 @@ function initializeDnsOptimizer() {
 
     // ── Retry / Rescan ──────────────────────────────────────
     document.getElementById('dns-retry-btn')?.addEventListener('click', runScan);
+}
+
+function initializeAboutTilt() {
+    const MAX_TILT = 8;
+
+    document.querySelectorAll('.about-team-tilt').forEach(wrapper => {
+        if (wrapper.dataset.tiltReady === 'true') return;
+        wrapper.dataset.tiltReady = 'true';
+
+        const card = wrapper.querySelector('.t-tilt-card');
+        if (!card) return;
+
+        let rafId = null;
+        let isHovering = false;
+
+        function applyTilt(clientX, clientY) {
+            const rect = wrapper.getBoundingClientRect();
+            const px = (clientX - rect.left) / rect.width;
+            const py = (clientY - rect.top) / rect.height;
+            const rx = (0.5 - py) * MAX_TILT;
+            const ry = (px - 0.5) * MAX_TILT;
+            const gx = px * 100;
+            const gy = py * 100;
+
+            card.classList.add('is-tilting');
+            card.style.transform = `perspective(1000px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`;
+            wrapper.style.setProperty('--tilt-gx', `${gx.toFixed(1)}%`);
+            wrapper.style.setProperty('--tilt-gy', `${gy.toFixed(1)}%`);
+        }
+
+        function onPointerMove(e) {
+            if (!isHovering) return;
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                applyTilt(e.clientX, e.clientY);
+                rafId = null;
+            });
+        }
+
+        function onPointerEnter() {
+            isHovering = true;
+            wrapper.classList.add('is-hover');
+        }
+
+        function onPointerLeave() {
+            isHovering = false;
+            if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+            wrapper.classList.remove('is-hover');
+            card.classList.remove('is-tilting');
+            card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
+            wrapper.style.setProperty('--tilt-gx', '50%');
+            wrapper.style.setProperty('--tilt-gy', '50%');
+        }
+
+        wrapper.addEventListener('pointermove', onPointerMove, { passive: true });
+        wrapper.addEventListener('pointerenter', onPointerEnter, { passive: true });
+        wrapper.addEventListener('pointerleave', onPointerLeave, { passive: true });
+        wrapper.addEventListener('pointercancel', onPointerLeave, { passive: true });
+    });
 }
