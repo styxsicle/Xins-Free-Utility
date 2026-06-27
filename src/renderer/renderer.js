@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initializeApp() {
     initializeWindowControls();
+    initializeFreeDashboardContent();
+    initializeFreeDashboardBackground();
     initializeNavigation();
     initializeTweaks();
     initializeCleanup();
@@ -36,6 +38,282 @@ function initializeApp() {
     initializeDnsOptimizer();
     initializeSettingsPage();
     initializeAboutTilt();
+}
+
+function initializeFreeDashboardContent() {
+    const page = document.getElementById('page-dashboard');
+    if (!page) return;
+
+    page.innerHTML = `
+        <canvas class="xt-reactive-bg" id="xt-reactive-bg" aria-hidden="true"></canvas>
+        <section class="hero glass xt-free-hero" id="hero-card">
+            <div class="hero-content">
+                <div class="xt-free-title-row">
+                    <h1 class="hero-title">XTweaks Free</h1>
+                    <span class="hero-badge">Free Version</span>
+                </div>
+                <p class="hero-sub">Essential tweaks and tools to improve your Windows experience.</p>
+            </div>
+        </section>
+
+        <div class="dash-row-1 xt-free-dashboard">
+            <div class="assets-block">
+                <div class="assets-grid">
+                    <article class="asset-card glass xt-free-card xt-cleanup-card">
+                        <div class="xt-free-card-head">
+                            <div class="asset-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18"/>
+                                    <path d="M8 6V4h8v2"/>
+                                    <path d="M19 6l-1 14H6L5 6"/>
+                                    <path d="M10 11v5M14 11v5"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3>Quick Cleanup</h3>
+                                <p>Remove temporary files and free up disk space.</p>
+                            </div>
+                        </div>
+                        <div class="xt-free-metric"><strong>1.24</strong><span>GB</span></div>
+                        <p class="xt-free-muted">Junk files found</p>
+                        <button class="xt-free-button" type="button" data-free-action="cleanup">Clear Temp Files</button>
+                    </article>
+
+                    <article class="asset-card glass xt-free-card xt-startup-card">
+                        <div class="xt-free-card-head">
+                            <div class="asset-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 2v10"/>
+                                    <path d="M18.4 5.6a9 9 0 1 1-12.8 0"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3>Startup Apps <span class="xt-status-pill">ACTIVE</span></h3>
+                                <p>Manage apps that run when Windows starts.</p>
+                            </div>
+                        </div>
+                        <div class="xt-startup-list">
+                            <div class="xt-startup-row"><span>Spotify</span><em>High impact</em><button class="xt-free-toggle is-on" type="button" aria-label="Spotify startup toggle"></button></div>
+                            <div class="xt-startup-row"><span>Discord</span><em>Medium impact</em><button class="xt-free-toggle is-on" type="button" aria-label="Discord startup toggle"></button></div>
+                            <div class="xt-startup-row"><span>OneDrive</span><em>Low impact</em><button class="xt-free-toggle is-on" type="button" aria-label="OneDrive startup toggle"></button></div>
+                        </div>
+                        <button class="xt-free-row-action" type="button" data-free-action="startup">Manage Startup Apps<span>›</span></button>
+                    </article>
+
+                    <article class="asset-card glass xt-free-card xt-summary-card">
+                        <div class="xt-free-card-head">
+                            <div class="asset-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="4" width="18" height="13" rx="2"/>
+                                    <path d="M8 21h8M12 17v4"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3>System Summary <span class="xt-status-pill">LIVE</span></h3>
+                            </div>
+                        </div>
+                        <div class="xt-summary-list">
+                            <div class="xt-summary-row"><span>CPU</span><b>23%</b><i style="--fill:23%"></i><em>Intel Core i5-12400F</em></div>
+                            <div class="xt-summary-row"><span>RAM</span><b>48%</b><i style="--fill:48%"></i><em>7.6 GB / 16 GB</em></div>
+                            <div class="xt-summary-row"><span>Disk (C:)</span><b>36%</b><i style="--fill:36%"></i><em>171 GB / 476 GB SSD</em></div>
+                        </div>
+                        <button class="xt-free-row-action" type="button" data-free-action="details">View Details<span>›</span></button>
+                    </article>
+
+                    <article class="asset-card glass xt-free-card xt-scan-card">
+                        <div class="xt-free-card-head">
+                            <div class="asset-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="7"/>
+                                    <path d="m21 21-4.3-4.3"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3>Performance Scan</h3>
+                                <p>Scan your system for items that can be optimized.</p>
+                            </div>
+                        </div>
+                        <div class="xt-scan-foot"><span>No issues found <span class="xt-status-pill">READY</span></span><button class="xt-free-button" type="button" data-free-action="scan">Scan Now</button></div>
+                    </article>
+
+                    <article class="asset-card glass xt-free-card xt-safe-card">
+                        <div class="xt-free-card-head">
+                            <div class="asset-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                    <path d="m9 12 2 2 4-5"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3>100% Safe <span class="xt-status-pill">SAFE</span></h3>
+                                <p>All tweaks are safe and reversible.</p>
+                                <p>No system files are modified.</p>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="asset-card glass xt-free-card xt-restore-card">
+                        <div class="xt-free-card-head">
+                            <div class="asset-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 12a9 9 0 0 1 15.1-6.6"/>
+                                    <path d="M18 2v4h-4"/>
+                                    <path d="M21 12a9 9 0 0 1-15.1 6.6"/>
+                                    <path d="M6 22v-4h4"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3>Create Restore Point</h3>
+                                <p>It’s recommended to create a restore point before applying tweaks.</p>
+                            </div>
+                        </div>
+                        <button class="xt-free-button" type="button" data-free-action="restore">Create Now</button>
+                    </article>
+                </div>
+            </div>
+        </div>
+
+        <section class="side-panel glass xt-safety-strip" id="discord-card">
+            <div class="xt-safety-main">
+                <div class="asset-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <path d="m9 12 2 2 4-5"/>
+                    </svg>
+                </div>
+                <div><h3><span class="xt-safe-dot" aria-hidden="true"></span>You’re Protected</h3><p>XTweaks Free is safe to use and won’t harm your system.</p></div>
+            </div>
+            <div class="xt-safety-item"><strong>Safe &amp; Reversible</strong><span>No permanent changes</span></div>
+            <div class="xt-safety-item"><strong>No System Modifications</strong><span>We don’t touch system files</span></div>
+            <div class="xt-safety-item"><strong>Trusted &amp; Lightweight</strong><span>Built for performance</span></div>
+        </section>
+
+        <span id="cpu-bar" style="display:none"></span>
+        <span id="gpu-bar" style="display:none"></span>
+        <span id="memory-bar" style="display:none"></span>
+        <span id="disk-bar" style="display:none"></span>
+        <span id="disk-usage" style="display:none">0%</span>
+        <span id="cpu-temp" style="display:none">--°C</span>
+        <span id="gpu-temp" style="display:none">--°C</span>
+        <span id="cpu-temp-circle" style="display:none"></span>
+        <span id="gpu-temp-circle" style="display:none"></span>
+        <span id="net-up" style="display:none"></span>
+        <span id="net-down" style="display:none"></span>
+        <span id="sys-cpu" style="display:none"></span>
+        <span id="sys-cores" style="display:none"></span>
+        <span id="sys-ram" style="display:none"></span>
+        <span id="sys-platform" style="display:none"></span>
+        <span id="sys-hostname" style="display:none"></span>
+        <span id="sys-uptime" style="display:none"></span>
+    `;
+}
+
+function initializeFreeDashboardBackground() {
+    const page = document.getElementById('page-dashboard');
+    const canvas = document.getElementById('xt-reactive-bg');
+    const ctx = canvas?.getContext?.('2d', { alpha: true });
+    if (!page || !canvas || !ctx) return;
+
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    const state = {
+        width: 0,
+        height: 0,
+        pointerX: 0.58,
+        pointerY: 0.22,
+        targetX: 0.58,
+        targetY: 0.22,
+        frame: 0,
+        running: false
+    };
+
+    const resize = () => {
+        const rect = page.getBoundingClientRect();
+        const width = Math.max(1, Math.round(rect.width * 0.5));
+        const height = Math.max(1, Math.round(rect.height * 0.5));
+        state.width = width;
+        state.height = height;
+        canvas.width = width;
+        canvas.height = height;
+    };
+
+    const drawBlob = (x, y, radius, alpha) => {
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        gradient.addColorStop(0, `rgba(255,255,255,${alpha})`);
+        gradient.addColorStop(0.34, `rgba(210,214,218,${alpha * 0.36})`);
+        gradient.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+    };
+
+    const draw = (time = 0) => {
+        const { width, height } = state;
+        if (!width || !height) return;
+
+        state.pointerX += (state.targetX - state.pointerX) * 0.035;
+        state.pointerY += (state.targetY - state.pointerY) * 0.035;
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = 'rgba(0,0,0,0)';
+        ctx.fillRect(0, 0, width, height);
+        ctx.globalCompositeOperation = 'screen';
+
+        const t = time * 0.00012;
+        const px = state.pointerX - 0.5;
+        const py = state.pointerY - 0.5;
+
+        drawBlob(width * (0.72 + px * 0.08 + Math.sin(t * 1.7) * 0.025), height * (0.12 + py * 0.08 + Math.cos(t) * 0.025), Math.min(width, height) * 0.42, 0.125);
+        drawBlob(width * (0.28 + px * 0.05 + Math.cos(t * 1.2) * 0.022), height * (0.68 + py * 0.06 + Math.sin(t * 1.4) * 0.025), Math.min(width, height) * 0.34, 0.075);
+        drawBlob(width * (0.52 + px * 0.06), height * (0.42 + py * 0.06), Math.min(width, height) * 0.28, 0.055);
+
+        ctx.globalCompositeOperation = 'source-over';
+    };
+
+    const tick = (time) => {
+        if (!state.running) return;
+        draw(time);
+        if (!document.hidden && !reduceMotion?.matches) {
+            state.frame = requestAnimationFrame(tick);
+        }
+    };
+
+    const start = () => {
+        cancelAnimationFrame(state.frame);
+        state.running = true;
+        if (reduceMotion?.matches || document.hidden) {
+            draw(0);
+            return;
+        }
+        state.frame = requestAnimationFrame(tick);
+    };
+
+    const stop = () => {
+        state.running = false;
+        cancelAnimationFrame(state.frame);
+    };
+
+    const updatePointer = (event) => {
+        const rect = page.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        state.targetX = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+        state.targetY = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+    };
+
+    window.addEventListener('resize', () => {
+        resize();
+        draw(0);
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) stop();
+        else start();
+    });
+    reduceMotion?.addEventListener?.('change', start);
+    page.addEventListener('pointermove', updatePointer, { passive: true });
+
+    resize();
+    start();
 }
 
 function initializeExternalLinks() {
@@ -139,6 +417,14 @@ function initializeNavigation() {
             targetPage = 'dashboard';
             const dashboardNavItem = document.querySelector('[data-page="dashboard"]');
             activeItem = dashboardNavItem;
+        }
+
+        if (!document.getElementById(`page-${targetPage}`)) {
+            showNotification('info', 'Coming Soon', 'This XTweaks Free page is not ready yet.', {
+                key: `nav-missing-${targetPage}`,
+                duration: 3200
+            });
+            return;
         }
         
         navItems.forEach(nav => nav.classList.remove('active'));
@@ -3308,6 +3594,40 @@ function initializeDashboardExtras() {
         'All tweaks applied',
         'Every recommended tweak across categories has been applied successfully.'
     );
+
+    document.getElementById('upgrade-premium-btn')?.addEventListener('click', () => {
+        showNotification('info', 'Premium Upgrade', 'Premium upgrade flow is coming soon.', {
+            key: 'free-upgrade-toast',
+            duration: 3200
+        });
+    });
+
+    const freeActionMessages = {
+        cleanup: ['Quick Cleanup', 'Preview only: no temporary files were removed.'],
+        startup: ['Startup Apps', 'Startup manager is coming soon in XTweaks Free.'],
+        details: ['System Summary', 'Detailed system view is coming soon.'],
+        scan: ['Performance Scan', 'Fake scan complete: no issues found.'],
+        restore: ['Restore Point', 'Preview only: no restore point was created.']
+    };
+    document.querySelectorAll('[data-free-action]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const [title, message] = freeActionMessages[button.dataset.freeAction] || ['XTweaks Free', 'This action is coming soon.'];
+            showNotification('info', title, message, {
+                key: `free-action-${button.dataset.freeAction || 'unknown'}`,
+                duration: 3400
+            });
+        });
+    });
+
+    document.querySelectorAll('.xt-free-toggle').forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+            toggle.classList.toggle('is-on');
+            showNotification('info', 'Startup Toggle', 'Preview only: startup settings were not changed.', {
+                key: 'free-toggle-toast',
+                duration: 2600
+            });
+        });
+    });
 
     // Mirror uptime onto hero
     setInterval(() => {
