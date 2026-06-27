@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getToggleStates: () => ipcRenderer.invoke('get-toggle-states'),
     saveToggleState: (toggleId, state) => ipcRenderer.invoke('save-toggle-state', toggleId, state),
     runCleanup: (type) => ipcRenderer.invoke('run-cleanup', type),
+    scanCleanup: () => ipcRenderer.invoke('scan-cleanup'),
 
     openExternal: (url) => ipcRenderer.invoke('open-external', url),
 
@@ -76,4 +77,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     dnsBackupExists:     ()       => ipcRenderer.invoke('dns-backup-exists'),
     gpuGamingStatus:     ()       => ipcRenderer.invoke('gpu-gaming-status'),
     networkIpReset:      ()       => ipcRenderer.invoke('network-ip-reset'),
+    scanShaderCache:     (vendor) => ipcRenderer.invoke('scan-shader-cache', vendor),
+    cleanShaderCache:    (vendor) => ipcRenderer.invoke('clean-shader-cache', vendor),
 });

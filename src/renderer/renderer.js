@@ -219,6 +219,7 @@ function initializeNavigation() {
   scheduleSysMemCardsOnEntry('page-memory', { source: 'page-enter' });
 } else if (targetPage === 'process-reducer') {
   _integratePageTopBar('page-process-reducer', '.prx-filter-bar');
+  scheduleProcessReducerCardsOnEntry({ source: 'page-enter' });
 } else {
                 _restoreNetTopBar();
                 updateTopBarHeightVar();
@@ -230,6 +231,15 @@ function initializeNavigation() {
                         dashPage.classList.add('dash-entered');
                     }
                     scheduleDashboardCardsOnEntry({ source: 'page-enter' });
+                }
+                if (targetPage === 'about') {
+                    scheduleAboutCardsOnEntry({ source: 'page-enter' });
+                }
+                if (targetPage === 'cleanup') {
+                    scheduleCleanupCardsOnEntry({ source: 'page-enter' });
+                }
+                if (targetPage === 'settings') {
+                    scheduleSettingsCardsOnEntry({ source: 'page-enter' });
                 }
             }
         }
@@ -1659,33 +1669,194 @@ function initializeTweaks() {
 }
 
 function initializeCleanup() {
-    const cleanupCards = document.querySelectorAll('.cleanup-card');
+    const STEPS = ['scan', 'review', 'clean', 'verify'];
 
-    cleanupCards.forEach(card => {
+    // ── Pipeline state ───────────────────────────────────────────
+    function setPipelineStep(activeStep) {
+        document.querySelectorAll('#page-cleanup .cu-pipe-step').forEach(el => {
+            const step = el.dataset.step;
+            el.classList.toggle('cu-pipe-active', step === activeStep);
+        });
+    }
+    // Initially no step active
+    setPipelineStep(null);
+
+    // ── Helpers ──────────────────────────────────────────────────
+    function fmtBytes(b) {
+        if (!b || b <= 0) return null;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.min(Math.floor(Math.log(b) / Math.log(1024)), 3);
+        return parseFloat((b / Math.pow(1024, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function scanLabel(type, data) {
+        if (!data) return 'Unable to inspect';
+        switch (type) {
+            case 'temp': {
+                const s = fmtBytes(data.bytes);
+                if (s) return `${s} found`;
+                return data.count > 0 ? `${data.count} files found` : 'Nothing to clean';
+            }
+            case 'dns':
+                return data.entries > 0 ? `${data.entries} entries cached` : 'Cache empty';
+            case 'recycle': {
+                const s = fmtBytes(data.bytes);
+                if (s) return `${s} in Bin`;
+                return data.count > 0 ? `${data.count} items found` : 'Bin is empty';
+            }
+            case 'prefetch':
+                return data.count > 0 ? `${data.count} files found` : 'Nothing to clean';
+            case 'windows-update': {
+                const s = fmtBytes(data.bytes);
+                if (s) return `${s} found`;
+                return data.count > 0 ? `${data.count} files found` : 'Nothing to clean';
+            }
+            default: return 'Unknown';
+        }
+    }
+
+    function hasFindings(type, data) {
+        if (!data) return false;
+        switch (type) {
+            case 'temp':           return data.count > 0 || data.bytes > 0;
+            case 'dns':            return data.entries > 0;
+            case 'recycle':        return data.count > 0 || data.bytes > 0;
+            case 'prefetch':       return data.count > 0;
+            case 'windows-update': return data.count > 0 || data.bytes > 0;
+            default: return false;
+        }
+    }
+
+    function addLogRow(msg, state = 'idle', timeStr = null) {
+        const body = document.querySelector('#page-cleanup .cu-log-body');
+        if (!body) return;
+        const row = document.createElement('div');
+        row.className = 'cu-log-row';
+        const dot = document.createElement('span');
+        dot.className = `cu-log-dot cu-dot-${state}`;
+        const msgEl = document.createElement('span');
+        msgEl.className = 'cu-log-msg';
+        msgEl.textContent = msg;
+        const timeEl = document.createElement('span');
+        timeEl.className = 'cu-log-time';
+        timeEl.textContent = timeStr || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        row.append(dot, msgEl, timeEl);
+        body.prepend(row);
+        // Keep at most 8 rows
+        while (body.children.length > 8) body.removeChild(body.lastChild);
+    }
+
+    function setCardStatus(card, label, state = 'ready') {
+        const statusEl = card.querySelector('.cu-card-status');
+        if (statusEl) {
+            statusEl.textContent = label;
+            statusEl.dataset.state = state;
+        }
+    }
+
+    // ── Scan ─────────────────────────────────────────────────────
+    const scanBtn = document.getElementById('cu-scan-btn');
+    let scanResults = null;
+
+    if (scanBtn) {
+        scanBtn.addEventListener('click', async () => {
+            if (scanBtn.disabled) return;
+            scanBtn.disabled = true;
+            const labelEl = scanBtn.querySelector('.cu-scan-btn-label');
+            if (labelEl) labelEl.textContent = 'Scanning…';
+            scanBtn.classList.add('cu-scan-btn--running');
+
+            setPipelineStep('scan');
+
+            // Reset card statuses
+            document.querySelectorAll('#page-cleanup .cleanup-card').forEach(c => {
+                setCardStatus(c, 'Scanning…', 'scanning');
+                const btn = c.querySelector('.cleanup-btn');
+                if (btn) btn.disabled = true;
+            });
+
+            try {
+                scanResults = await window.electronAPI.scanCleanup();
+                setPipelineStep('review');
+                addLogRow('Scan completed — review results below', 'success');
+
+                document.querySelectorAll('#page-cleanup .cleanup-card').forEach(card => {
+                    const type = card.dataset.cleanup;
+                    const data = scanResults?.[type] ?? null;
+                    const label = scanLabel(type, data);
+                    const found = hasFindings(type, data);
+                    setCardStatus(card, label, found ? 'found' : 'clean');
+                    const btn = card.querySelector('.cleanup-btn');
+                    if (btn) btn.disabled = !found;
+                    addLogRow(`${card.querySelector('.cu-card-title')?.textContent || type} · ${label}`, found ? 'found' : 'clean');
+                });
+            } catch (err) {
+                setPipelineStep(null);
+                addLogRow('Scan failed — check permissions', 'error');
+                document.querySelectorAll('#page-cleanup .cleanup-card').forEach(c => {
+                    setCardStatus(c, 'Scan failed', 'error');
+                    const btn = c.querySelector('.cleanup-btn');
+                    if (btn) btn.disabled = false;
+                });
+            } finally {
+                scanBtn.disabled = false;
+                scanBtn.classList.remove('cu-scan-btn--running');
+                if (labelEl) labelEl.textContent = 'Scan System';
+            }
+        });
+    }
+
+    // ── Clean buttons ────────────────────────────────────────────
+    document.querySelectorAll('#page-cleanup .cleanup-card').forEach(card => {
         const cleanupType = card.dataset.cleanup;
         const cleanBtn = card.querySelector('.cleanup-btn');
+        if (!cleanBtn) return;
 
-        if (cleanBtn) {
-            cleanBtn.addEventListener('click', async () => {
-                cleanBtn.disabled = true;
-                cleanBtn.textContent = 'Cleaning...';
+        cleanBtn.addEventListener('click', async () => {
+            if (cleanBtn.disabled) return;
+            cleanBtn.disabled = true;
+            cleanBtn.textContent = 'Cleaning…';
+            setPipelineStep('clean');
 
-                try {
-                    const result = await window.electronAPI.runCleanup(cleanupType);
+            const title = card.querySelector('.cu-card-title')?.textContent || cleanupType;
+            addLogRow(`${title} · Cleaning…`, 'idle');
 
-                    if (result.success) {
-                        showNotification('success', 'Cleanup Complete', result.message);
-                    } else {
-                        showNotification('error', 'Cleanup Failed', result.message);
-                    }
-                } catch (error) {
-                    showNotification('error', 'Error', error.message);
-                } finally {
+            try {
+                const result = await window.electronAPI.runCleanup(cleanupType);
+
+                if (result.success) {
+                    setCardStatus(card, 'Cleaned', 'clean');
+                    addLogRow(`${title} · Cleaned successfully`, 'success');
+                    showNotification('success', 'Cleanup Complete', result.message);
+                    setPipelineStep('verify');
+
+                    // Re-scan this category to verify
+                    try {
+                        const fresh = await window.electronAPI.scanCleanup();
+                        const data = fresh?.[cleanupType] ?? null;
+                        const label = scanLabel(cleanupType, data);
+                        const found = hasFindings(cleanupType, data);
+                        setCardStatus(card, found ? label : 'Verified clean', found ? 'found' : 'clean');
+                        addLogRow(`${title} · Verify: ${found ? label : 'clean'}`, found ? 'found' : 'success');
+                        scanResults = fresh;
+                    } catch {}
+                } else {
+                    setCardStatus(card, 'Failed', 'error');
+                    addLogRow(`${title} · Cleanup failed`, 'error');
+                    showNotification('error', 'Cleanup Failed', result.message);
                     cleanBtn.disabled = false;
-                    cleanBtn.textContent = 'Clean';
+                    setPipelineStep('review');
                 }
-            });
-        }
+            } catch (error) {
+                setCardStatus(card, 'Error', 'error');
+                addLogRow(`${title} · Error: ${error.message}`, 'error');
+                showNotification('error', 'Error', error.message);
+                cleanBtn.disabled = false;
+                setPipelineStep('review');
+            } finally {
+                cleanBtn.textContent = 'Clean';
+            }
+        });
     });
 }
 
@@ -4288,8 +4459,8 @@ function applyEntryCardShine(item, index, stagger = 55, duration = ENTRY_CARD_SH
 }
 
 const GAMING_ENTRY_MOTION = {
-    duration: 620,
-    stagger: 55,
+    duration: 820,
+    stagger: 90,
     slideX: 0,
     slideY: 14,
     blur: 5,
@@ -4497,8 +4668,8 @@ function initializeGamingPage() {
 
 // ── System & Memory: card reveal motion (mirrors Network/Gaming entrance) ──
 const SYSMEM_ENTRY_MOTION = {
-    duration: 620,
-    stagger: 55,
+    duration: 820,
+    stagger: 90,
     slideY: 14,
     blur: 5,
     opacity: 0,
@@ -6592,6 +6763,12 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('load', () => {
     setTimeout(() => {
         scheduleDashboardCardsOnEntry({ source: 'page-enter' });
+        if (document.getElementById('page-cleanup')?.classList.contains('active')) {
+            scheduleCleanupCardsOnEntry({ source: 'page-enter' });
+        }
+        if (document.getElementById('page-settings')?.classList.contains('active')) {
+            scheduleSettingsCardsOnEntry({ source: 'page-enter' });
+        }
     }, 380);
 });
 
@@ -6887,51 +7064,72 @@ function initializeGpuPage() {
         gpuResultsInfo.innerHTML = buildInfoHtml(primaryGpu);
         if (gpuResultsHeader) gpuResultsHeader.className = `gpu-results-header gpu-results-header--${primaryGpu.vendor}`;
 
-        // ── Vendor tabs (only if multiple vendors) ────────────
-        gpuVendorTabs.textContent = '';
-        if (uniqueGpus.length > 1) {
-            uniqueGpus.forEach(gpu => {
-                const btn = document.createElement('button');
-                btn.className = 'gpu-vendor-tab' + (gpu.vendor === defaultVendor ? ' active' : '');
-                btn.dataset.vendor = gpu.vendor;
-                btn.textContent = VENDOR_NAME[gpu.vendor];
-                btn.addEventListener('click', () => {
-                    gpuVendorTabs.querySelectorAll('.gpu-vendor-tab').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    gpuSections.querySelectorAll('.gpu-vendor-section').forEach(s => {
-                        s.hidden = s.dataset.vendor !== gpu.vendor;
-                    });
-                    const g = uniqueGpus.find(x => x.vendor === gpu.vendor);
-                    if (g) {
-                        gpuResultsInfo.innerHTML = buildInfoHtml(g);
-                        if (gpuResultsHeader) gpuResultsHeader.className = `gpu-results-header gpu-results-header--${g.vendor}`;
-                    }
-                });
-                gpuVendorTabs.appendChild(btn);
-            });
-        }
+        // ── Always show NVIDIA + AMD tabs (plus any extra detected vendors) ──
+        const TAB_LABEL = { nvidia: 'NVIDIA', amd: 'AMD / Radeon', intel: 'Intel', unknown: 'Unknown' };
+        const tabVendors = ['nvidia', 'amd'];
+        uniqueGpus.forEach(g => { if (!tabVendors.includes(g.vendor)) tabVendors.push(g.vendor); });
 
-        // ── Build vendor sections ─────────────────────────────
+        gpuVendorTabs.textContent = '';
+        tabVendors.forEach(vendor => {
+            const isDetected = uniqueGpus.some(g => g.vendor === vendor);
+            const btn = document.createElement('button');
+            btn.className = 'gpu-vendor-tab'
+                + (vendor === defaultVendor ? ' active' : '')
+                + (!isDetected ? ' gpu-vendor-tab--preview' : '');
+            btn.dataset.vendor = vendor;
+            btn.textContent = TAB_LABEL[vendor] || VENDOR_NAME[vendor];
+            btn.addEventListener('click', () => {
+                gpuVendorTabs.querySelectorAll('.gpu-vendor-tab').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                gpuSections.querySelectorAll('.gpu-vendor-section').forEach(s => {
+                    s.hidden = s.dataset.vendor !== vendor;
+                });
+                ['gpu-sc-temp', 'gpu-sc-usage', 'gpu-sc-power'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.dataset.vendor = vendor;
+                });
+                const g = uniqueGpus.find(x => x.vendor === vendor);
+                if (g) {
+                    gpuResultsInfo.innerHTML = buildInfoHtml(g);
+                    if (gpuResultsHeader) gpuResultsHeader.className = `gpu-results-header gpu-results-header--${g.vendor}`;
+                } else {
+                    gpuResultsInfo.innerHTML = `<div class="gpu-ri-vendor-row"><span class="gpu-ri-vendor-name" style="opacity:0.45">${TAB_LABEL[vendor] || vendor} — not detected</span></div>`;
+                    if (gpuResultsHeader) gpuResultsHeader.className = `gpu-results-header gpu-results-header--${vendor}`;
+                }
+            });
+            gpuVendorTabs.appendChild(btn);
+        });
+
+        // ── Build vendor sections (detected + preview) ────────
         gpuSections.textContent = '';
-        uniqueGpus.forEach((gpu, idx) => {
-            const section = buildVendorSection(gpu, idx);
-            section.dataset.vendor = gpu.vendor;
-            if (uniqueGpus.length > 1 && gpu.vendor !== defaultVendor) {
-                section.hidden = true;
-            }
+        tabVendors.forEach((vendor, idx) => {
+            const detectedGpu = uniqueGpus.find(g => g.vendor === vendor);
+            const isPreview = !detectedGpu;
+            const gpuObj = detectedGpu || { vendor, name: null, driverVersion: null, vram: null, driverDate: null };
+            const section = buildVendorSection(gpuObj, idx, isPreview);
+            section.dataset.vendor = vendor;
+            if (vendor !== defaultVendor) section.hidden = true;
             gpuSections.appendChild(section);
         });
 
         gpuResultsState.hidden = false;
     }
 
-    function buildVendorSection(gpu, idx) {
+    function buildVendorSection(gpu, idx, isPreview = false) {
         const v     = gpu.vendor;
         const cards = GPU_CARDS[v] || GPU_CARDS.unknown;
 
         const section = document.createElement('div');
         section.className = `gpu-vendor-section gpu-vendor-section--${v}`;
         section.style.animationDelay = `${idx * 0.08}s`;
+
+        // Preview mode banner (honest notice when vendor not detected)
+        if (isPreview) {
+            const banner = document.createElement('div');
+            banner.className = 'gpu-preview-banner';
+            banner.textContent = `Preview mode — no ${VENDOR_NAME[v] || v} GPU detected on this system. Cards below show available controls if a compatible GPU were present.`;
+            section.appendChild(banner);
+        }
 
         // Thin section label
         const label = document.createElement('div');
@@ -6960,7 +7158,9 @@ function initializeGpuPage() {
             let liveDesc = c.desc;
             if (c.badge === 'info') {
                 const titleLower = c.title.toLowerCase();
-                if (titleLower.includes('vram') && gpu.vram) {
+                if (isPreview && (titleLower.includes('vram') || titleLower.includes('driver') || titleLower.includes('arc driver'))) {
+                    liveDesc = `No ${VENDOR_NAME[v] || v} GPU detected on this system.`;
+                } else if (titleLower.includes('vram') && gpu.vram) {
                     liveDesc = `${gpu.vram} detected on your ${VENDOR_NAME[v]} GPU. VRAM capacity determines texture quality headroom and memory-pressure tolerance.`;
                 } else if (titleLower.includes('driver') && gpu.driverVersion) {
                     const dateStr = gpu.driverDate ? ` (${gpu.driverDate})` : '';
@@ -6968,7 +7168,8 @@ function initializeGpuPage() {
                 }
             }
 
-            const btnText = c.badge === 'info' ? 'Read Only' : 'Coming Soon';
+            const isSafe = c.badge === 'safe';
+            const btnText = c.badge === 'info' ? 'Read Only' : (isSafe ? 'Run' : 'Coming Soon');
 
             card.innerHTML = `
                 <div class="gpu-card-aurora" aria-hidden="true"></div>
@@ -6984,9 +7185,42 @@ function initializeGpuPage() {
                         <span class="gpu-card-badge ${BADGE_CLASS[c.badge] || 'gpu-badge--soon'}"><span class="gpu-badge-dot" aria-hidden="true"></span>${BADGE_LABEL[c.badge] || 'Coming Soon'}</span>
                         <span class="gpu-card-impact gpu-impact--${impactLower}">${c.impact || 'Medium'} Impact</span>
                     </div>
-                    <button class="gpu-card-btn" disabled>${btnText}</button>
+                    <button class="gpu-card-btn" ${isSafe ? '' : 'disabled'}>${btnText}</button>
                 </div>
             `;
+
+            if (isSafe && c.title === 'Shader Cache Cleanup') {
+                const cardBtn = card.querySelector('.gpu-card-btn');
+                if (cardBtn) {
+                    cardBtn.textContent = 'Scan Cache';
+                    let shaderState = 'idle';
+                    cardBtn.addEventListener('click', async () => {
+                        if (shaderState === 'idle' || shaderState === 'rescan') {
+                            shaderState = 'scanning';
+                            cardBtn.disabled = true;
+                            cardBtn.textContent = 'Scanning…';
+                            try {
+                                const res = await window.electronAPI.scanShaderCache(v);
+                                if (!res.available) { shaderState = 'idle'; cardBtn.textContent = 'Unavailable'; return; }
+                                if (res.count === 0) { shaderState = 'idle'; cardBtn.textContent = 'Cache Empty'; cardBtn.disabled = false; return; }
+                                const mb = res.bytes > 0 ? ` (${(res.bytes / 1048576).toFixed(1)} MB)` : '';
+                                cardBtn.textContent = `Clean ${res.count} files${mb}`;
+                                cardBtn.disabled = false;
+                                shaderState = 'ready';
+                            } catch { shaderState = 'idle'; cardBtn.textContent = 'Scan Cache'; cardBtn.disabled = false; }
+                        } else if (shaderState === 'ready') {
+                            if (!confirm('Clear the GPU shader cache? Windows will rebuild it next time games load shaders.')) return;
+                            shaderState = 'cleaning';
+                            cardBtn.disabled = true;
+                            cardBtn.textContent = 'Cleaning…';
+                            try {
+                                await window.electronAPI.cleanShaderCache(v);
+                                shaderState = 'rescan'; cardBtn.textContent = 'Done — Rescan'; cardBtn.disabled = false;
+                            } catch { shaderState = 'ready'; cardBtn.textContent = 'Clean Failed'; cardBtn.disabled = false; }
+                        }
+                    });
+                }
+            }
 
             // Pointer-tracking aurora
             card.addEventListener('pointermove', e => {
@@ -7012,6 +7246,14 @@ function initializeGpuPage() {
         section.appendChild(grid);
         return section;
     }
+
+    // ── Shader Cache Cleanup cards — badge:'safe' for supported vendors ──────
+    ['nvidia', 'amd', 'intel'].forEach(v => {
+        const cards = GPU_CARDS[v];
+        if (!cards) return;
+        const sc = cards.find(c => c.title === 'Shader Cache Cleanup');
+        if (sc) sc.badge = 'safe';
+    });
 
     // ── Event wiring ──────────────────────────────────────────
     gpuRetryBtn?.addEventListener('click', () => {
@@ -9698,8 +9940,8 @@ function initializeAiTweaker() {
 
 // ── Network Card Actions ──────────────────────────────────────
 const NETWORK_ENTRY_MOTION = {
-    duration: 620,
-    stagger: 55,
+    duration: 820,
+    stagger: 90,
     slideX: 0,
     slideY: 14,
     blur: 5,
@@ -9831,6 +10073,7 @@ const DASHBOARD_ENTRY_MOTION = {
     scale: 0.98,
     easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
 };
+
 let dashboardPageEnterMotionLastRun = 0;
 let dashboardTabMotionLastRun = 0;
 let dashboardTabMotionRequest = 0;
@@ -9869,6 +10112,7 @@ function animateDashboardCardsOnEntry() {
     const page = document.getElementById('page-dashboard');
     if (!page?.classList.contains('active')) return 0;
 
+    const motion = DASHBOARD_ENTRY_MOTION;
     const targetItems = getDashboardEntryCards(page);
     clearDashboardEntryCardAnimations(targetItems);
     if (targetItems[0]) targetItems[0].offsetHeight;
@@ -9877,14 +10121,14 @@ function animateDashboardCardsOnEntry() {
     targetItems.forEach((item, index) => {
         const rect = item.getBoundingClientRect();
         if (rect.width < 8 || rect.height < 8) return;
-        applyEntryCardShine(item, index, DASHBOARD_ENTRY_MOTION.stagger);
+        applyEntryCardShine(item, index, motion.stagger);
         item.style.pointerEvents = 'none';
 
         const animation = item.animate([
             {
-                opacity: DASHBOARD_ENTRY_MOTION.opacity,
-                transform: `translate3d(${DASHBOARD_ENTRY_MOTION.slideX}px, ${DASHBOARD_ENTRY_MOTION.slideY}px, 0) scale(${DASHBOARD_ENTRY_MOTION.scale})`,
-                filter: `blur(${DASHBOARD_ENTRY_MOTION.blur}px)`
+                opacity: motion.opacity,
+                transform: `translate3d(${motion.slideX}px, ${motion.slideY}px, 0) scale(${motion.scale})`,
+                filter: `blur(${motion.blur}px)`
             },
             {
                 opacity: 1,
@@ -9892,9 +10136,9 @@ function animateDashboardCardsOnEntry() {
                 filter: 'blur(0px)'
             }
         ], {
-            duration: DASHBOARD_ENTRY_MOTION.duration,
-            delay: index * DASHBOARD_ENTRY_MOTION.stagger,
-            easing: DASHBOARD_ENTRY_MOTION.easing,
+            duration: motion.duration,
+            delay: index * motion.stagger,
+            easing: motion.easing,
             fill: 'both'
         });
 
@@ -9902,7 +10146,7 @@ function animateDashboardCardsOnEntry() {
         item._dashboardEntryAnimation = animation;
         setTimeout(() => {
             if (item._dashboardEntryAnimation === animation) item.style.removeProperty('pointer-events');
-        }, index * DASHBOARD_ENTRY_MOTION.stagger);
+        }, index * motion.stagger);
         animation.finished
             .catch(() => {})
             .finally(() => {
@@ -9945,6 +10189,130 @@ function scheduleDashboardCardsOnEntry(options = {}) {
                 dashboardTabMotionLastRun = now;
             }
             animateDashboardCardsOnEntry();
+        });
+    });
+}
+
+// ── AI Process Reducer: card reveal motion ────────────────────────────────────
+const PROCESS_REDUCER_ENTRY_MOTION = {
+    duration: 820,
+    stagger: 90,
+    slideX: 0,
+    slideY: 20,
+    blur: 8,
+    opacity: 0,
+    scale: 0.98,
+    easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
+};
+
+let prxPageEnterMotionLastRun = 0;
+let prxTabMotionLastRun = 0;
+let prxTabMotionRequest = 0;
+
+function getPrxEntryCards(page) {
+    const panel = page.querySelector('#prx-panel-overview') || page;
+    return Array.from(panel.querySelectorAll('.prx-pcard, .prx-adv-card')).filter(item => {
+        const rect = item.getBoundingClientRect();
+        return rect.width >= 8 && rect.height >= 8;
+    });
+}
+
+function clearPrxEntryCardAnimations(items = []) {
+    items.forEach(item => {
+        if (item._prxEntryAnimation) {
+            item._prxEntryAnimation.cancel();
+            item._prxEntryAnimation = null;
+        }
+        item.style.removeProperty('will-change');
+        item.style.removeProperty('pointer-events');
+        item.style.removeProperty('opacity');
+        item.style.removeProperty('transform');
+        item.style.removeProperty('filter');
+        clearEntryCardShine(item);
+    });
+}
+
+function animatePrxCardsOnEntry() {
+    const page = document.getElementById('page-process-reducer');
+    if (!page?.classList.contains('active')) return 0;
+
+    const motion = PROCESS_REDUCER_ENTRY_MOTION;
+    const targetItems = getPrxEntryCards(page);
+    clearPrxEntryCardAnimations(targetItems);
+    if (targetItems[0]) targetItems[0].offsetHeight;
+
+    let started = 0;
+    targetItems.forEach((item, index) => {
+        const rect = item.getBoundingClientRect();
+        if (rect.width < 8 || rect.height < 8) return;
+        applyEntryCardShine(item, index, motion.stagger);
+        item.style.pointerEvents = 'none';
+
+        const animation = item.animate([
+            {
+                opacity: motion.opacity,
+                transform: `translate3d(${motion.slideX}px, ${motion.slideY}px, 0) scale(${motion.scale})`,
+                filter: `blur(${motion.blur}px)`
+            },
+            {
+                opacity: 1,
+                transform: 'translate3d(0, 0, 0) scale(1)',
+                filter: 'blur(0px)'
+            }
+        ], {
+            duration: motion.duration,
+            delay: index * motion.stagger,
+            easing: motion.easing,
+            fill: 'both'
+        });
+
+        item.style.willChange = 'transform, opacity, filter';
+        item._prxEntryAnimation = animation;
+        setTimeout(() => {
+            if (item._prxEntryAnimation === animation) item.style.removeProperty('pointer-events');
+        }, index * motion.stagger);
+        animation.finished
+            .catch(() => {})
+            .finally(() => {
+                if (item._prxEntryAnimation === animation) {
+                    animation.cancel();
+                    item._prxEntryAnimation = null;
+                    item.style.removeProperty('will-change');
+                    item.style.removeProperty('pointer-events');
+                    item.style.removeProperty('opacity');
+                    item.style.removeProperty('transform');
+                    item.style.removeProperty('filter');
+                }
+            });
+        started++;
+    });
+
+    return started;
+}
+
+function scheduleProcessReducerCardsOnEntry(options = {}) {
+    const page = document.getElementById('page-process-reducer');
+    if (!page) return;
+    const requestId = ++prxTabMotionRequest;
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (!page.classList.contains('active')) return;
+            const now = performance.now();
+            if (options.source === 'page-enter' && now - prxPageEnterMotionLastRun < 900) return;
+            if (options.source === 'page-enter') prxPageEnterMotionLastRun = now;
+            if (options.source === 'tab-click') {
+                if (requestId !== prxTabMotionRequest) return;
+                if (now - prxTabMotionLastRun < 450) {
+                    setTimeout(() => {
+                        if (requestId !== prxTabMotionRequest || !page.classList.contains('active')) return;
+                        prxTabMotionLastRun = performance.now();
+                        animatePrxCardsOnEntry();
+                    }, 450 - (now - prxTabMotionLastRun));
+                    return;
+                }
+                prxTabMotionLastRun = now;
+            }
+            animatePrxCardsOnEntry();
         });
     });
 }
@@ -11067,6 +11435,8 @@ function initializeDnsOptimizer() {
 
 function initializeAboutTilt() {
     const MAX_TILT = 8;
+    const RETURN_MS = 440;
+    const RETURN_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
     document.querySelectorAll('.about-team-tilt').forEach(wrapper => {
         if (wrapper.dataset.tiltReady === 'true') return;
@@ -11077,6 +11447,11 @@ function initializeAboutTilt() {
 
         let rafId = null;
         let isHovering = false;
+        let returnTimer = null;
+
+        function cancelReturn() {
+            if (returnTimer) { clearTimeout(returnTimer); returnTimer = null; }
+        }
 
         function applyTilt(clientX, clientY) {
             const rect = wrapper.getBoundingClientRect();
@@ -11084,13 +11459,12 @@ function initializeAboutTilt() {
             const py = (clientY - rect.top) / rect.height;
             const rx = (0.5 - py) * MAX_TILT;
             const ry = (px - 0.5) * MAX_TILT;
-            const gx = px * 100;
-            const gy = py * 100;
 
-            card.classList.add('is-tilting');
+            // Fast-follow during hover via inline transition
+            card.style.transition = 'transform 80ms ease-out';
             card.style.transform = `perspective(1000px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`;
-            wrapper.style.setProperty('--tilt-gx', `${gx.toFixed(1)}%`);
-            wrapper.style.setProperty('--tilt-gy', `${gy.toFixed(1)}%`);
+            wrapper.style.setProperty('--tilt-gx', `${(px * 100).toFixed(1)}%`);
+            wrapper.style.setProperty('--tilt-gy', `${(py * 100).toFixed(1)}%`);
         }
 
         function onPointerMove(e) {
@@ -11104,17 +11478,35 @@ function initializeAboutTilt() {
 
         function onPointerEnter() {
             isHovering = true;
+            cancelReturn();
             wrapper.classList.add('is-hover');
+            // Switch to fast-follow immediately (cancel any lingering return transition)
+            card.style.transition = 'transform 80ms ease-out';
         }
 
         function onPointerLeave() {
             isHovering = false;
             if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+            cancelReturn();
             wrapper.classList.remove('is-hover');
-            card.classList.remove('is-tilting');
-            card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
             wrapper.style.setProperty('--tilt-gx', '50%');
             wrapper.style.setProperty('--tilt-gy', '50%');
+
+            // Apply explicit smooth return transition BEFORE setting neutral transform.
+            // This ensures the browser sees a well-defined "from" state with the slow
+            // easing already set, so a proper CSS transition fires.
+            card.style.transition = `transform ${RETURN_MS}ms ${RETURN_EASE}`;
+            card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
+
+            // After return completes, clean up inline styles
+            returnTimer = setTimeout(() => {
+                if (!isHovering) {
+                    card.classList.remove('is-tilting');
+                    card.style.removeProperty('transition');
+                    card.style.removeProperty('transform');
+                }
+                returnTimer = null;
+            }, RETURN_MS + 40);
         }
 
         wrapper.addEventListener('pointermove', onPointerMove, { passive: true });
@@ -11122,4 +11514,220 @@ function initializeAboutTilt() {
         wrapper.addEventListener('pointerleave', onPointerLeave, { passive: true });
         wrapper.addEventListener('pointercancel', onPointerLeave, { passive: true });
     });
+}
+
+// ── About: card reveal motion ────────────────────────────────────────────────
+const ABOUT_ENTRY_MOTION = {
+    duration: 820,
+    stagger: 80,
+    slideY: 16,
+    blur: 6,
+    opacity: 0,
+    scale: 0.982,
+    easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
+};
+let aboutPageEnterMotionLastRun = 0;
+
+function getAboutEntryCards() {
+    const page = document.getElementById('page-about');
+    if (!page) return [];
+    const items = [];
+    const appCard = page.querySelector('.about-card.app-info');
+    if (appCard) items.push(appCard);
+    page.querySelectorAll('.about-team-tilt').forEach(el => items.push(el));
+    page.querySelectorAll('.feature-card').forEach(el => items.push(el));
+    return items;
+}
+
+function animateAboutCardsOnEntry() {
+    const page = document.getElementById('page-about');
+    if (!page?.classList.contains('active')) return;
+
+    const m = ABOUT_ENTRY_MOTION;
+    const items = getAboutEntryCards();
+
+    items.forEach(item => {
+        if (item._aboutAnim) { try { item._aboutAnim.cancel(); } catch (_) {} item._aboutAnim = null; }
+        item.style.removeProperty('opacity');
+        item.style.removeProperty('transform');
+        item.style.removeProperty('filter');
+        item.style.removeProperty('pointer-events');
+    });
+    if (items[0]) items[0].offsetHeight;
+
+    items.forEach((item, index) => {
+        const delay = index * m.stagger;
+        item.style.pointerEvents = 'none';
+        const anim = item.animate([
+            { opacity: m.opacity, transform: `translateY(${m.slideY}px) scale(${m.scale})`, filter: `blur(${m.blur}px)` },
+            { opacity: 1,         transform: 'translateY(0) scale(1)',                       filter: 'blur(0px)' }
+        ], { duration: m.duration, delay, easing: m.easing, fill: 'both' });
+        item._aboutAnim = anim;
+        anim.onfinish = () => {
+            item.style.removeProperty('pointer-events');
+            item.style.removeProperty('opacity');
+            item.style.removeProperty('transform');
+            item.style.removeProperty('filter');
+            if (item._aboutAnim === anim) item._aboutAnim = null;
+        };
+        setTimeout(() => item.style.removeProperty('pointer-events'), delay + m.duration + 60);
+    });
+}
+
+function scheduleAboutCardsOnEntry(options = {}) {
+    const now = Date.now();
+    if (options.source === 'page-enter' && now - aboutPageEnterMotionLastRun < 900) return;
+    if (options.source === 'page-enter') aboutPageEnterMotionLastRun = now;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        animateAboutCardsOnEntry();
+    }));
+}
+
+// ── Cleanup: card reveal motion ──────────────────────────────────────────────
+const CLEANUP_ENTRY_MOTION = {
+    duration: 820,
+    stagger: 90,
+    slideY: 18,
+    blur: 7,
+    opacity: 0,
+    scale: 0.985,
+    easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
+};
+let cleanupPageEnterMotionLastRun = 0;
+
+function getCleanupEntryItems() {
+    const page = document.getElementById('page-cleanup');
+    if (!page) return [];
+    const items = [];
+    const hero = page.querySelector('.cu-hero');
+    if (hero) items.push(hero);
+    const pipeline = page.querySelector('.cu-pipeline');
+    if (pipeline) items.push(pipeline);
+    // Safe Cleanup Queue: header then its cards
+    const safeHd = page.querySelector('.cu-group-safe .cu-group-hd');
+    if (safeHd) items.push(safeHd);
+    page.querySelectorAll('.cu-group-safe .cleanup-card').forEach(el => items.push(el));
+    // System Cache: header then its cards
+    const cacheHd = page.querySelector('.cu-group-cache .cu-group-hd');
+    if (cacheHd) items.push(cacheHd);
+    page.querySelectorAll('.cu-group-cache .cleanup-card').forEach(el => items.push(el));
+    // Recent Activity log
+    const log = page.querySelector('.cu-log');
+    if (log) items.push(log);
+    return items;
+}
+
+function animateCleanupCardsOnEntry() {
+    const page = document.getElementById('page-cleanup');
+    if (!page?.classList.contains('active')) return;
+
+    const m = CLEANUP_ENTRY_MOTION;
+    const items = getCleanupEntryItems();
+
+    items.forEach(item => {
+        if (item._cleanupAnim) { try { item._cleanupAnim.cancel(); } catch (_) {} item._cleanupAnim = null; }
+        item.style.removeProperty('opacity');
+        item.style.removeProperty('transform');
+        item.style.removeProperty('filter');
+        item.style.removeProperty('pointer-events');
+    });
+    if (items[0]) items[0].offsetHeight;
+
+    items.forEach((item, index) => {
+        const delay = index * m.stagger;
+        item.style.pointerEvents = 'none';
+        const anim = item.animate([
+            { opacity: m.opacity, transform: `translateY(${m.slideY}px) scale(${m.scale})`, filter: `blur(${m.blur}px)` },
+            { opacity: 1,         transform: 'translateY(0) scale(1)',                        filter: 'blur(0px)' }
+        ], { duration: m.duration, delay, easing: m.easing, fill: 'both' });
+        item._cleanupAnim = anim;
+        anim.onfinish = () => {
+            item.style.removeProperty('pointer-events');
+            item.style.removeProperty('opacity');
+            item.style.removeProperty('transform');
+            item.style.removeProperty('filter');
+            if (item._cleanupAnim === anim) item._cleanupAnim = null;
+        };
+        setTimeout(() => item.style.removeProperty('pointer-events'), delay + m.duration + 60);
+    });
+}
+
+function scheduleCleanupCardsOnEntry(options = {}) {
+    const now = Date.now();
+    if (options.source === 'page-enter' && now - cleanupPageEnterMotionLastRun < 900) return;
+    if (options.source === 'page-enter') cleanupPageEnterMotionLastRun = now;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        animateCleanupCardsOnEntry();
+    }));
+}
+
+// ── Settings: card reveal motion (iOS Control Center — slides DOWN from above) ──
+const SETTINGS_ENTRY_MOTION = {
+    duration: 820,
+    stagger: 75,
+    slideY: -18,
+    blur: 8,
+    opacity: 0,
+    scale: 0.985,
+    easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
+};
+let settingsPageEnterMotionLastRun = 0;
+
+function getSettingsEntryItems() {
+    const page = document.getElementById('page-settings');
+    if (!page) return [];
+    const items = [];
+    const header = page.querySelector('.settings-main-header');
+    if (header) items.push(header);
+    const expCard = page.querySelector('.settings-experience-card');
+    if (expCard) items.push(expCard);
+    const general = page.querySelector('#settings-general');
+    if (general) items.push(general);
+    const appearance = page.querySelector('#settings-appearance');
+    if (appearance) items.push(appearance);
+    const links = page.querySelector('#settings-links');
+    if (links) items.push(links);
+    return items;
+}
+
+function animateSettingsCardsOnEntry() {
+    const page = document.getElementById('page-settings');
+    if (!page?.classList.contains('active')) return;
+
+    const m = SETTINGS_ENTRY_MOTION;
+    const items = getSettingsEntryItems();
+
+    items.forEach(item => {
+        if (item._settingsAnim) { try { item._settingsAnim.cancel(); } catch (_) {} item._settingsAnim = null; }
+        item.style.removeProperty('opacity');
+        item.style.removeProperty('transform');
+        item.style.removeProperty('filter');
+        item.style.removeProperty('pointer-events');
+    });
+    if (items[0]) items[0].offsetHeight;
+
+    items.forEach((item, index) => {
+        const delay = index * m.stagger;
+        item.style.pointerEvents = 'none';
+        const anim = item.animate([
+            { opacity: m.opacity, transform: `translateY(${m.slideY}px) scale(${m.scale})`, filter: `blur(${m.blur}px)` },
+            { opacity: 1,         transform: 'translateY(0) scale(1)',                       filter: 'blur(0px)' }
+        ], { duration: m.duration, delay, easing: m.easing, fill: 'both' });
+        item._settingsAnim = anim;
+        anim.onfinish = () => {
+            item.style.removeProperty('pointer-events');
+            item.style.removeProperty('opacity');
+            item.style.removeProperty('transform');
+            item.style.removeProperty('filter');
+            if (item._settingsAnim === anim) item._settingsAnim = null;
+        };
+        setTimeout(() => item.style.removeProperty('pointer-events'), delay + m.duration + 60);
+    });
+}
+
+function scheduleSettingsCardsOnEntry(options = {}) {
+    const now = Date.now();
+    if (options.source === 'page-enter' && now - settingsPageEnterMotionLastRun < 900) return;
+    if (options.source === 'page-enter') settingsPageEnterMotionLastRun = now;
+    requestAnimationFrame(() => requestAnimationFrame(() => animateSettingsCardsOnEntry()));
 }

@@ -3374,6 +3374,12 @@
                             <span class="cu-eyebrow">MAINTENANCE BAY</span>
                             <h1 class="cu-title">System Cleanup</h1>
                             <p class="cu-subtitle">Safely clear temporary files, caches, and system junk to keep your machine lean and responsive.</p>
+                            <button class="cu-scan-btn" id="cu-scan-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                                <span class="cu-scan-btn-label">Scan System</span>
+                            </button>
                         </div>
                         <div class="cu-hero-right">
                             <div class="cu-status-cluster">
@@ -3395,22 +3401,22 @@
 
                     <!-- ── Cleanup Pipeline ─────────────────────────────── -->
                     <div class="cu-pipeline" aria-hidden="true">
-                        <div class="cu-pipe-step cu-pipe-active">
+                        <div class="cu-pipe-step" data-step="scan">
                             <div class="cu-pipe-node"></div>
                             <span class="cu-pipe-label">Scan</span>
                         </div>
                         <div class="cu-pipe-track"></div>
-                        <div class="cu-pipe-step">
+                        <div class="cu-pipe-step" data-step="review">
                             <div class="cu-pipe-node"></div>
                             <span class="cu-pipe-label">Review</span>
                         </div>
                         <div class="cu-pipe-track"></div>
-                        <div class="cu-pipe-step">
+                        <div class="cu-pipe-step" data-step="clean">
                             <div class="cu-pipe-node"></div>
                             <span class="cu-pipe-label">Clean</span>
                         </div>
                         <div class="cu-pipe-track"></div>
-                        <div class="cu-pipe-step">
+                        <div class="cu-pipe-step" data-step="verify">
                             <div class="cu-pipe-node"></div>
                             <span class="cu-pipe-label">Verify</span>
                         </div>

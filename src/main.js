@@ -1486,6 +1486,111 @@ ipcMain.handle('open-external', async (event, url) => {
     shell.openExternal(url);
 });
 
+// ── Cleanup Scanner (read-only inspection) ────────────────────────────────────
+ipcMain.handle('scan-cleanup', async () => {
+    function run(cmd, opts) {
+        return new Promise(resolve => {
+            exec(cmd, { shell: 'cmd.exe', windowsHide: true, timeout: 12000, ...opts }, (err, stdout) => {
+                resolve(stdout || '');
+            });
+        });
+    }
+
+    const [tempOut, dnsOut, recycleOut, prefetchOut, wuOut] = await Promise.all([
+        run(`powershell -NoProfile -NonInteractive -Command "try{$f=Get-ChildItem -Path @($env:TEMP,'C:\\Windows\\Temp') -File -Force -Recurse -ErrorAction SilentlyContinue;Write-Output ('{0}|{1}' -f $f.Count,($f|Measure-Object -Property Length -Sum).Sum)}catch{Write-Output '0|0'}"`),
+        run('ipconfig /displaydns'),
+        run(`powershell -NoProfile -NonInteractive -Command "try{$f=Get-ChildItem 'C:\\$Recycle.Bin' -Force -Recurse -ErrorAction SilentlyContinue;Write-Output ('{0}|{1}' -f $f.Count,($f|Measure-Object -Property Length -Sum).Sum)}catch{Write-Output '0|0'}"`),
+        run(`powershell -NoProfile -NonInteractive -Command "try{$f=Get-ChildItem 'C:\\Windows\\Prefetch' -Filter '*.pf' -Force -ErrorAction SilentlyContinue;Write-Output $f.Count}catch{Write-Output '0'}"`),
+        run(`powershell -NoProfile -NonInteractive -Command "try{$f=Get-ChildItem 'C:\\Windows\\SoftwareDistribution\\Download' -File -Force -Recurse -ErrorAction SilentlyContinue;Write-Output ('{0}|{1}' -f $f.Count,($f|Measure-Object -Property Length -Sum).Sum)}catch{Write-Output '0|0'}"`)
+    ]);
+
+    function parsePair(s) {
+        const [c, b] = (s || '').trim().split('|');
+        return { count: parseInt(c, 10) || 0, bytes: parseInt(b, 10) || 0 };
+    }
+
+    const temp    = parsePair(tempOut);
+    const recycle = parsePair(recycleOut);
+    const wu      = parsePair(wuOut);
+    const prefetchCount = parseInt((prefetchOut || '').trim(), 10) || 0;
+    const dnsEntries = (dnsOut.match(/Record Name/gi) || []).length;
+
+    return {
+        temp:            { count: temp.count,    bytes: temp.bytes    },
+        dns:             { entries: dnsEntries                         },
+        recycle:         { count: recycle.count, bytes: recycle.bytes },
+        prefetch:        { count: prefetchCount                        },
+        'windows-update':{ count: wu.count,      bytes: wu.bytes      }
+    };
+});
+
+// ── Shader Cache Scanner / Cleaner ────────────────────────────────────────────
+const SHADER_CACHE_PATHS = {
+    nvidia: [
+        path.join(process.env.LOCALAPPDATA || '', 'NVIDIA', 'DXCache'),
+        path.join(process.env.LOCALAPPDATA || '', 'NVIDIA', 'GLCache'),
+        path.join(process.env.APPDATA      || '', 'NVIDIA', 'ComputeCache'),
+    ],
+    amd: [
+        path.join(process.env.LOCALAPPDATA || '', 'AMD', 'DxCache'),
+        path.join(process.env.LOCALAPPDATA || '', 'AMD', 'GLCache'),
+        path.join(process.env.LOCALAPPDATA || '', 'D3DSCache'),
+    ],
+    intel: [
+        path.join(process.env.LOCALAPPDATA || '', 'D3DSCache'),
+    ],
+};
+
+ipcMain.handle('scan-shader-cache', async (_, vendor) => {
+    const paths = SHADER_CACHE_PATHS[vendor];
+    if (!paths) return { available: false };
+
+    function run(cmd) {
+        return new Promise(resolve => {
+            exec(cmd, { shell: 'cmd.exe', windowsHide: true, timeout: 12000 }, (err, stdout) => {
+                resolve((stdout || '').trim());
+            });
+        });
+    }
+
+    let totalCount = 0;
+    let totalBytes = 0;
+
+    for (const p of paths) {
+        const escaped = p.replace(/'/g, "''");
+        const out = await run(
+            `powershell -NoProfile -NonInteractive -Command "try{if(Test-Path '${escaped}'){$f=Get-ChildItem '${escaped}' -Recurse -Force -File -ErrorAction SilentlyContinue;Write-Output ('{0}|{1}' -f $f.Count,($f|Measure-Object -Property Length -Sum -ErrorAction SilentlyContinue).Sum)}else{Write-Output '0|0'}}catch{Write-Output '0|0'}"`
+        );
+        const [c, b] = out.split('|');
+        totalCount += parseInt(c, 10) || 0;
+        totalBytes += parseInt(b, 10) || 0;
+    }
+
+    return { available: true, count: totalCount, bytes: totalBytes };
+});
+
+ipcMain.handle('clean-shader-cache', async (_, vendor) => {
+    const paths = SHADER_CACHE_PATHS[vendor];
+    if (!paths) return { success: false, error: 'Unsupported vendor' };
+
+    function run(cmd) {
+        return new Promise(resolve => {
+            exec(cmd, { shell: 'cmd.exe', windowsHide: true, timeout: 30000 }, (err) => resolve(!err));
+        });
+    }
+
+    let cleaned = 0;
+    for (const p of paths) {
+        const escaped = p.replace(/'/g, "''");
+        const ok = await run(
+            `powershell -NoProfile -NonInteractive -Command "try{if(Test-Path '${escaped}'){Remove-Item '${escaped}\\*' -Recurse -Force -ErrorAction SilentlyContinue}}catch{}"`
+        );
+        if (ok) cleaned++;
+    }
+
+    return { success: true, cleaned };
+});
+
 // ── Ollama AI Tweaker ──────────────────────────────────────────────────────
 
 function ollamaHttpRequest(path, method, body, timeoutMs) {
