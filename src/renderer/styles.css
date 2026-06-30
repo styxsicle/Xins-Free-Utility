@@ -13051,8 +13051,98 @@ ol.ai-msg-list li {
     flex: 0 0 auto;
 }
 
+.xt-tweak-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
 .cleanup-confirm-modal[hidden] {
     display: none;
+}
+.xt-tweak-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.xt-tweak-modal-card {
+    position: relative;
+    z-index: 1;
+    background: #161618;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 28px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255,255,255,0.06) inset;
+}
+.xt-tweak-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 6px;
+}
+.xt-tweak-modal-head h3 {
+    margin: 4px 0 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.92);
+    line-height: 1.35;
+}
+.xt-tweak-modal-close {
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.55);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    padding: 6px 10px;
+    transition: color 0.15s, background 0.15s;
+}
+.xt-tweak-modal-close:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.1);
+}
+.xt-tweak-modal-body {
+    margin: 18px 0 24px;
+}
+.xt-tweak-modal-body > p {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.6;
+}
+.xt-tweak-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+.xt-tweak-modal-btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 9px 18px;
+    transition: background 0.15s, color 0.15s;
+}
+.xt-tweak-modal-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .xt-cleanup-confirm-list {
@@ -18596,6 +18686,6 @@ body.settings-nav-hidden .sidebar {
 @media (prefers-reduced-motion: reduce) {
   .app-loading-screen  { transition: none; }
   .app-loading-inner   { animation: none; }
-  .app-loading-spinner { animation: none; border-top-color: rgba(255, 255, 255, 0.82); }
   .app-loading-mark    { animation: none; }
+  /* Spinner is kept spinning — it's a functional loading indicator, not decorative motion */
 }

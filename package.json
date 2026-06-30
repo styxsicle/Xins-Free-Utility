@@ -1,6 +1,6 @@
 {
   "name": "xin-tweaks-free",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "XTweaks Free - Windows Tweaking Utility by Xin",
   "main": "src/main.js",
   "scripts": {

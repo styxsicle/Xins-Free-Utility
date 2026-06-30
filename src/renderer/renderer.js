@@ -1463,6 +1463,10 @@ function initializeNavigation() {
                 }
                 if (targetPage === 'cleanup') {
                     scheduleCleanupCardsOnEntry({ source: 'page-enter' });
+                    if (!cleanupAutoScanDone) {
+                        cleanupAutoScanDone = true;
+                        setTimeout(() => document.getElementById('cleanup-scan-btn')?.click(), 150);
+                    }
                 }
                 if (targetPage === 'startup') {
                     scheduleStartupCardsOnEntry({ source: 'page-enter' });
@@ -2926,7 +2930,7 @@ function getCleanupPageMarkup() {
             </div>
             <div class="xt-cleanup-card-footer">
                 <span class="xt-cleanup-state" data-cleanup-status="${card.id}" data-state="idle">Waiting to scan</span>
-                ${getPremiumActionButtonMarkup('Run', `data-cleanup-run="${card.id}"`, '<path d="M8 6.5v11l9-5.5z" fill="currentColor" stroke="none"/>')}
+                ${getPremiumActionButtonMarkup('Run', `data-cleanup-run="${card.id}" data-cleanup-action="${card.id}"`, '<path d="M8 6.5v11l9-5.5z" fill="currentColor" stroke="none"/>')}
             </div>
             <div class="xt-tweak-result xt-cleanup-result" data-cleanup-result="${card.id}">Missing folders are treated as already clean. PatchCache remains excluded.</div>
         </article>
@@ -3011,10 +3015,15 @@ function getCleanupPageMarkup() {
 }
 
 function initializeCleanupDashboard() {
+    console.log('[cleanup] init started');
     const page = document.getElementById('page-cleanup');
-    if (!page) return;
+    if (!page) {
+        console.log('[cleanup] error: #page-cleanup not found');
+        return;
+    }
 
     page.innerHTML = getCleanupPageMarkup();
+    console.log('[cleanup] found buttons:', page.querySelectorAll('[data-cleanup-action]').length);
 
     const scanBtn = document.getElementById('cleanup-scan-btn');
     const selectedBtn = document.getElementById('cleanup-selected-btn');
@@ -3134,7 +3143,16 @@ function initializeCleanupDashboard() {
     }
 
     async function scanCleanup() {
-        if (!window.electronAPI?.scanCleanup || isBusy) return;
+        if (!window.electronAPI?.scanCleanup) {
+            console.log('[cleanup] error: preload scanCleanup API not available');
+            showNotification('error', 'Cleanup Unavailable', 'Cleanup API is not available in this environment.');
+            return;
+        }
+        if (isBusy) {
+            console.log('[cleanup] scanCleanup skipped: already busy');
+            return;
+        }
+        console.log('[cleanup] calling preload API (scanCleanup)');
         setBusy(true);
         CLEANUP_PAGE_CARDS.forEach((card) => {
             setCardVisual(card.id, 'Scanning...', 'Inspecting safe cleanup locations now.', '--', 'scanning');
@@ -3143,9 +3161,11 @@ function initializeCleanupDashboard() {
 
         try {
             const results = await window.electronAPI.scanCleanup();
+            console.log('[cleanup] result: scan returned', Object.keys(results || {}).length, 'entries');
             applyScanResults(results);
             if (lastResult) lastResult.textContent = 'Latest action: scan complete. Review the queue before cleaning.';
         } catch (error) {
+            console.log('[cleanup] error:', error);
             CLEANUP_PAGE_CARDS.forEach((card) => {
                 setCardVisual(card.id, 'Scan failed', 'Unable to inspect this location right now.', '--', 'error');
             });
@@ -3164,25 +3184,40 @@ function initializeCleanupDashboard() {
     }
 
     async function runCleanupIds(ids) {
-        if (!ids.length || !window.electronAPI?.runCleanup || isBusy) return;
+        if (!ids.length) return;
+        if (!window.electronAPI?.runCleanup) {
+            showNotification('error', 'API Unavailable', 'Cleanup run API is not available in this environment.');
+            return;
+        }
+        if (isBusy) {
+            showNotification('info', 'Operation In Progress', 'Another cleanup operation is in progress. Please wait and try again.');
+            return;
+        }
         setBusy(true);
 
         for (const id of ids) {
             const title = getCardTitle(id);
             setCardVisual(id, 'Cleaning...', 'Running the cleanup task now.', null, 'running');
             try {
+                console.log('[cleanup] calling preload API (runCleanup):', id);
                 const result = await window.electronAPI.runCleanup(id);
+                console.log('[cleanup] action result:', id, result);
                 if (result?.success) {
                     completedRuns += 1;
                     setCardVisual(id, 'Completed', result.message || 'Cleanup finished successfully.', '0 B', 'clean');
                     if (lastResult) lastResult.textContent = `${title}: ${result.message || 'Cleanup finished successfully.'}`;
                     showNotification('success', 'Cleanup Complete', result.message || `${title} cleaned successfully.`);
+                } else if (result?.requiresAdmin) {
+                    setCardVisual(id, 'Requires Admin', result.message || 'Requires Administrator to clean this location.', null, 'error');
+                    if (lastResult) lastResult.textContent = `${title}: ${result.message || 'Requires Administrator.'}`;
+                    showNotification('error', 'Admin Required', result.message || `${title} requires Administrator access. Relaunch XTweaks Free as Administrator.`);
                 } else {
                     setCardVisual(id, 'Not completed', result?.message || 'This cleanup target could not be completed.', null, 'error');
                     if (lastResult) lastResult.textContent = `${title}: ${result?.message || 'Cleanup did not complete.'}`;
                     showNotification('error', 'Cleanup Not Completed', result?.message || `${title} could not be cleaned.`);
                 }
             } catch (error) {
+                console.log('[cleanup] action error:', id, error);
                 setCardVisual(id, 'Error', error.message || 'Unexpected cleanup error.', null, 'error');
                 if (lastResult) lastResult.textContent = `${title}: ${error.message || 'Unexpected cleanup error.'}`;
                 showNotification('error', 'Cleanup Error', error.message || `${title} failed to clean.`);
@@ -3204,18 +3239,49 @@ function initializeCleanupDashboard() {
             showNotification('info', 'No Cleanup Selected', 'Choose at least one cleanup target first.');
             return;
         }
+        if (isBusy) {
+            showNotification('info', 'Scan In Progress', 'Please wait for the scan to finish, then try again.');
+            return;
+        }
         const ready = await ensureScanReady();
-        if (!ready) return;
+        if (!ready) {
+            showNotification('info', 'Scan Required', 'Could not prepare scan results. Click "Scan Safe Locations" first.');
+            return;
+        }
         openConfirm(ids);
     });
 
-    document.querySelectorAll('[data-cleanup-run]').forEach((button) => {
-        button.addEventListener('click', async () => {
-            const id = button.dataset.cleanupRun;
+    page.addEventListener('click', async (e) => {
+        const button = e.target.closest('[data-cleanup-action]');
+        if (!button) return;
+        const id = button.dataset.cleanupAction;
+        console.log('[cleanup] clicked:', id);
+        button.disabled = true;
+        try {
+            if (!window.electronAPI?.scanCleanup) {
+                console.log('[cleanup] error: preload API not available');
+                showNotification('error', 'Cleanup Unavailable', 'Cleanup API is not available in this environment.');
+                return;
+            }
+            if (isBusy) {
+                console.log('[cleanup] busy: scan in progress');
+                showNotification('info', 'Scan In Progress', 'Please wait for the current scan to complete, then click Run again.');
+                return;
+            }
+            console.log('[cleanup] calling preload API (ensureScanReady)');
             const ready = await ensureScanReady();
-            if (!ready) return;
+            console.log('[cleanup] ensureScanReady result:', ready);
+            if (!ready) {
+                showNotification('info', 'Scan Required', 'Please click "Scan Safe Locations" before running individual cleanup actions.');
+                return;
+            }
             openConfirm([id]);
-        });
+        } catch (err) {
+            console.log('[cleanup] error:', err);
+            showNotification('error', 'Cleanup Error', err.message || 'An unexpected error occurred.');
+        } finally {
+            button.disabled = isBusy;
+        }
     });
 
     document.querySelectorAll('[data-cleanup-include]').forEach((input) => {
@@ -3231,8 +3297,6 @@ function initializeCleanupDashboard() {
     confirmModal?.querySelectorAll('[data-cleanup-cancel]').forEach((button) => {
         button.addEventListener('click', closeConfirm);
     });
-
-    scanCleanup();
 }
 
 function initializeCleanup() {
@@ -8668,8 +8732,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(finish, 560); // safety net if transitionend doesn't fire
     }
 
-    window.addEventListener('load', () => setTimeout(revealApp, 850));
-    setTimeout(revealApp, 3500); // hard fallback so the loader never hangs
+    const LOADER_MIN_MS = 900; // ← edit this to change how long the loader stays visible (ms)
+    window.addEventListener('load', () => setTimeout(revealApp, LOADER_MIN_MS));
+    setTimeout(revealApp, LOADER_MIN_MS + 3500); // hard fallback so the loader never hangs
 })();
 
 // ── GPU Page ──────────────────────────────────────────────────
@@ -13664,6 +13729,7 @@ const STARTUP_ENTRY_MOTION = {
 };
 let startupPageEnterMotionLastRun = 0;
 let startupAutoScanDone = false;
+let cleanupAutoScanDone = false;
 
 function getStartupEntryCards() {
     const page = document.getElementById('page-startup');

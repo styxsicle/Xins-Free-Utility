@@ -2024,8 +2024,16 @@ ipcMain.handle('apply-recommended-tweaks', async (event, tweakIds) => {
 });
 
 ipcMain.handle('run-cleanup', async (event, type) => {
+    console.log('[cleanup] main handler received:', type);
     const admin = await isRunningAsAdmin();
-    return runCleanupAction(String(type || ''), admin.isAdmin);
+    try {
+        const result = await runCleanupAction(String(type || ''), admin.isAdmin);
+        console.log('[cleanup] action result:', type, JSON.stringify({ success: result.success, message: result.message, requiresAdmin: result.requiresAdmin }));
+        return result;
+    } catch (err) {
+        console.log('[cleanup] action error:', type, err.message);
+        throw err;
+    }
 });
 
 ipcMain.handle('open-external', async (event, url) => {
@@ -2046,10 +2054,13 @@ ipcMain.handle('open-external', async (event, url) => {
 
 // ── Cleanup Scanner (read-only inspection) ────────────────────────────────────
 ipcMain.handle('scan-cleanup', async () => {
+    console.log('[cleanup] main scan handler called');
     const entries = await Promise.all(
         Object.keys(CLEANUP_CARD_ACTIONS).map(async (id) => [id, await scanCleanupAction(id)])
     );
-    return Object.fromEntries(entries);
+    const result = Object.fromEntries(entries);
+    console.log('[cleanup] scan complete:', Object.keys(result).length, 'entries');
+    return result;
 });
 
 // ── Shader Cache Scanner / Cleaner ────────────────────────────────────────────
