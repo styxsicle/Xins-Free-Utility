@@ -1,50 +1,52 @@
 <div align="center">
-  <img src="src/renderer/free_utility_badge.svg" width="90" alt="XTweaks Free Logo" />
+  <img src="assets/icon.ico" width="90" alt="XTweaks Free Logo" />
 
   # XTweaks Free
 
-  ### Clean Windows Utility for Quick PC Maintenance
+  ### Clean Windows Utility
 
   **Simple. Safe. Free.**
 
-  XTweaks Free helps clean junk files, review startup apps, create restore points, and manage basic Windows maintenance from one clean desktop app.
+  XTweaks Free helps clean junk files, review startup apps, create restore points, and manage basic Windows maintenance from one clean app.
 </div>
 
 ---
 
 ## ❔ Why use XTweaks Free?
 
-XTweaks Free is made for users who want a simple Windows utility without confusing menus, fake scans, or sketchy “boost” claims.
+Keeping your PC clean should not be confusing, sketchy, or full of fake “boost” claims.
 
-It focuses on useful free tools like cleanup, startup review, restore points, and basic system maintenance in a clean black-and-white interface.
+XTweaks Free gives you simple cleanup tools, startup review, restore point controls, and basic Windows maintenance in one clean desktop app.
 
 ---
 
 ## ✨ Main Features
 
-- 🧹 **Cleanup Tools**  
-  Clean temporary files, cache folders, logs, and other safe junk files.
+- **Cleanup tools**
+- **Startup app manager**
+- **Restore point creation**
+- **Restore protection status**
+- **Safe cleanup confirmations**
+- **Smooth startup loading screen**
+- **Clean black-and-white dashboard**
+- **Simple tools for everyday PC maintenance**
 
-- 🚀 **Startup Manager**  
-  Review startup apps and manage unnecessary startup entries.
+---
 
-- 🛡️ **Restore Point Tools**  
-  Check restore point status and create a Windows restore point before making changes.
+## 🖥️ Built For
 
-- ⚙️ **Settings Page**  
-  Simple settings area for app preferences and controls.
+XTweaks Free is designed for everyday Windows users who want a cleaner, smoother PC without digging through system menus.
 
-- 🎬 **Smooth Startup Experience**  
-  Includes a polished loading screen and Home page entrance animation.
-
-- 🖥️ **Clean Dashboard**  
-  Minimal Home page layout with quick access to the most important tools.
+No login required.  
+No premium account required.  
+No fake scan results.  
+No confusing setup.
 
 ---
 
 ## 📦 Download
 
-Download the latest installer from the **Releases** page:
+Download the latest version from the **Releases** page:
 
 ➡️ **[Download XTweaks Free](../../releases/latest)**
 
