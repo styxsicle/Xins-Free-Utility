@@ -38,6 +38,15 @@
 </head>
 
 <body>
+    <div class="app-loading-screen" id="app-loading-screen" role="status" aria-live="polite">
+        <div class="app-loading-inner">
+            <div class="app-loading-mark">
+                <img src="../../assets/XTweaks_Logo.png" alt="">
+            </div>
+            <div class="app-loading-spinner" aria-hidden="true"></div>
+            <p class="app-loading-text">Loading XTweaks Free…</p>
+        </div>
+    </div>
     <div class="app-container" id="app-container">
         <div class="titlebar" id="titlebar">
             <div class="titlebar-drag">
@@ -74,7 +83,7 @@
                         </div>
                     </div>
                     <div class="branding-profile-text">
-                        <span class="branding-profile-title">XTweaks Free</span>
+                        <span class="branding-profile-title">Xin's Free Utility</span>
                         <span class="branding-profile-handle">FREE EDITION</span>
                     </div>
                     <div class="branding-profile-divider" aria-hidden="true"></div>
@@ -118,7 +127,11 @@
                 </button>
 
                 <div class="nav-upgrade">
-                    <img class="free-utility-badge-svg" src="free_utility_badge.svg" alt="Free Utility">
+                    <svg class="nav-upgrade-crown-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/>
+                        <path d="m8.2 12.2 2.3 2.3 5.3-5.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="nav-upgrade-label">FREE</span>
                 </div>
             </nav>
 
@@ -141,7 +154,8 @@
                         </button>
                         <button class="top-bar-cta" id="upgrade-premium-btn" type="button">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 2l2.9 6 6.6.9-4.8 4.7 1.2 6.5L12 17l-5.9 3.1 1.2-6.5-4.8-4.7 6.6-.9L12 2z"/>
+                                <rect x="3" y="11" width="18" height="11" rx="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                             </svg>
                             Upgrade to Premium
                         </button>
@@ -149,7 +163,7 @@
                 </div>
 
                 <div class="page-body">
-                <div id="page-dashboard" class="page active dash-entered">
+                <div id="page-dashboard" class="page active">
                     <section class="hero glass xt-free-hero" id="hero-card">
                         <div class="hero-bg-orbs" aria-hidden="true">
                             <span class="orb o1"></span>
@@ -3444,6 +3458,8 @@
 
                 </div>
 
+                <div id="page-startup" class="page"></div>
+
                 <div id="page-about" class="page">
                     <div class="page-header">
                         <h1>About</h1>
@@ -4471,6 +4487,23 @@
                     <p class="dns-depth-hint">Accurate is recommended for most users. Deep adds more rounds for the steadiest results on noisy connections. Quick is useful for a rough check only.</p>
                     <div class="dns-log-entries" id="dns-log-entries"></div>
                 </details>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Free Tweak Confirm Modal ─────────────────────────── -->
+    <div id="free-tweak-confirm-modal" class="xt-tweak-confirm-overlay" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="xt-tweak-confirm-card">
+            <div class="xt-tweak-confirm-kicker">CONFIRM TWEAKS</div>
+            <div class="xt-tweak-confirm-head">
+                <h2>Apply Selected Tweaks</h2>
+                <p>The following tweaks will be applied to your Windows system.</p>
+            </div>
+            <div class="xt-tweak-confirm-list" id="free-tweak-confirm-list"></div>
+            <div class="xt-tweak-confirm-warning">Admin-required items will be skipped if not running as administrator.</div>
+            <div class="xt-tweak-confirm-actions">
+                <button class="xt-tweak-modal-btn ghost" type="button" data-free-tweak-cancel>Cancel</button>
+                <button class="xt-tweak-modal-btn" type="button" data-free-tweak-apply>Apply Tweaks</button>
             </div>
         </div>
     </div>

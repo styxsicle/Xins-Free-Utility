@@ -6,13 +6,9 @@ const fs = require('fs');
 const https = require('https');
 const http = require('http');
 
-const xinAuth = require('./xin-auth');
-const firebaseConfig = require('./firebase-config');
-const APP_ID = 'xin-premium-optimizer';
-
 // Set userData before ready so Electron can create its cache without access-denied errors.
 const appDataRoot = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
-app.setPath('userData', path.join(appDataRoot, 'XinPremiumOptimizer'));
+app.setPath('userData', path.join(appDataRoot, 'XTweaksFree'));
 
 let mainWindow;
 let nativeAddon = null;
@@ -46,20 +42,8 @@ function createWindow() {
     mainWindow.setMenu(null);
 }
 
-app.whenReady().then(async () => {
-    const ok = await xinAuth.validate({
-        firebaseConfig,
-        appId: APP_ID,
-        sessionPath: path.join(app.getPath('userData'), 'xin-session.json')
-    });
-    if (!ok.success) {
-        const { dialog } = require('electron');
-        dialog.showErrorBox('Access Denied', ok.error || 'License validation failed.');
-        app.quit();
-        return;
-    }
-
-    console.log('[XIN TWEAKS] Xin Premium Optimizer starting...');
+app.whenReady().then(() => {
+    console.log('[XIN TWEAKS] Xin Free Utility starting...');
     console.log('[XIN TWEAKS] Debug console ready. All tweak operations will be logged below.');
     createWindow();
 });
@@ -599,6 +583,603 @@ function runNetworkCommand(command, args, timeout = 12000) {
         });
     });
 }
+
+function isRunningAsAdmin() {
+    if (process.platform !== 'win32') {
+        return Promise.resolve({ isAdmin: false });
+    }
+
+    return new Promise(resolve => {
+        execFile('net', ['session'], { windowsHide: true, timeout: 3000 }, err => {
+            resolve({ isAdmin: !err });
+        });
+    });
+}
+
+function envPath(...segments) {
+    return path.join(...segments.filter(Boolean));
+}
+
+const FREE_HOME_TWEAK_ACTIONS = {
+    'flush-dns': {
+        title: 'Flush DNS Cache',
+        requiresAdmin: false,
+        run: async () => {
+            const result = await runNetworkCommand('ipconfig', ['/flushdns'], 10000);
+            return {
+                success: result.success,
+                message: result.success ? 'DNS resolver cache flushed.' : result.message
+            };
+        }
+    },
+    'windows-temp': {
+        title: 'Windows Temp Cleanup',
+        requiresAdmin: false,
+        paths: [
+            process.env.TEMP,
+            envPath(process.env.LOCALAPPDATA, 'Temp')
+        ]
+    },
+    'browser-cache': {
+        title: 'Browser Cache Cleanup',
+        requiresAdmin: false,
+        paths: [
+            envPath(process.env.LOCALAPPDATA, 'Microsoft', 'Windows', 'INetCache'),
+            envPath(process.env.LOCALAPPDATA, 'Microsoft', 'Windows', 'INetCookies'),
+            envPath(process.env.LOCALAPPDATA, 'Microsoft', 'Windows', 'WebCache')
+        ]
+    },
+    'discord-cache': {
+        title: 'Discord Cache Cleanup',
+        requiresAdmin: false,
+        paths: [
+            envPath(process.env.APPDATA, 'Discord', 'Cache'),
+            envPath(process.env.APPDATA, 'Discord', 'Code Cache')
+        ]
+    },
+    'windows-update': {
+        title: 'Windows Update Cleanup',
+        requiresAdmin: true,
+        paths: [
+            envPath(process.env.PROGRAMDATA, 'USOPrivate', 'UpdateStore'),
+            envPath(process.env.PROGRAMDATA, 'USOShared', 'Logs')
+        ]
+    },
+    'upgrade-leftovers': {
+        title: 'Upgrade Leftovers',
+        requiresAdmin: true,
+        paths: [
+            'C:\\$GetCurrent',
+            'C:\\$SysReset',
+            'C:\\$Windows.~BT',
+            'C:\\$Windows.~WS',
+            'C:\\$WinREAgent'
+        ]
+    },
+    'onedrive-temp': {
+        title: 'OneDrive Temp Cleanup',
+        requiresAdmin: false,
+        paths: [
+            `${process.env.SystemDrive || 'C:'}\\OneDriveTemp`
+        ]
+    },
+    'sleepstudy': {
+        title: 'SleepStudy Cleanup',
+        requiresAdmin: true,
+        paths: [
+            envPath(process.env.SystemRoot || 'C:\\Windows', 'System32', 'SleepStudy')
+        ]
+    },
+    'windows-logs': {
+        title: 'Windows Logs Cleanup',
+        requiresAdmin: true,
+        paths: [
+            envPath(process.env.WINDIR || 'C:\\Windows', 'Logs')
+        ]
+    },
+    'recycle-bin': {
+        title: 'Recycle Bin Cleanup',
+        requiresAdmin: false,
+        run: async () => {
+            const result = await runPowerShellText('Clear-RecycleBin -Force -ErrorAction SilentlyContinue', 20000);
+            return {
+                success: result.success,
+                deletedCount: null,
+                freedBytes: null,
+                message: result.success
+                    ? 'Recycle Bin emptied safely.'
+                    : (result.message || 'Recycle Bin cleanup could not complete.')
+            };
+        }
+    },
+    'directx-shader-cache': {
+        title: 'DirectX Shader Cache',
+        requiresAdmin: false,
+        allowPartialSuccess: true,
+        measureBefore: true,
+        paths: [
+            envPath(process.env.LOCALAPPDATA, 'D3DSCache'),
+            envPath(process.env.LOCALAPPDATA, 'NVIDIA', 'DXCache'),
+            envPath(process.env.LOCALAPPDATA, 'AMD', 'DxCache')
+        ]
+    }
+};
+
+async function removeDirectoryContents(targetPath) {
+    if (!targetPath || typeof targetPath !== 'string') {
+        return { path: targetPath || '', success: true, skipped: true, message: 'No path configured.' };
+    }
+
+    try {
+        const entries = await fs.promises.readdir(targetPath, { withFileTypes: true });
+        let removed = 0;
+        let failed = 0;
+
+        for (const entry of entries) {
+            const child = path.join(targetPath, entry.name);
+            try {
+                await fs.promises.rm(child, { recursive: true, force: true, maxRetries: 1 });
+                removed++;
+            } catch (error) {
+                failed++;
+            }
+        }
+
+        return {
+            path: targetPath,
+            success: failed === 0,
+            removed,
+            failed,
+            message: failed === 0 ? `Cleared ${removed} item(s).` : `Cleared ${removed} item(s), ${failed} could not be removed.`
+        };
+    } catch (error) {
+        if (error && error.code === 'ENOENT') {
+            return { path: targetPath, success: true, skipped: true, message: 'Folder not found.' };
+        }
+        return { path: targetPath, success: false, message: error.message || 'Could not access folder.' };
+    }
+}
+
+async function measureDirectoryContents(targetPath) {
+    if (!targetPath || typeof targetPath !== 'string') {
+        return { path: targetPath || '', bytes: 0, count: 0, missing: true, accessible: true };
+    }
+
+    const totals = { path: targetPath, bytes: 0, count: 0, missing: false, accessible: true };
+
+    async function walk(currentPath) {
+        let entries;
+        try {
+            entries = await fs.promises.readdir(currentPath, { withFileTypes: true });
+        } catch (error) {
+            if (error?.code === 'ENOENT') {
+                totals.missing = true;
+                return;
+            }
+            if (error?.code === 'EACCES' || error?.code === 'EPERM') {
+                totals.accessible = false;
+                return;
+            }
+            throw error;
+        }
+
+        for (const entry of entries) {
+            const child = path.join(currentPath, entry.name);
+            if (entry.isDirectory()) {
+                await walk(child);
+                continue;
+            }
+
+            try {
+                const stat = await fs.promises.stat(child);
+                totals.count += 1;
+                totals.bytes += Number(stat.size) || 0;
+            } catch (error) {
+                if (error?.code === 'ENOENT') continue;
+                if (error?.code === 'EACCES' || error?.code === 'EPERM') {
+                    totals.accessible = false;
+                    continue;
+                }
+                throw error;
+            }
+        }
+    }
+
+    try {
+        await walk(targetPath);
+    } catch (error) {
+        return {
+            path: targetPath,
+            bytes: 0,
+            count: 0,
+            missing: error?.code === 'ENOENT',
+            accessible: !(error?.code === 'EACCES' || error?.code === 'EPERM'),
+            error: error?.message || 'Could not scan folder.'
+        };
+    }
+
+    return totals;
+}
+
+async function runFreeHomeTweakAction(actionId, isAdmin) {
+    const action = FREE_HOME_TWEAK_ACTIONS[actionId];
+    if (!action) {
+        return { id: actionId, title: String(actionId || 'Unknown'), success: false, message: 'Unknown cleanup action.' };
+    }
+
+    if (action.requiresAdmin && !isAdmin) {
+        return {
+            id: actionId,
+            title: action.title,
+            success: false,
+            skipped: true,
+            requiresAdmin: true,
+            message: 'Requires Administrator. Run XTweaks Free as Administrator to apply this card.'
+        };
+    }
+
+    if (typeof action.run === 'function') {
+        const result = await action.run();
+        return {
+            id: actionId,
+            title: action.title,
+            requiresAdmin: action.requiresAdmin,
+            success: result.success === true,
+            deletedCount: result.deletedCount,
+            freedBytes: result.freedBytes,
+            message: result.message || (result.success ? 'Completed.' : 'Failed.')
+        };
+    }
+
+    const beforeResults = [];
+    if (action.measureBefore) {
+        for (const targetPath of action.paths || []) {
+            beforeResults.push(await measureDirectoryContents(targetPath));
+        }
+    }
+
+    const pathResults = [];
+    for (const targetPath of action.paths || []) {
+        pathResults.push(await removeDirectoryContents(targetPath));
+    }
+
+    const failures = pathResults.filter(result => !result.success);
+    const skipped = pathResults.filter(result => result.skipped).length;
+    const removed = pathResults.reduce((sum, result) => sum + (Number(result.removed) || 0), 0);
+    const failed = pathResults.reduce((sum, result) => sum + (Number(result.failed) || 0), 0);
+    const freedBytes = beforeResults.reduce((sum, result) => sum + (Number(result.bytes) || 0), 0);
+    const success = failures.length === 0 || action.allowPartialSuccess === true;
+
+    return {
+        id: actionId,
+        title: action.title,
+        requiresAdmin: action.requiresAdmin,
+        success,
+        deletedCount: removed,
+        freedBytes: action.measureBefore ? freedBytes : undefined,
+        message: failures.length === 0
+            ? `Completed. Removed ${removed} item(s)${skipped ? `; ${skipped} folder(s) were missing.` : '.'}`
+            : action.allowPartialSuccess
+                ? `Completed with ${failed || failures.length} locked item(s) skipped.${removed ? ` Removed ${removed} item(s).` : ''}`
+                : `${failures.length} location(s) could not be cleaned.`,
+        details: pathResults
+    };
+}
+
+const CLEANUP_CARD_ACTIONS = {
+    'windows-temp': {
+        title: 'Windows Temp',
+        requiresAdmin: true,
+        paths: [envPath(process.env.WINDIR || 'C:\\Windows', 'Temp')]
+    },
+    'user-temp': {
+        title: 'User Temp',
+        requiresAdmin: false,
+        paths: [process.env.TEMP, envPath(process.env.LOCALAPPDATA, 'Temp')]
+    },
+    'browser-cache': {
+        title: 'Browser Cache',
+        requiresAdmin: false,
+        paths: [
+            envPath(process.env.LOCALAPPDATA, 'Microsoft', 'Windows', 'INetCache'),
+            envPath(process.env.LOCALAPPDATA, 'Microsoft', 'Windows', 'INetCookies'),
+            envPath(process.env.LOCALAPPDATA, 'Microsoft', 'Windows', 'WebCache')
+        ]
+    },
+    'discord-cache': {
+        title: 'Discord Cache',
+        requiresAdmin: false,
+        paths: [
+            envPath(process.env.APPDATA, 'Discord', 'Cache'),
+            envPath(process.env.APPDATA, 'Discord', 'Code Cache')
+        ]
+    },
+    'windows-update-logs': {
+        title: 'Windows Update Logs',
+        requiresAdmin: true,
+        paths: [envPath(process.env.PROGRAMDATA, 'USOShared', 'Logs')]
+    },
+    'onedrive-temp': {
+        title: 'OneDrive Temp',
+        requiresAdmin: false,
+        paths: [`${process.env.SystemDrive || 'C:'}\\OneDriveTemp`]
+    },
+    'sleepstudy-reports': {
+        title: 'SleepStudy Reports',
+        requiresAdmin: true,
+        paths: [envPath(process.env.SystemRoot || 'C:\\Windows', 'System32', 'SleepStudy')]
+    },
+    'windows-logs': {
+        title: 'Windows Logs',
+        requiresAdmin: true,
+        paths: [envPath(process.env.WINDIR || 'C:\\Windows', 'Logs')]
+    }
+};
+
+async function scanCleanupAction(actionId) {
+    const action = CLEANUP_CARD_ACTIONS[actionId];
+    if (!action) {
+        return { id: actionId, title: String(actionId || 'Unknown'), bytes: 0, count: 0, success: false, message: 'Unknown cleanup action.' };
+    }
+
+    const pathResults = [];
+    for (const targetPath of action.paths || []) {
+        pathResults.push(await measureDirectoryContents(targetPath));
+    }
+
+    const bytes = pathResults.reduce((sum, result) => sum + (Number(result.bytes) || 0), 0);
+    const count = pathResults.reduce((sum, result) => sum + (Number(result.count) || 0), 0);
+    const accessible = pathResults.every(result => result.accessible !== false);
+    const missingOnly = pathResults.every(result => result.missing === true || ((result.count || 0) === 0 && (result.bytes || 0) === 0));
+
+    return {
+        id: actionId,
+        title: action.title,
+        requiresAdmin: action.requiresAdmin === true,
+        bytes,
+        count,
+        success: true,
+        accessible,
+        missingOnly,
+        message: accessible ? (bytes > 0 || count > 0 ? 'Ready to clean.' : 'Nothing to clean.') : 'Some files could not be inspected.',
+        details: pathResults
+    };
+}
+
+async function runCleanupAction(actionId, isAdmin) {
+    const action = CLEANUP_CARD_ACTIONS[actionId];
+    if (!action) {
+        return { id: actionId, title: String(actionId || 'Unknown'), success: false, message: 'Unknown cleanup action.' };
+    }
+
+    if (action.requiresAdmin && !isAdmin) {
+        return {
+            id: actionId,
+            title: action.title,
+            success: false,
+            skipped: true,
+            requiresAdmin: true,
+            message: 'Requires Administrator. Run XTweaks Free as Administrator to clean this category.'
+        };
+    }
+
+    const pathResults = [];
+    for (const targetPath of action.paths || []) {
+        pathResults.push(await removeDirectoryContents(targetPath));
+    }
+
+    const failures = pathResults.filter(result => !result.success);
+    const removed = pathResults.reduce((sum, result) => sum + (Number(result.removed) || 0), 0);
+    const skipped = pathResults.filter(result => result.skipped).length;
+
+    return {
+        id: actionId,
+        title: action.title,
+        requiresAdmin: action.requiresAdmin === true,
+        success: failures.length === 0,
+        message: failures.length === 0
+            ? `Completed. Removed ${removed} item(s)${skipped ? `; ${skipped} folder(s) were missing.` : '.'}`
+            : `${failures.length} location(s) could not be cleaned.`,
+        details: pathResults
+    };
+}
+
+ipcMain.handle('free-home-tweak-status', async () => {
+    const admin = await isRunningAsAdmin();
+    return {
+        isAdmin: admin.isAdmin,
+        actions: Object.entries(FREE_HOME_TWEAK_ACTIONS).map(([id, action]) => ({
+            id,
+            title: action.title,
+            requiresAdmin: action.requiresAdmin === true
+        }))
+    };
+});
+
+ipcMain.handle('run-free-home-tweaks', async (event, actionIds) => {
+    const selectedIds = Array.isArray(actionIds) ? actionIds.map(String) : [];
+    const allowedIds = selectedIds.filter(id => Object.prototype.hasOwnProperty.call(FREE_HOME_TWEAK_ACTIONS, id));
+    const admin = await isRunningAsAdmin();
+    const results = [];
+
+    for (let i = 0; i < allowedIds.length; i++) {
+        const id = allowedIds[i];
+        event.sender.send('free-home-tweak-progress', {
+            id,
+            step: i + 1,
+            total: allowedIds.length,
+            status: 'running'
+        });
+
+        const result = await runFreeHomeTweakAction(id, admin.isAdmin);
+        results.push(result);
+
+        event.sender.send('free-home-tweak-progress', {
+            id,
+            step: i + 1,
+            total: allowedIds.length,
+            status: result.success ? 'done' : 'failed',
+            result
+        });
+    }
+
+    return {
+        success: results.every(result => result.success || result.skipped),
+        isAdmin: admin.isAdmin,
+        results
+    };
+});
+
+function runPowerShellText(script, timeout = 15000) {
+    return new Promise((resolve) => {
+        execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script], {
+            windowsHide: true,
+            timeout,
+            maxBuffer: 1024 * 1024
+        }, (error, stdout, stderr) => {
+            resolve({
+                success: !error,
+                stdout: (stdout || '').trim(),
+                stderr: (stderr || '').trim(),
+                message: error ? ((stderr || '').trim() || error.message) : ''
+            });
+        });
+    });
+}
+
+async function getRestorePointStatus() {
+    const admin = await isRunningAsAdmin();
+    const script = `
+$ErrorActionPreference = 'SilentlyContinue'
+$rps = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
+$rp = $null
+if ($rps) { $rp = $rps | Sort-Object -Property SequenceNumber -Descending | Select-Object -First 1 }
+$srReg = Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SystemRestore' -ErrorAction SilentlyContinue
+$globallyDisabled = ($null -ne $srReg) -and ($null -ne $srReg.PSObject.Properties['DisableSR']) -and ([int]$srReg.DisableSR -eq 1)
+$sysDrive = $env:SystemDrive
+$driveCfg = Get-CimInstance -ClassName SystemRestoreConfig -Namespace root/default -ErrorAction SilentlyContinue | Where-Object { $_.VolumeName -like "$sysDrive*" } | Select-Object -First 1
+$enabled = (-not $globallyDisabled) -and ($null -ne $driveCfg)
+$rpDate = $null
+if ($rp -and $rp.CreationTime) {
+  $raw = [string]$rp.CreationTime
+  if ($raw -match '^(\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})') {
+    $rpDate = "$($Matches[1])-$($Matches[2])-$($Matches[3])T$($Matches[4]):$($Matches[5]):$($Matches[6])"
+  }
+}
+[PSCustomObject]@{
+  protectionEnabled = [bool]$enabled
+  latestDescription = if ($rp) { [string]$rp.Description } else { $null }
+  latestSequence    = if ($rp) { [int]$rp.SequenceNumber } else { $null }
+  latestCreatedAt   = $rpDate
+  latestRpType      = if ($rp) { [int]$rp.RestorePointType } else { $null }
+} | ConvertTo-Json -Compress
+`;
+
+    const result = await runPowerShellText(script, 15000);
+    let data = null;
+    try {
+        data = result.stdout ? JSON.parse(result.stdout) : null;
+    } catch {
+        data = null;
+    }
+
+    return {
+        success: true,
+        isAdmin: admin.isAdmin,
+        protectionEnabled: data?.protectionEnabled === true,
+        latestRestorePoint: data?.latestDescription ? {
+            description: data.latestDescription,
+            sequenceNumber: data.latestSequence ?? null,
+            createdAt: data.latestCreatedAt || null,
+            rpType: data.latestRpType ?? null
+        } : null,
+        message: data ? '' : 'System Restore status could not be fully detected.'
+    };
+}
+
+async function createRestorePoint() {
+    const admin = await isRunningAsAdmin();
+    if (!admin.isAdmin) {
+        return {
+            success: false,
+            requiresAdmin: true,
+            message: 'Administrator privileges are required to create a restore point.'
+        };
+    }
+
+    const status = await getRestorePointStatus();
+    if (!status.protectionEnabled) {
+        return {
+            success: false,
+            requiresAdmin: false,
+            message: 'System Restore appears to be disabled on this PC. Enable system protection in Windows first.'
+        };
+    }
+
+    const script = `
+$ErrorActionPreference = 'SilentlyContinue'
+$before = 0
+$rps = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
+if ($rps) { $before = ($rps | Measure-Object -Property SequenceNumber -Maximum).Maximum }
+if ($null -eq $before) { $before = 0 }
+$created = $false
+$errMsg = $null
+try {
+  Checkpoint-Computer -Description 'XTweaks Free Restore Point' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop
+  $rpsAfter = Get-ComputerRestorePoint -ErrorAction SilentlyContinue
+  $after = 0
+  if ($rpsAfter) { $after = ($rpsAfter | Measure-Object -Property SequenceNumber -Maximum).Maximum }
+  if ($null -eq $after) { $after = 0 }
+  $created = [int]$after -gt [int]$before
+  if (-not $created) { $errMsg = 'Windows did not create the restore point. A restore point may already exist for today — Windows limits creation to once per 24 hours.' }
+} catch {
+  $errMsg = $_.Exception.Message
+}
+[PSCustomObject]@{ created = [bool]$created; error = $errMsg } | ConvertTo-Json -Compress
+`;
+
+    const createResult = await runPowerShellText(script, 30000);
+    let data = null;
+    try {
+        data = createResult.stdout ? JSON.parse(createResult.stdout) : null;
+    } catch {
+        data = null;
+    }
+
+    if (!createResult.success && !data) {
+        return { success: false, requiresAdmin: false, message: createResult.message || 'Windows did not create the restore point.' };
+    }
+
+    if (data?.created === true) {
+        return { success: true, message: 'XTweaks Free Restore Point created successfully.' };
+    }
+
+    return {
+        success: false,
+        requiresAdmin: false,
+        message: data?.error || 'Windows did not create the restore point.'
+    };
+}
+
+ipcMain.handle('get-restore-point-status', async () => getRestorePointStatus());
+ipcMain.handle('create-restore-point', async () => createRestorePoint());
+ipcMain.handle('open-windows-system-restore', async () => {
+    const systemRoot = process.env.SystemRoot || 'C:\\Windows';
+    const restoreUi = path.join(systemRoot, 'System32', 'rstrui.exe');
+    const protectionUi = path.join(systemRoot, 'System32', 'SystemPropertiesProtection.exe');
+
+    try {
+        const result = await shell.openPath(restoreUi);
+        if (!result) return { success: true, message: 'Windows System Restore opened.' };
+    } catch {}
+
+    try {
+        const result = await shell.openPath(protectionUi);
+        if (!result) return { success: true, message: 'System protection settings opened.' };
+    } catch {}
+
+    return { success: false, message: 'Windows System Restore could not be opened.' };
+});
 
 async function runNetworkPowerShellJson(script, timeout = 12000) {
     const result = await runNetworkCommand('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], timeout);
@@ -1443,85 +2024,32 @@ ipcMain.handle('apply-recommended-tweaks', async (event, tweakIds) => {
 });
 
 ipcMain.handle('run-cleanup', async (event, type) => {
-    const timestamp = new Date().toLocaleTimeString();
-    console.log(`\n[${timestamp}] ========================================`);
-    console.log(`[${timestamp}] CLEANUP REQUEST: ${type}`);
-
-    const commands = {
-        'temp': 'del /q /f /s %TEMP%\\* 2>nul & del /q /f /s C:\\Windows\\Temp\\* 2>nul',
-        'prefetch': 'del /q /s C:\\Windows\\Prefetch\\*.pf 2>nul',
-        'dns': 'ipconfig /flushdns',
-        'recycle': 'powershell -Command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"',
-        'windows-update': 'del /q /s C:\\Windows\\SoftwareDistribution\\Download\\* 2>nul'
-    };
-
-    const command = commands[type];
-    if (!command) {
-        console.log(`[${timestamp}] STATUS: FAILED - Unknown cleanup type`);
-        console.log(`[${timestamp}] ========================================\n`);
-        return { success: false, message: 'Unknown cleanup type' };
-    }
-
-    console.log(`[${timestamp}] COMMAND: ${command}`);
-
-    return new Promise((resolve) => {
-        exec(command, { shell: 'cmd.exe', windowsHide: true }, (error, stdout, stderr) => {
-            if (error) {
-                console.log(`[${timestamp}] STATUS: COMPLETED (with warnings)`);
-                if (stderr) console.log(`[${timestamp}] STDERR: ${stderr}`);
-            } else {
-                console.log(`[${timestamp}] STATUS: SUCCESS`);
-                if (stdout) console.log(`[${timestamp}] OUTPUT: ${stdout.trim()}`);
-            }
-            console.log(`[${timestamp}] ========================================\n`);
-            resolve({
-                success: true,
-                message: `${type.charAt(0).toUpperCase() + type.slice(1)} cleanup completed!`
-            });
-        });
-    });
+    const admin = await isRunningAsAdmin();
+    return runCleanupAction(String(type || ''), admin.isAdmin);
 });
 
 ipcMain.handle('open-external', async (event, url) => {
-    shell.openExternal(url);
+    const target = String(url || '');
+    let parsed;
+    try {
+        parsed = new URL(target);
+    } catch {
+        return { success: false, message: 'Invalid external URL' };
+    }
+
+    if (parsed.protocol !== 'https:') {
+        return { success: false, message: 'External URL must use HTTPS' };
+    }
+
+    return shell.openExternal(parsed.href);
 });
 
 // ── Cleanup Scanner (read-only inspection) ────────────────────────────────────
 ipcMain.handle('scan-cleanup', async () => {
-    function run(cmd, opts) {
-        return new Promise(resolve => {
-            exec(cmd, { shell: 'cmd.exe', windowsHide: true, timeout: 12000, ...opts }, (err, stdout) => {
-                resolve(stdout || '');
-            });
-        });
-    }
-
-    const [tempOut, dnsOut, recycleOut, prefetchOut, wuOut] = await Promise.all([
-        run(`powershell -NoProfile -NonInteractive -Command "try{$f=Get-ChildItem -Path @($env:TEMP,'C:\\Windows\\Temp') -File -Force -Recurse -ErrorAction SilentlyContinue;Write-Output ('{0}|{1}' -f $f.Count,($f|Measure-Object -Property Length -Sum).Sum)}catch{Write-Output '0|0'}"`),
-        run('ipconfig /displaydns'),
-        run(`powershell -NoProfile -NonInteractive -Command "try{$f=Get-ChildItem 'C:\\$Recycle.Bin' -Force -Recurse -ErrorAction SilentlyContinue;Write-Output ('{0}|{1}' -f $f.Count,($f|Measure-Object -Property Length -Sum).Sum)}catch{Write-Output '0|0'}"`),
-        run(`powershell -NoProfile -NonInteractive -Command "try{$f=Get-ChildItem 'C:\\Windows\\Prefetch' -Filter '*.pf' -Force -ErrorAction SilentlyContinue;Write-Output $f.Count}catch{Write-Output '0'}"`),
-        run(`powershell -NoProfile -NonInteractive -Command "try{$f=Get-ChildItem 'C:\\Windows\\SoftwareDistribution\\Download' -File -Force -Recurse -ErrorAction SilentlyContinue;Write-Output ('{0}|{1}' -f $f.Count,($f|Measure-Object -Property Length -Sum).Sum)}catch{Write-Output '0|0'}"`)
-    ]);
-
-    function parsePair(s) {
-        const [c, b] = (s || '').trim().split('|');
-        return { count: parseInt(c, 10) || 0, bytes: parseInt(b, 10) || 0 };
-    }
-
-    const temp    = parsePair(tempOut);
-    const recycle = parsePair(recycleOut);
-    const wu      = parsePair(wuOut);
-    const prefetchCount = parseInt((prefetchOut || '').trim(), 10) || 0;
-    const dnsEntries = (dnsOut.match(/Record Name/gi) || []).length;
-
-    return {
-        temp:            { count: temp.count,    bytes: temp.bytes    },
-        dns:             { entries: dnsEntries                         },
-        recycle:         { count: recycle.count, bytes: recycle.bytes },
-        prefetch:        { count: prefetchCount                        },
-        'windows-update':{ count: wu.count,      bytes: wu.bytes      }
-    };
+    const entries = await Promise.all(
+        Object.keys(CLEANUP_CARD_ACTIONS).map(async (id) => [id, await scanCleanupAction(id)])
+    );
+    return Object.fromEntries(entries);
 });
 
 // ── Shader Cache Scanner / Cleaner ────────────────────────────────────────────
@@ -2252,8 +2780,8 @@ async function collectStartupContext() {
         `if($p){$p.PSObject.Properties|Where-Object{$_.Name -notmatch '^PS'}|ForEach-Object{` +
         `$r+=@{Name=$_.Name;Cmd=[string]$_.Value;Source=$k}}}}}` +
         `;$sf=@([System.Environment]::GetFolderPath('Startup'),[System.Environment]::GetFolderPath('CommonStartup'));` +
-        `foreach($f in $sf){if(Test-Path $f){Get-ChildItem -Path $f -EA SilentlyContinue|ForEach-Object{` +
-        `$r+=@{Name=$_.BaseName;Cmd=$_.FullName;Source='StartupFolder'}}}}` +
+        `foreach($f in $sf){if(Test-Path $f){Get-ChildItem -Path $f -Filter '*.lnk' -EA SilentlyContinue|ForEach-Object{` +
+        `$r+=@{Name=$_.BaseName;Cmd=$_.FullName;Source=('StartupFolder:'+$_.FullName)}}}}` +
         `;if($r.Count -eq 0){return '[]'} else {$r|ConvertTo-Json -Compress}`;
 
     // ── Script 2: Scheduled tasks with logon/boot triggers ──────────────────
@@ -2267,9 +2795,10 @@ async function collectStartupContext() {
         `}}}catch{};` +
         `if($r.Count -eq 0){return '[]'} else {($r|Select-Object -First 40)|ConvertTo-Json -Compress}`;
 
-    const [rawReg, rawTasks] = await Promise.all([
+    const [rawReg, rawTasks, adminResult] = await Promise.all([
         runPS(regScript, 12000),
         runPS(taskScript, 14000),
+        isRunningAsAdmin().catch(() => ({ isAdmin: false })),
     ]);
 
     // ── Parse registry + startup folder entries ────────────────────────────
@@ -2283,17 +2812,25 @@ async function collectStartupContext() {
             if (INTERNAL_PROTECTED_PROCESSES.has((entry.Name || '').toLowerCase().replace(/\s+/g, ''))) continue;
             const cls = classifyStartupEntry(entry.Name, entry.Cmd);
             if (!cls) continue;
+            const isFolder = (entry.Source || '').startsWith('StartupFolder:');
+            const folderFilePath = isFolder ? (entry.Source || '').slice('StartupFolder:'.length) : '';
+            const srcKey = isFolder ? 'Startup Folder' : (entry.Source || '');
+            const isHklm = !isFolder && (srcKey.toLowerCase().includes('hklm') || srcKey.toLowerCase().includes('wow6432'));
+            const isCommonFolder = isFolder && folderFilePath.toLowerCase().includes('\\programdata\\');
             const item = {
-                name:     entry.Name,
-                command:  (entry.Cmd || '').slice(0, 200),
-                source:   entry.Source === 'StartupFolder' ? 'Startup Folder' : (entry.Source || ''),
-                display:  cls.display,
-                category: cls.category,
-                bucket:   cls.bucket,
-                safe:     cls.safe,
+                name:          entry.Name,
+                command:       (entry.Cmd || '').slice(0, 260),
+                source:        srcKey,
+                location:      isFolder ? folderFilePath : srcKey,
+                requiresAdmin: isHklm || isCommonFolder,
+                display:       cls.display,
+                category:      cls.category,
+                bucket:        cls.bucket,
+                safe:          cls.safe,
+                safeToDisable: cls.safe,
             };
-            if (entry.Source === 'StartupFolder') folderEntries.push(item);
-            else                                   registryEntries.push(item);
+            if (isFolder) folderEntries.push(item);
+            else          registryEntries.push(item);
         }
     }
 
@@ -2307,14 +2844,17 @@ async function collectStartupContext() {
             const cls = classifyStartupEntry(t.Name, t.Action);
             if (cls && cls.bucket === 'protected') continue; // skip Windows-protected tasks
             scheduledTasks.push({
-                name:     t.Name,
-                path:     t.Path || '\\',
-                state:    t.State || 'Ready',
-                action:   (t.Action || '').slice(0, 150),
-                display:  cls ? cls.display : t.Name,
-                category: cls ? cls.category : 'Unknown',
-                bucket:   cls ? cls.bucket   : 'unknown',
-                safe:     cls ? cls.safe      : false,
+                name:          t.Name,
+                path:          t.Path || '\\',
+                location:      t.Path || '\\',
+                state:         t.State || 'Ready',
+                action:        (t.Action || '').slice(0, 150),
+                display:       cls ? cls.display  : t.Name,
+                category:      cls ? cls.category : 'Unknown',
+                bucket:        cls ? cls.bucket   : 'unknown',
+                safe:          cls ? cls.safe      : false,
+                safeToDisable: false,
+                requiresAdmin: true,
             });
         }
     }
@@ -2323,6 +2863,7 @@ async function collectStartupContext() {
         registryEntries,
         folderEntries,
         scheduledTasks,
+        isAdmin: adminResult?.isAdmin === true,
         scannedAt: Date.now(),
         scanFailed: false,
     };
@@ -2378,10 +2919,40 @@ ipcMain.handle('disable-startup-entry', async (event, entryName, location) => {
     if (!entryName || typeof entryName !== 'string') return { success: false, error: 'invalid_name' };
 
     const locLower = (location || '').toLowerCase();
+
+    // Startup folder entry — move .lnk to an app-owned backup folder
+    const isFolderEntry = !locLower.startsWith('hkcu:') && !locLower.startsWith('hklm:')
+        && (locLower.endsWith('.lnk') || locLower.includes('\\start menu\\programs\\startup'));
+
+    if (isFolderEntry) {
+        const srcPath = location || '';
+        if (!srcPath || !fs.existsSync(srcPath)) {
+            return { success: false, error: 'file_not_found' };
+        }
+        try {
+            const backupDir = path.join(app.getPath('userData'), 'disabled-startup-shortcuts');
+            if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+            const fileName = path.basename(srcPath);
+            const backupPath = path.join(backupDir, fileName);
+            const manifestPath = path.join(backupDir, 'manifest.json');
+            let manifest = {};
+            try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch {}
+            manifest[fileName] = { originalPath: srcPath, name: entryName, disabledAt: Date.now() };
+            fs.copyFileSync(srcPath, backupPath);
+            fs.unlinkSync(srcPath);
+            fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+            _startupCtxCache = null;
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err.message || 'Could not move startup shortcut.' };
+        }
+    }
+
+    // Registry entry — use StartupApproved key (same method as Windows Task Manager)
     let approvedPath;
     if (locLower.includes('hkcu') || locLower.includes('current user')) {
         approvedPath = 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run';
-    } else if (locLower.includes('hklm') || locLower.includes('all user')) {
+    } else if (locLower.includes('hklm') || locLower.includes('all user') || locLower.includes('wow6432')) {
         approvedPath = 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run';
     } else {
         return { success: false, error: 'manual_required' };
@@ -2407,6 +2978,7 @@ ipcMain.handle('disable-startup-entry', async (event, entryName, location) => {
         proc.on('close', (code) => {
             if (settled) return; settled = true;
             clearTimeout(timer);
+            _startupCtxCache = null;
             _bgContextCache = null;
             resolve({ success: code === 0 });
         });

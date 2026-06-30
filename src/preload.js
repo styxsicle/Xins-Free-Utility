@@ -33,6 +33,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveToggleState: (toggleId, state) => ipcRenderer.invoke('save-toggle-state', toggleId, state),
     runCleanup: (type) => ipcRenderer.invoke('run-cleanup', type),
     scanCleanup: () => ipcRenderer.invoke('scan-cleanup'),
+    getRestorePointStatus: () => ipcRenderer.invoke('get-restore-point-status'),
+    createRestorePoint: () => ipcRenderer.invoke('create-restore-point'),
+    openWindowsSystemRestore: () => ipcRenderer.invoke('open-windows-system-restore'),
+    getFreeHomeTweakStatus: () => ipcRenderer.invoke('free-home-tweak-status'),
+    runFreeHomeTweaks: (actionIds) => ipcRenderer.invoke('run-free-home-tweaks', actionIds),
+    onFreeHomeTweakProgress: (cb) => {
+        const handler = (_, data) => cb(data);
+        ipcRenderer.on('free-home-tweak-progress', handler);
+        return () => ipcRenderer.removeListener('free-home-tweak-progress', handler);
+    },
 
     openExternal: (url) => ipcRenderer.invoke('open-external', url),
 
